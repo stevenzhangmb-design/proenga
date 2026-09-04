@@ -1,0 +1,2329 @@
+<!-- ╔══════════════════════════════════════════════════════════════════════╗
+     原型骨架（装配器结构唯一源）· prototype-skeleton · v3.13 （2026-08-04）
+     v1.1：§8.0 落骨架——查看整页底部主操作默认改「保存」(非「提交」·实测背书)；配置类用 detailData.okText:'提交' 覆盖；新增 detailSave（修旧 closeDetail bare-ref 不关闭 bug）。
+     v1.1.1：档↔规范全量同步——筛选区日期范围宽 447px→**427px**（2026-08-02 实测·同步 spec §5.3/§8.0.2 + ㊞闸断言）。
+     v3.13：blockIf 支持数组（一个按钮可挂多条拦截规则），向后兼容单对象写法。同时更正 §5.3t 注释里的 Manifestação 规则：结论性事件之间可互相覆盖（以最后一个为准），只有 Ciência 不能在结论性事件之后提交。
+v3.12：选项的禁用原因不再拼进 label —— EP 的 label 同时用于下拉项和触发器回显，拼进去会让选中框显示一长串被截断的说明（用户截图逮到）。改为 label 只放选项名、原因走 el-option 插槽的小灰字。同时 optionRules.disable 支持 {opt,reason}，一条规则禁多项时各给各的短原因（共用一句常常对不上）。
+v3.11：多选面板点保存/取消后收不起来 —— 改用 .ms-pop[aria-hidden="true"]{display:none} 收口。EP popover 关闭时已把 aria-hidden 置回 true，但它的 <Transition> 在这里走不完（enter-from 与 leave-active 并存，leave 等一个永不到来的 transitionend），afterLeave 不执行 → display 卡在 block，空面板挡住内容。走过三次弯路（删模板 transition / 删 opacity 钉死 / 把 transition 写进 CSS）都没打中，根因是一直在猜过渡为何不结束、没先量元素三态。
+v3.10：提示带底色改 :cell-style 内联（底色由数据 level 直接决定，不绕 class→CSS）。注：加它的起因"切页签后底色不上"是我的误判——那几行在视口外，浏览器不给视口外元素算样式，读 computed 自然是空的，显示一直正常。改动本身保留（更直接），但别再照着那个错误归因去查问题。
+v3.9：「能不能触发」收敛成唯一的 canFire()/FIRE_KEYS —— 此前判定被复制到 bandWayOk 和两处 link 模板里，每加一个触发键就漏一处（v3.4 漏 goto、v3.7 漏 opensFP 致弹窗「选择」点不动）。以后加键只改 FIRE_KEYS。
+v3.8：跨页复用整页时页头跟着来源走 —— opensFP 可带 title，写 {c<列下标>} 取点击行真值（从采购退货单开票，页头显示自己的退货单号，不再显示别人的采购发票 Key）。
+v3.7：整页向导可跨页复用 opensFP:{page,name} —— 开退票整页只存一份(挂在退货发票页)，采购退货单原地打开同一份，不再 goto 跳模块。顺带让 bandWayOk/箭头认这个新键(v3.4 同款坑)。
+v3.6：失败提示带分级 level:'warn'(橙·该干活了) / 缺省或 'risk'(红·已经出事了) —— 原来只有一种红，"待出库开票失败"和"货已出库却没开票"看着一样重，采购员分不出先处理哪个。
+v3.5：失败提示带改按【行对象】绑定（Map），不再按下标 —— 原来筛选/排序后下标错位，导致筛「开票失败」时提示带全部消失。
+v3.4：失败提示带的出路链接补认 goto/download/transition —— 原来只认 act|opens，用 goto 写的出路被渲染成灰色不可点。
+v3.3：商品名一律完整显示 —— 确认清单 .rv-name 去掉 nowrap+ellipsis 改折行；表格列写 {wrap:true} 解除单元格默认截断。教训：数据补了全名，样式把它截了，等于白补。
+v3.2：确认弹窗按当前实际勾选实时生成 —— 新字段 type:'reviewList'（勾几行列几行、总数金额实算）+ table.label 支持 {n} 占位（「已选择 {n}」）。此前是写死的，勾 5 行仍只显示 1 个。
+v3.1：① 多选面板触发器高度跟随上下文(弹窗 small=24px，原写死 32px 与同排 combo 差 8px) ② 退货数量/勾选改动后自动重算概览(某真实业务系统 要手动点「计算」、改完还显示旧金额，是缺陷，不跟；表写 autoCalc:false 可退回手动)。
+v3.0：补两个「数据写了渲染不出来」的缺口 —— 行内 select 单元格 sub 灰字（CFOP 5102）、表单字段 help → 标签旁 ⓘ（与 hint 下方灰字并存）。
+v2.9：为「照搬真系统」补 4 项 —— sec.titleBtn(标题行内嵌按钮) / 列 headCheck(表头半选全选框) / table.search 支持 {fields,ph}(字段下拉+搜索) / dialog.noHeader(无标题栏)。
+v2.8：修多选面板半透明卡住 —— :visible 受控必须配 trigger="manual"，与 trigger="click" 并用会让两套开合状态打架、过渡停在中间态。
+v2.7：修多选面板透明 —— .ms-pop 只写 padding:0!important 会顶掉 EP 自带的背景/边框/阴影，须显式补回。
+v2.6：① multiSelect 扩到弹窗字段（helpers 泛化 pfx+model，列表/弹窗共用一套）② 新增 f.noLabel —— 不渲染标签行，用于与 combo 同排时基线对齐（某真实业务系统 筛选区四项是平齐的）。
+v2.5：筛选区 type:'multiSelect' —— 多选下拉面板(搜索+全部+复选列表+取消/保存)，照实测 某真实业务系统「发票账号」；面板改动落草稿，点保存才生效。
+v2.4：修 v2.3 两处——弹窗 select 补 :placeholder（原来写了 ph 也只显示「请选择」）；弹窗分页改用与列表页相同的 EP layout（原自造 T('totalCount')/T('perPage') 是不存在的 key，渲染成空白）。
+v2.3：弹窗补 ① type:'combo' 组合筛选（复用列表同一套结构，model 走 dlgFilterModel 互不干扰）② 表格分页条 tb.pager。用于选票类弹窗照搬真系统交互。
+v2.2：quickFilters —— 状态页签下方一行第二维度快捷筛选(带计数·可点·与主页签叠加)。主状态机页签只放单据生命周期，税务/开票状态走这里，两个维度不打架。
+v2.1：① listTotals 改走 pick2(统计条随状态页签变) ② 按钮 copy:'文本' 真写剪贴板(排查信息一次带走)。
+v2.0：goto 跨页跳转 —— 按钮/菜单项/失败出路写 goto:'页面id'|{sys,page} → 真跳过去(跨系统自动切)；okButtons 改走 fireBtn 故也能带 goto/download。目标页不存在会提示，不做哑按钮。
+v1.9：① act:'transition' 行状态真迁移(改单元格/跨页签搬行/计数同步) ② 查询真过滤(筛选值→整行文本包含匹配)。此前这些动作只弹提示、数据不动。
+v1.8：真下载 —— 弹窗/按钮写 download:{filename,mime,content} → Blob+a[download] 真的落盘（原来只弹提示，用户点了没反应）。
+v1.7：整页 detailData.btnPos:'top' —— 操作按钮渲染在标题栏右侧(照 某真实业务系统 退票编辑页)；不写则仍是底部固定条。
+v1.6：cfg.actionsWidth —— 操作列宽可显式指定(对齐真实系统实测值)；不写则仍走自动估算。
+v1.5：弹窗表格支持 radio 单选列 + 第二张表 table2（单元格渲染仍只一份）；表单 type:'button' 支持 disabled。
+v1.4：表单字段 type:'pick' —— 只读输入+蓝色「选择」文字链→开弹窗（ERP 选单据通用范式，照实测 TF Loja）。
+v1.3：详情区块内页签——section 写 tabs:[{label,table?|fields?}] → 同卡片左右切换（「明细/操作日志」通用范式）；不写则渲染与 v1.2 逐字一致。
+v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDevkit→__anno.exportDevkit) +【🚀 一键生成代码】(annoGenCode→__anno.generateCode)·i18n exportDevkit/genCode·return 已补。
+     ────────────────────────────────────────────────────────────────────────
+     【AI 禁手写本结构】这是装配器 qa/assemble-prototype.js 的唯一结构源。
+     标准部件（顶栏 + 标注工具条 + 渲染器 + glue + 正确的助手顺序/IIFE/显式闭合）
+     全部固定在此，由程序逐字复制——AI 一个字都不重打，故标准部件漂移=结构上不可能。
+     AI 只产出【项目数据 JSON】（见 examples/project-data.sample.json），装配器填进孔位：
+       TITLE / PRIMARY / SIDEBAR_BG / PROJECT_DATA_JS / ANNOTATION_LAYER（各孔位在下方正文，勿在本注释里写成标记形态）
+     项目数据是【纯 JSON】：rows 为二维数组，标签单元写 {"t":"文本","c":"green"}（禁函数调用）。
+     PAGECFG 每页支持：banner / stats / chart / donut（环形图 {title,label,grad,items:[[名,值,色]]}）/
+       filters / columns+rows / actions / custom（原始 HTML 复杂页·整块带锚点）/ note（页脚说明）/ building。
+     ╚══════════════════════════════════════════════════════════════════════╝ -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>@@TITLE@@ · 原型</title>
+<script src="https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/element-plus@2.4.4/dist/index.css">
+<script src="https://unpkg.com/element-plus@2.4.4/dist/index.full.min.js"></script>
+<style>
+  /* TF 默认设计规范·EP 主题令牌(system-design-spec.md 主色#3363FF/警告#F2AC3A)·在 EP CSS 之后覆盖 */
+  :root{ --el-color-primary:@@PRIMARY@@; --el-color-primary-rgb:51,99,255; --el-color-primary-light-3:#7092ff; --el-color-primary-light-5:#99b1ff; --el-color-primary-light-7:#c2d0ff; --el-color-primary-light-8:#d6e0ff; --el-color-primary-light-9:#ebefff; --el-color-primary-dark-2:#294fcc; --el-color-warning:#f2ac3a; --el-color-warning-rgb:242,172,58; --el-color-warning-light-3:#f6c575; --el-color-warning-light-5:#f9d69d; --el-color-warning-light-7:#fbe6c4; --el-color-warning-light-8:#fceed8; --el-color-warning-light-9:#fef7eb; --el-color-warning-dark-2:#c28a2e; --border:#e6e9f0; --text-1:#182638; --text-3:#8190a4; --green:#16af78; --red:#e15b5b; --orange:#e6a23c; }
+  body{margin:0;font-family:"Noto Sans SC",system-ui,'Microsoft YaHei';background:#f2f3f5;color:#333;}
+  /* §导航侧栏：height(非 min-height)+overflow-y:auto —— 菜单组全展开超一屏时【侧栏内部滚动】。
+     用 min-height 会被内容撑得比视口高、又是 position:fixed，overflow 失效→底部菜单够不到(2026-07-11 真机实测逮到)。 */
+  /* §顶部导航（真系统 TF OMS 就是顶部导航模式·2026-07-12 实测对齐）：深色条 50px + 横向主菜单(悬停展开) + 内容全宽·无侧栏 */
+  .topnav{display:flex;align-items:center;margin-left:10px;}
+  .topnav .tn{position:relative;}
+  .topnav .tn-btn{border:0;background:transparent;color:#cdd8ee;font-size:14px;padding:0 14px;height:50px;line-height:50px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:5px;}
+  .topnav .tn:hover .tn-btn,.topnav .tn-btn.active{background:var(--el-color-primary);color:#fff;}
+  .topnav .tn-drop{display:none;position:absolute;top:50px;left:0;background:#fff;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:10px 0;min-width:172px;z-index:40;}
+  .topnav .tn:hover .tn-drop{display:block;}
+  .topnav .tn:hover .tn-mega{display:flex;}   /* 必须在 .tn-drop 之后：否则 display:block 覆盖掉多列 flex（2026-07-12 截图逮到） */
+  .topnav .tn-sub{display:flex;align-items:center;gap:6px;padding:9px 20px;color:#333;font-size:14px;cursor:pointer;white-space:nowrap;}
+  .topnav .tn-sub:hover{color:var(--el-color-primary);background:#f5f7fa;}
+  .topnav .tn-sub.on{color:var(--el-color-primary);}
+  /* 大菜单：多列分组（真系统悬停「财务」→ 充值/扣费 | 发票管理 | 费用管理 三列）
+     ⚠️ 这里绝不能写 display:flex —— 同特异性且靠后会覆盖 .tn-drop{display:none}，导致**所有**大菜单常驻显示
+        （2026-07-12 实测逮到：7 个下拉全部 display:flex 叠在一起，糊成白盒子）。display 只在 :hover 规则里给。 */
+  .topnav .tn-mega{gap:8px;padding:14px 8px;}
+  .topnav .tn-col{min-width:150px;}
+  .topnav .tn-col-title{padding:0 20px 8px;color:#909399;font-size:13px;border-left:2px solid var(--el-color-primary);margin:0 0 4px 8px;line-height:1;}
+  /* §双菜单模式的内容区。
+     ⚠️ min-width:0 必须有 —— flex 项默认 min-width:auto，宽表格会把 main 撑到超出视口、整页横向滚动
+        （真系统是表格**内部**滚动、页面不溢出）。2026-07-12 实测逮到：溢出 428px。 */
+  .main{flex:1;min-width:0;}
+  .main.has-side{margin-left:248px;}   /* 侧栏模式：让开固定定位的侧栏 */
+  /* §多系统双行顶栏(94px)+侧栏模式：页签条本是全宽(z20)会盖住 fixed 侧栏顶部(客户管理菜单项被遮成孤立页签)。
+     修：页签条左移让开侧栏(只在内容区上方)，侧栏顶部对齐双行顶栏高度。2026-07-27 事故根治。 */
+  .pagetabs.pt-offset{margin-left:248px;}
+  .sidebar.sb-multi{top:94px;height:calc(100vh - 94px);}
+  /* §侧栏（menuMode='side' 时显示）。top/height 按顶栏50px + 页签41px = 91px 计 */
+  /* ═══ §5.3h 侧边栏（浅色清新版·2026-07-12 用户定）═══
+     白底侧栏 + 深色顶栏 = 现代 SaaS 经典搭配。设计要点：
+     ① 白底 + 右侧发丝分割线（不用重边框）② 行高 40px、左右留白 12px、圆角 8px 胶囊
+     ③ 选中 = 主色淡底胶囊 + 左侧 3px 主色条 + 主色加粗字（不用大色块）
+     ④ 未选 #444 / 悬停淡灰底 ⑤ 分组标题 13px 灰 #909399 ⑥ 箭头细描边、克制 */
+  aside.sidebar{width:248px;background:#fff;height:calc(100vh - 91px);position:fixed;top:91px;left:0;
+                overflow-y:auto;z-index:10;border-right:1px solid #EBEEF5;padding:8px 0;}
+  aside.sidebar::-webkit-scrollbar{width:6px;}
+  aside.sidebar::-webkit-scrollbar-thumb{background:#dfe3ea;border-radius:3px;}
+  .sidemenu{--el-menu-bg-color:transparent;--el-menu-text-color:#444444;--el-menu-active-color:var(--el-color-primary);
+            --el-menu-hover-bg-color:#F5F7FA;border:0;padding:0 12px;}
+  /* 一级/二级条目：统一 40px 胶囊 */
+  .sidemenu .el-menu-item,.sidemenu .el-sub-menu__title{
+      height:40px;line-height:40px;border-radius:8px;margin:2px 0;padding-left:14px !important;
+      font-size:14px;color:#444;transition:background .15s,color .15s;}
+  .sidemenu .el-menu-item:hover,.sidemenu .el-sub-menu__title:hover{background:#F5F7FA;color:#303133;}
+  /* 分组标题：小字灰（层级感靠字重/字号，不靠色块） */
+  .sidemenu .el-sub-menu__title{color:#909399;font-size:13px;}
+  .sidemenu .el-sub-menu.is-opened>.el-sub-menu__title{color:#606266;}
+  /* 子菜单缩进 + 去掉 EP 默认灰底 */
+  .sidemenu .el-menu--inline{background:transparent;padding:0;}
+  /* §三级菜单层级缩进（2026-07-26）：L1(分销) < L2(分销管理/库存分配) < L3(分销商品) 逐级递进，层级分明 */
+  .sidemenu .el-menu--inline .el-menu-item{padding-left:30px !important;}                 /* L2 叶子 */
+  .sidemenu .el-menu--inline .el-sub-menu__title{padding-left:30px !important;}            /* L2 组标题(嵌套子组) */
+  .sidemenu .el-menu--inline .el-menu--inline .el-menu-item{padding-left:48px !important;} /* L3 叶子 */
+  .sidemenu>.el-sub-menu>.el-sub-menu__title{color:#606266;font-weight:600;font-size:14px;} /* L1 顶层组标题更醒目 */
+  /* 选中：主色淡底胶囊 + 左侧 3px 主色条 + 加粗（关键的"清新"手法：轻、准、不厚重） */
+  .sidemenu .el-menu-item.is-active{
+      background:rgba(51,99,255,.08);color:var(--el-color-primary);font-weight:600;position:relative;}
+  .sidemenu .el-menu-item.is-active::before{
+      content:'';position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:0 3px 3px 0;
+      background:var(--el-color-primary);}
+  /* 箭头：细、淡、不抢戏 */
+  .sidemenu .el-sub-menu__icon-arrow{color:#c0c4cc;font-size:12px;right:12px;}
+  /* ═══ §5.3f2 顶栏右侧控件区（简约·时尚·清新）═══
+     设计原则：① 统一 30px 圆形触点，无笨重底色 ② 悬停才浮出淡淡高亮 ③ 细发丝线分隔组
+     ④ 文字最少化（账号名只在下拉里出现）⑤ 主色只用在"当前选中/角标"上，其余克制留白。 */
+  .topbar .right{margin-left:auto;display:flex;align-items:center;gap:6px;}
+  /* 通用圆形触点 */
+  .topbar .right .langsw,.modnav .mn-right .langsw,.tb-bell,.tb-user,.menusw .ms{
+    display:inline-flex;align-items:center;justify-content:center;
+    height:30px;border-radius:8px;color:#aab6d4;cursor:pointer;outline:none;
+    transition:background .15s,color .15s;}
+  .topbar .right .langsw:hover,.modnav .mn-right .langsw:hover,.tb-bell:hover,.tb-user:hover,.menusw .ms:hover{background:rgba(255,255,255,.09);color:#fff;}
+  /* SVG 图标：统一 17px 细描边（emoji/Unicode 方块渲染糙且跨系统不一致，一律用内联 SVG） */
+  .topbar .right .ic,.modnav .mn-right .ic{width:17px;height:17px;flex-shrink:0;}
+  .topbar .right .ic-caret,.modnav .mn-right .ic-caret{width:11px;height:11px;opacity:.65;flex-shrink:0;}
+  /* 语言：图标 + 语言名（紧凑） */
+  .topbar .right .langsw,.modnav .mn-right .langsw{gap:5px;padding:0 9px 0 8px;font-size:13px;white-space:nowrap;}
+  /* 菜单模式：两个线框图标，无外框；选中=主色淡底 */
+  .menusw{display:flex;gap:2px;}
+  .menusw .ms{width:30px;border:0;background:transparent;padding:0;}
+  .menusw .ms.on{background:rgba(51,99,255,.24);color:#fff;}
+  /* 消息：圆形触点 + 小红角标（不喧宾夺主） */
+  .tb-bell{position:relative;width:30px;overflow:visible;}
+  /* 角标必须挂在图标外沿（top/right 取负），压在图标上会把铃铛盖没（2026-07-12 截图逮到） */
+  .tb-bell .bell-dot{position:absolute;top:-1px;right:-1px;min-width:15px;height:15px;padding:0 3px;
+                     border-radius:8px;background:#F56C6C;color:#fff;font-size:9px;line-height:15px;
+                     text-align:center;font-weight:700;box-shadow:0 0 0 2px @@SIDEBAR_BG@@;letter-spacing:0;
+                     pointer-events:none;}
+  /* 头像：只留圆头像（账号名移进下拉），最省宽度 */
+  .tb-user{width:30px;}
+  .tb-user .u-name{display:none;}
+  .tb-user .u-avatar{width:26px;height:26px;border-radius:50%;
+                     background:linear-gradient(135deg,var(--el-color-primary),#5b82ff);color:#fff;
+                     display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;}
+  /* 标注开关：排在右侧工具组【之前】(order:-1)，与其后的系统控件之间隔一道发丝线。
+     2026-08-06 用户定：标注是作者态工具，放在语言/布局/消息/头像这组的左边。 */
+  .anno-sw{display:flex;align-items:center;gap:7px;font-size:13px;color:#aab6d4;order:-1;
+           padding-right:12px;margin-right:4px;border-right:1px solid rgba(255,255,255,.12);}
+  .topbar{height:50px;display:flex;align-items:center;gap:12px;padding:0 18px;position:sticky;top:0;z-index:60;background:@@SIDEBAR_BG@@;color:#cdd8ee;}  /* z-index 必须高过 .pagetabs(20)，否则悬停大菜单被页签条盖住（2026-07-12 截图逮到） */
+  /* 品牌区 = 方形 logo + 名称（真系统顶栏左上角范式）。logo 用 CSS 画，离线版零外部图片依赖。
+     字母由 project-data 的 logo 字段给（缺省取名称首字母）。 */
+  .topbar .brand{font-weight:700;display:flex;align-items:center;gap:9px;}
+  .topbar .brand-logo{width:26px;height:26px;border-radius:6px;background:var(--el-color-primary);
+                      color:#fff;font-size:12px;font-weight:800;letter-spacing:.5px;
+                      display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  /* §5.5 语言切换器（标准件·三语文案层）：顶栏内联、不浮层、不遮标注开关。
+     ⚠️ 具体样式统一在上方「§5.3f2 顶栏右侧控件区」定义，此处不再重复（重复会覆盖新样式）。 */
+  .langsw{cursor:pointer;outline:none;white-space:nowrap;}
+  .sysseg{display:flex;gap:6px;} .sysseg .seg{border:0;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;background:transparent;color:#cdd8ee;} .sysseg .seg.active{background:var(--el-color-primary);color:#fff;}
+  .flow-tip{font-size:12px;color:#e6a23c;}
+  /* §顶栏模块导航 caret（组项可展开标记） */
+  .topnav .tn-caret{margin-left:4px;font-size:10px;opacity:.7;}
+  .topnav .tn-btn.active{background:var(--el-color-primary);color:#fff;}
+  /* §第二行模块导航条（多系统时·系统切换在其上方顶栏）+ 悬停二级/三级大菜单 */
+  .modnav{display:flex;align-items:center;height:44px;background:#1e3160;padding:0 12px;position:sticky;top:50px;z-index:55;box-shadow:0 1px 0 rgba(0,0,0,.18);}
+  .modnav .mn{position:relative;align-self:stretch;}
+  .modnav .mn-btn{display:flex;align-items:center;gap:4px;height:44px;padding:0 16px;color:#cdd8ee;font-size:14px;cursor:pointer;white-space:nowrap;}
+  .modnav .mn-btn:hover{background:rgba(255,255,255,.08);color:#fff;}
+  .modnav .mn-btn.on{background:var(--el-color-primary);color:#fff;}
+  .modnav .mn-caret{font-size:10px;opacity:.7;}
+  .modnav .mn-right{margin-left:auto;display:flex;align-items:center;gap:6px;}
+  .modnav .mn-cur{color:#e6a23c;font-size:12px;white-space:nowrap;margin-right:4px;}
+  .modnav .mn-drop{display:none;position:absolute;top:44px;left:0;background:#fff;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:8px 0;min-width:180px;z-index:56;}
+  .modnav .mn:hover .mn-drop{display:block;}
+  .modnav .mn-grp-title{padding:6px 16px 4px;color:#909399;font-size:12px;border-left:2px solid var(--el-color-primary);margin:2px 0 2px 8px;line-height:1.2;}
+  .modnav .mn-sub{padding:8px 20px;color:#333;font-size:14px;cursor:pointer;white-space:nowrap;}
+  .modnav .mn-sub:hover{background:#f5f7fa;color:var(--el-color-primary);}
+  .modnav .mn-sub.on{color:var(--el-color-primary);font-weight:500;}
+  .pagetabs{background:#fff;padding:6px 18px 0;position:sticky;top:50px;z-index:20;border-bottom:1px solid var(--border);}
+  .pagetabs .el-tabs__header{margin:0;}
+    /* §区块内页签(v1.3)：详情卡片里「明细/操作日志」切换，压扁间距、不抢主色 */
+    /* §快捷筛选条(v2.2) */
+    .qf-bar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:9px 4px 3px;border-bottom:1px solid #F0F2F5;margin-bottom:2px;}
+    .qf-label{color:#909399;font-size:12px;margin-right:2px;}
+    .qf-item{display:inline-flex;align-items:center;gap:5px;padding:3px 11px;border-radius:13px;font-size:12px;cursor:pointer;
+             color:#606266;background:#F4F6F8;border:1px solid transparent;transition:.15s;user-select:none;}
+    .qf-item:hover{background:#E9EDF2;}
+    .qf-item.is-on{background:#EBF1FF;border-color:#3363FF;color:#3363FF;font-weight:600;}
+    .qf-item .qf-n{font-weight:700;font-size:12px;}
+    .qf-warn{color:#b8801f;background:#FDF6EC;} .qf-warn:hover{background:#FAECD8;}
+    .qf-danger{color:#c9433c;background:#FEF0F0;} .qf-danger:hover{background:#FDE2E2;}
+    /* §选单据文字链(v1.4) */ .fd-pick{color:#3363FF;font-size:13px;cursor:pointer;white-space:nowrap;}
+    .fd-pick:hover{opacity:.75;}
+    .dv-sec-tabs .el-tabs__header{margin:0 0 14px;} .dv-sec-tabs .el-tabs__nav-wrap::after{height:1px;background:#E4E7ED;}
+    .dv-sec-tabs .el-tabs__item{height:38px;line-height:38px;font-size:13px;color:#606266;}
+    .dv-sec-tabs .el-tabs__item.is-active{color:#3363FF;font-weight:600;}
+    .dv-sec-tabs .el-tabs__active-bar{background:#3363FF;} .pagetabs .el-tabs__nav{border:0 !important;}
+  body.anno-preview-mode .anno-author-only{display:none !important;}
+  .content{padding:20px 24px 60px;max-width:1820px;}
+  .new-banner{display:flex;align-items:center;gap:10px;padding:10px 14px;background:linear-gradient(115deg,#eef9f3,#f3fbff);border:1px solid #d4ecdd;border-radius:9px;margin-bottom:16px;font-size:11px;color:#2c7a55;} .new-banner b{color:#1f6f49;}
+  .stat-card{background:#fff;border:1px solid var(--border);border-radius:11px;padding:16px;box-shadow:0 5px 18px rgba(24,42,74,.055);height:100%;}
+  .stat-card .stat-label{color:var(--text-3);font-size:11px;margin-bottom:8px;}
+  .stat-card .stat-value{font-size:21px;font-weight:750;letter-spacing:-.6px;color:#182638;}
+  .stat-card .stat-hint{color:#8190a4;margin-top:8px;font-size:10px;}
+  .stat-card.up .stat-hint{color:var(--green);} .stat-card.down .stat-hint{color:var(--red);} .stat-card.warn .stat-hint{color:var(--orange);}
+  .chart{height:200px;position:relative;} .chart .bars{position:absolute;inset:6px 5px 10px 8px;display:flex;align-items:end;justify-content:space-around;gap:8px;} .bar{flex:1;max-width:26px;border-radius:4px 4px 2px 2px;background:linear-gradient(180deg,#79a0ff,#4b7cff);opacity:.85;}
+  .donut{width:130px;height:130px;border-radius:50%;position:relative;} .donut:after{content:attr(data-label);white-space:pre;position:absolute;inset:23px;display:grid;place-items:center;text-align:center;line-height:1.4;border-radius:50%;background:#fff;color:#36445a;font-size:11px;font-weight:700;}
+  .rl{list-style:none;margin:0;padding:0;} .rl li{display:flex;align-items:center;gap:7px;padding:5px 0;color:#68768a;font-size:11px;} .rl i{width:8px;height:8px;border-radius:2px;} .rl b{margin-left:auto;color:#45546a;}
+  .gcard{background:#fff;border:1px solid var(--border);border-radius:11px;padding:16px;box-shadow:0 5px 18px rgba(24,42,74,.055);} .gcard h4{margin:0 0 10px;font-size:14px;color:#182638;} .code{display:block;background:#0f1729;color:#cfe0ff;border-radius:8px;padding:12px 14px;font-family:Consolas,Menlo,monospace;font-size:12px;line-height:1.7;white-space:pre-wrap;word-break:break-all;}
+
+  /* ═══ system-design-spec.md 对齐（2026-07-09 按真代码补齐·规范改了实现必须跟）═══ */
+  /* §5.1 页面最小宽（真代码 index.vue）：整页最小 1350px，低于此横向滚动 */
+  #app{min-width:1350px;}
+  /* §4.5 页签：nav 条底 #F0F2F5；选中=白底+边框#E4E7ED+圆角8px+高41px（真代码 el-table.scss #tabsBox·两层同款）*/
+  .pagetabs .el-tabs__nav-scroll{background:#F0F2F5;border-radius:8px 8px 0 0;}
+  .pagetabs .el-tabs__item{height:41px;line-height:41px;color:#909399;}
+  .pagetabs .el-tabs__item.is-active{background:#fff;border:1px solid #E4E7ED;border-bottom:none;border-radius:8px 8px 0 0;color:#3363FF;font-weight:500;}
+  /* §5.3 筛选区：固定宽字段（真代码 basic.scss .search-box）
+     ⚠️ 必须保持 el-card 结构：标注层右键对「div 区域」走画框、对卡片/按钮才弹气泡；
+        换成裸 div 会让筛选区圈选失效(⑯③ 实测逮到)。只改样式、不改 DOM 结构。 */
+  /* ⚠️ 2026-07-12 登录态实测校正（真系统 zgl-search-box）：
+     真系统筛选区【无 label】——字段名直接写在**占位符**里（「全部发票账号」「创建时间」）；
+     白底(非#f7f8fa)、padding 16px 16px 0、字段宽 285px、日期范围 427px、控件高 32px、字段 margin 右16下16。
+     旧规范的「label 112px + 控件 210px + 灰底 #f7f8fa + padding 24px」是别的组件(WMS basic.scss)，与 OMS 不符。 */
+  .search-box{background:#fff;border-radius:6px;border:none;box-shadow:none;}
+  .search-box .el-card__body{padding:16px 16px 0;}
+  .search-box .el-input{width:285px;}
+  .search-box .el-select{width:285px;}
+  .search-box .el-date-editor{width:427px;}
+  .search-box .el-form-item{margin:0 16px 16px 0;}
+  /* 无 label：整条隐藏（字段名靠占位符表达，见 §5.3） */
+  .search-box .el-form-item__label{display:none;}
+  .search-box .el-button--primary{min-width:80px;}
+  /* §5.3+§5.5 多语言：112px 是按中文提炼的，葡/西/英 label 更长会换行（实测 "Data de Emissão" 断两行）。
+     非中文时改为自适应宽（保留 112px 下限，保证与中文版对齐观感一致）。<html lang> 由 setLang 维护。 */
+  html:not([lang^="zh"]) .search-box .el-form-item__label{width:auto;min-width:112px;white-space:nowrap;}
+  /* §5.3b 组合筛选(真系统 zgl-search-box 实测·下拉选字段+输入值+精确/模糊三段合一) */
+  .combo-filter{display:flex;align-items:center;}
+  .combo-filter .combo-left{width:150px;}
+  .combo-filter .combo-left .el-select__wrapper{border-radius:4px 0 0 4px;}
+  .combo-filter .combo-mid{width:264px;}
+  .combo-filter .combo-mid .el-input__wrapper{border-radius:0;margin-left:-1px;position:relative;z-index:1;}
+  .combo-filter .combo-mid .el-input__wrapper:hover,.combo-filter .combo-mid .el-input__wrapper.is-focus{z-index:2;}
+  .combo-filter .combo-right{width:130px;}
+  .combo-filter .combo-right .el-select__wrapper{border-radius:0 4px 4px 0;margin-left:-1px;}
+  /* §5.3b 修(2026-08-18)：el-select 内部有个 el-input，被全局 .search-box .el-input{width:285px} 撑成 285px→
+     溢出到右侧空白(最右的「精确搜索」段一路穿到查询/重置按钮底下)，其 box-shadow 边框从两按钮 12px 缝隙里透出=看着像"按钮间有连接线"。
+     锁死 combo 内 el-select 的 el-input 填满父级(由 combo-left/right 定宽)，不吃全局 285px。 */
+  .combo-filter .el-select .el-input{width:100%;}
+  .combo-filter .combo-search-ic{color:#a8abb2;font-size:15px;line-height:1;}
+  /* §多选下拉面板(v2.5)：触发器视觉与 el-select 一致，面板内自带搜索/滚动/底部按钮 */
+  /* §标题行内嵌按钮(v2.9) */
+  /* §行内 select 下方灰字(v3.0)：02 图税收性质值下面的 CFOP 5102 */
+  .cell-sub{color:#a8abb2;font-size:11px;line-height:1.5;margin-top:2px;}
+  /* §商品名不截断(v3.3)：列写 {wrap:true} → 该列单元格允许折行，不出省略号。
+     EP 表格单元格默认 white-space:nowrap + ellipsis，长商品名会被截成「…」。 */
+  .el-table .cell-wrap-col .cell,.el-table .cell.cell-wrap{white-space:normal !important;text-overflow:clip !important;word-break:break-word;line-height:1.5;}
+  /* §字段标签旁问号(v3.0) */
+  .fd-help{margin-left:4px;cursor:help;color:#a8abb2;font-size:11px;border:1px solid #c0c4cc;border-radius:50%;
+    width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;line-height:1;vertical-align:middle;}
+  /* §确认清单(v3.2) */
+  .rv-box{background:#f7f8fa;border-radius:4px;padding:12px 16px;}
+  .rv-kv{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;gap:20px;}
+  .rv-kv .rv-k{color:#909399;flex:none;}
+  .rv-kv .rv-v{color:#303133;font-weight:500;text-align:right;word-break:break-all;}
+  .rv-hr{border-top:1px solid #dcdfe6;margin:8px 0;}
+  .rv-li{display:flex;justify-content:space-between;font-size:13px;color:#606266;padding:3px 0;gap:16px;}
+  /* 商品名一律完整显示：宁可折行也不截（2026-08-31 用户要求；数据补了全名，样式截了等于白补） */
+  .rv-li .rv-name{white-space:normal;word-break:break-word;line-height:1.5;}
+  .rv-li .rv-num{flex:none;}
+  .rv-li.rv-strong{color:#303133;font-weight:600;}
+  .rv-empty{color:#a8abb2;font-size:13px;text-align:center;padding:10px 0;}
+  .sec-title-row{display:flex;align-items:center;gap:10px;}
+  .sec-title-row .sec-title-btn{font-weight:400;padding:0 6px;height:24px;}
+  /* §弹窗无标题栏(v2.9)：03 图确认弹窗直接是 ⓘ + 一句话，没有标题栏 */
+  .fdlg.no-header .el-dialog__header{display:none !important;}
+  .fdlg.no-header .el-dialog__body{padding-top:22px;}
+  /* 高度跟随上下文：列表筛选区 32px；弹窗表单是 size="small"→24px（实测 combo 内控件就是 24px，
+     写死 32px 会与同排 combo 差 8px、看着没对齐。2026-08-28 用户逮到） */
+  .ms-trigger{display:flex;align-items:center;justify-content:space-between;height:32px;padding:0 11px;
+    background:#fff;border-radius:4px;box-shadow:0 0 0 1px #dcdfe6 inset;cursor:pointer;box-sizing:border-box;width:100%;}
+  .ms-trigger:hover{box-shadow:0 0 0 1px #c0c4cc inset;}
+  .ms-trigger.is-open{box-shadow:0 0 0 1px var(--el-color-primary) inset;}
+  .el-dialog .ms-trigger{height:24px;padding:0 8px;}
+  .el-dialog .ms-text{font-size:12px;}
+  .el-dialog .ms-caret{font-size:10px;margin-left:6px;}
+  .ms-text{font-size:14px;color:#606266;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ms-text.is-ph{color:#a8abb2;}
+  .ms-caret{color:#a8abb2;font-size:11px;margin-left:8px;flex:none;}
+  /* 面板必须自带背景/边框/阴影 —— 只写 padding:0!important 会把 EP 自带的一并顶掉，面板变透明(2026-08-28 截图逮到) */
+  .ms-pop{padding:0 !important;background:#fff !important;opacity:1 !important;border:1px solid #e4e7ed !important;
+    border-radius:4px !important;box-shadow:0 6px 18px rgba(0,0,0,.12) !important;}
+  /* §面板收起靠 aria-hidden，不靠过渡(v3.11)：EP popover 关闭时把 aria-hidden 置回 true，
+     但它的 <Transition> 在这里走不完（enter-from 与 leave-active 三类并存 → 等一个永不到来的
+     transitionend → afterLeave 不执行 → display 停在 block，空面板挡住内容和点击）。
+     直接按语义属性收口，与过渡机制解耦。实测：打开中 aria-hidden=false / 保存·取消后 =true。 */
+  .ms-pop[aria-hidden="true"]{display:none !important;}
+  /* §禁用选项的原因(v3.12)：小一号灰字，跟在选项名后；只在下拉里出现，不进触发器 */
+  .el-select-dropdown__item .opt-why{margin-left:8px;font-size:12px;color:#c0c4cc;font-weight:400;}
+  .ms-panel{padding:10px 0 0;background:#fff;border-radius:4px;}
+  .ms-panel .ms-search{padding:0 12px 8px;}
+  .ms-ic{color:#a8abb2;}
+  .ms-list{max-height:260px;overflow-y:auto;padding:0 12px;overscroll-behavior:contain;}
+  .ms-list::-webkit-scrollbar{width:6px;} .ms-list::-webkit-scrollbar-thumb{background:#dcdfe6;border-radius:3px;}
+  .ms-item{display:block;padding:5px 0;cursor:pointer;}
+  .ms-item .el-checkbox{width:100%;}
+  .ms-item .el-checkbox__label{font-size:13px;color:#303133;white-space:normal;line-height:1.5;}
+  .ms-empty{color:#a8abb2;font-size:13px;text-align:center;padding:18px 0;}
+  .ms-foot{display:flex;justify-content:flex-end;gap:20px;padding:10px 14px;border-top:1px solid #ebeef5;margin-top:8px;}
+  .ms-foot a{font-size:13px;cursor:pointer;}
+  .ms-foot .ms-cancel{color:#606266;}
+  .ms-foot .ms-save{color:var(--el-color-primary);font-weight:500;}
+  /* §弹窗分页条(v2.3)：右对齐，与列表页分页同一视觉语言 */
+  .dlg-pager{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:12px;}
+  .dlg-pager .el-pagination{margin:0;}
+  /* 弹窗里的 combo 段宽收窄，四个条件才排得下一行 */
+  .el-dialog .combo-filter .combo-left{width:118px;}
+  .el-dialog .combo-filter.combo-2 .combo-mid{width:224px;}
+  .el-dialog .combo-filter.combo-date .combo-dt{width:224px;}
+  /* ② 两段版（无「精确搜索」）：输入框是最后一段 → 右侧要收回圆角 */
+  .combo-filter.combo-2 .combo-mid{width:360px;}
+  .combo-filter.combo-2 .combo-mid .el-input__wrapper{border-radius:0 4px 4px 0;}
+  /* ③ 日期版（[字段▾] + 日期选择器）：日期段收右圆角 */
+  .combo-filter.combo-date .combo-dt{width:280px;}
+  .combo-filter.combo-date .combo-dt.el-date-editor{border-radius:0 4px 4px 0;margin-left:-1px;}
+  /* §5.3q 空状态（真系统实测：插画 180×180 + 文案「暂无数据」#909399 14px + 容器高 ~366px·背景透明）
+     EP 默认只有文字，这里补插画（内联 SVG·不依赖外链，离线版也在） */
+  .el-table__empty-block{min-height:366px !important;}
+  .el-table__empty-text{color:#909399 !important;font-size:14px !important;line-height:1.6;}
+  .el-table__empty-text::before{
+    content:'';display:block;width:180px;height:180px;margin:0 auto 12px;
+    background:no-repeat center/contain;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><g fill='none'><ellipse cx='90' cy='150' rx='58' ry='9' fill='%23eef1f6'/><rect x='48' y='38' width='84' height='104' rx='8' fill='%23f5f7fa' stroke='%23dfe4ee' stroke-width='2'/><rect x='62' y='58' width='56' height='6' rx='3' fill='%23e2e7f0'/><rect x='62' y='74' width='44' height='6' rx='3' fill='%23e8ecf3'/><rect x='62' y='90' width='52' height='6' rx='3' fill='%23e8ecf3'/><rect x='62' y='106' width='34' height='6' rx='3' fill='%23eef1f6'/><circle cx='126' cy='44' r='16' fill='%23fff' stroke='%23cfd8e6' stroke-width='2'/><path d='M120 44h12M126 38v12' stroke='%23cfd8e6' stroke-width='2' stroke-linecap='round'/></g></svg>");
+  }
+  /* §5.3s 页面级右上角主按钮（真系统「同步发票」在筛选区右上，不在表格工具栏里） */
+  .page-btn-row{display:flex;justify-content:flex-end;margin-bottom:12px;}
+  /* §5.3r 多选网格（真系统「同步采购发票」弹窗：全选 + 两列勾选框 + 每项灰色副行(CNPJ) + 可滚动） */
+  .chk-grid-wrap{width:100%;}
+  .chk-grid-hr{height:1px;background:#EBEEF5;margin:12px 0 4px;}
+  .chk-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 24px;max-height:340px;overflow-y:auto;padding-right:4px;}
+  .chk-grid::-webkit-scrollbar{width:6px;}
+  .chk-grid::-webkit-scrollbar-thumb{background:#dfe3ea;border-radius:3px;}
+  .chk-cell{display:block;padding:8px 0;cursor:pointer;}
+  .chk-cell .cg-name{font-size:14px;color:#333;}
+  .chk-cell .cg-sub{display:block;margin-left:24px;margin-top:-2px;font-size:12px;color:#a8abb2;line-height:18px;}
+  /* §上传字段(真系统「+ 上传证书」蓝色文字链)：type:'upload'·绝不能用 el-input(对象值会渲染成 [object Object]) */
+  .up-link{display:inline-flex;align-items:center;gap:3px;color:var(--el-color-primary);font-size:14px;cursor:pointer;line-height:32px;}
+  .up-link:hover{opacity:.8;}
+  /* §行内操作图标(真系统实测：色 rgba(51,99,255,.8)·尺寸 ~20px·间距 8px·hover 变实色) */
+  .row-ic{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;margin-right:8px;
+          color:rgba(51,99,255,.8);font-size:16px;cursor:pointer;border-radius:4px;line-height:1;}
+  .row-ic:hover{color:var(--el-color-primary);background:rgba(51,99,255,.08);}
+  /* §左侧状态面板(真系统「发票管理」实测：开票中/开票失败/已开票▾/异常发票·带计数·白底卡片) */
+  .has-panel{display:flex;gap:16px;align-items:flex-start;}
+  .has-panel .panel-content{flex:1;min-width:0;}
+  .status-panel{width:262px;flex-shrink:0;background:#fff;border-radius:6px;padding:8px 0 12px;}
+  .status-panel .sp-title{padding:12px 20px;font-size:15px;font-weight:600;color:#303133;}
+  .status-panel .sp-item{display:flex;align-items:center;justify-content:space-between;padding:11px 20px;font-size:14px;color:#444;cursor:pointer;}
+  .status-panel .sp-item:hover{background:#f5f7fa;}
+  .status-panel .sp-item.on{background:#eef3ff;color:var(--el-color-primary);}
+  .status-panel .sp-item.on .sp-count{color:var(--el-color-primary);}
+  .status-panel .sp-count{color:#a8abb2;font-weight:400;font-size:13px;}
+  .status-panel .sp-sub{padding-left:38px;}
+  .status-panel .sp-caret{color:#a8abb2;font-size:12px;}
+  /* §注意事项框(真系统 el-alert warning·橙底ⓘ·实测发票主体各 tab 大量使用) */
+  .tf-alert{display:flex;gap:8px;background:#fdf6ec;border-radius:4px;padding:12px 16px;margin-bottom:16px;}
+  .tf-alert-ic{font-style:normal;color:#f2ac3a;font-size:14px;line-height:22px;flex-shrink:0;}
+  .tf-alert-body{font-size:14px;color:#7d5a2a;line-height:22px;}
+  .tf-alert-body b{color:#b3762a;display:block;}
+  /* §开关规则块(真系统「高级规则」：switch + 主说明 + 灰色副说明) */
+  .fd-desc{margin-left:10px;font-size:14px;color:#444;}
+  /* 副说明必须整行（el-form-item__content 是 flex，不给 flex-basis 会挤到同一行·2026-07-12 截图逮到） */
+  .fd-sub{flex-basis:100%;width:100%;font-size:12px;color:#a8abb2;margin-top:4px;line-height:18px;}
+  /* §工作台三件套(todos / aiPanel / pipeline·2026-08-06)：ERP 首页=今天干什么 + AI 帮你判断 + 链路卡在哪 */
+  .wb-card{margin-bottom:16px;}
+  .wb-todos{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;}
+  .wb-todo{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid #EBEEF5;border-radius:6px;cursor:pointer;transition:.15s;background:#fff;}
+  .wb-todo:hover{border-color:var(--el-color-primary);box-shadow:0 2px 10px rgba(51,99,255,.10);}
+  .wb-todo-ic{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+  .wb-todo.red .wb-todo-ic{background:#FEF0F0;color:#D93026;} .wb-todo.red .wb-todo-num{color:#D93026;}
+  .wb-todo.orange .wb-todo-ic{background:#FDF6EC;color:#E6912B;} .wb-todo.orange .wb-todo-num{color:#E6912B;}
+  .wb-todo.blue .wb-todo-ic{background:#EEF3FF;color:#3363FF;} .wb-todo.blue .wb-todo-num{color:#333;}
+  .wb-todo-main{flex:1;min-width:0;}
+  .wb-todo-lb{font-size:13px;color:#606266;line-height:18px;}
+  .wb-todo-num{font-size:22px;font-weight:700;line-height:28px;}
+  .wb-todo-unit{font-size:12px;font-weight:400;color:#909399;margin-left:3px;}
+  .wb-todo-go{font-size:12px;color:var(--el-color-primary);white-space:nowrap;}
+  /* AI 面板：左问右洞察 */
+  .ai-card{margin-bottom:16px;background:linear-gradient(135deg,#F5F8FF 0%,#FFFFFF 55%);border:1px solid #DCE5FF;}
+  .ai-wrap{display:flex;gap:24px;flex-wrap:wrap;}
+  .ai-left{flex:1;min-width:320px;} .ai-right{width:360px;flex-shrink:0;}
+  .ai-title{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:#1d2b4f;}
+  .ai-badge{background:var(--el-color-primary);color:#fff;font-size:11px;font-weight:800;padding:2px 7px;border-radius:5px;letter-spacing:.5px;}
+  .ai-badge.sm{font-size:10px;padding:1px 5px;align-self:flex-start;flex-shrink:0;}
+  .ai-greet{color:#66778d;font-size:13px;margin:6px 0 12px;line-height:20px;}
+  .ai-input{display:flex;gap:10px;} .ai-input .el-input{flex:1;}
+  .ai-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+  .ai-chip{padding:5px 12px;background:#fff;border:1px solid #DCE5FF;border-radius:14px;font-size:12px;color:#3d5488;cursor:pointer;transition:.15s;}
+  .ai-chip:hover{border-color:var(--el-color-primary);color:var(--el-color-primary);}
+  .ai-answer{display:flex;gap:10px;margin-top:14px;padding:12px 14px;background:#fff;border:1px solid #DCE5FF;border-radius:6px;font-size:13px;color:#333;line-height:21px;}
+  .ai-sub{font-size:12px;color:#8793a5;margin-bottom:8px;}
+  .ai-ins{padding:10px 12px;border-radius:6px;margin-bottom:8px;cursor:pointer;font-size:13px;line-height:20px;border-left:3px solid;background:#fff;}
+  .ai-ins.red{border-color:#D93026;color:#7a2b26;background:#FEF6F6;}
+  .ai-ins.orange{border-color:#E6912B;color:#7d5a2a;background:#FDF9F2;}
+  .ai-ins.blue{border-color:#3363FF;color:#2a3f6e;background:#F6F9FF;}
+  .ai-ins-go{font-size:12px;color:var(--el-color-primary);margin-top:4px;}
+  /* 平台连接宫格 */
+  .cg-sub{font-size:14px;color:#333;margin:-2px 0 16px;}
+  .cg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(184px,1fr));gap:14px;}
+  .cg-item{border:1px solid #E4E7ED;border-radius:6px;padding:18px 14px;text-align:center;cursor:pointer;transition:.15s;background:#fff;position:relative;}
+  .cg-item:hover{border-color:var(--el-color-primary);box-shadow:0 2px 12px rgba(51,99,255,.10);}
+  .cg-item.on{border-color:#B7E3C8;}
+  .cg-logo{font-size:16px;font-weight:800;letter-spacing:-.2px;line-height:26px;border-radius:4px;padding:4px 8px;display:inline-block;}
+  .cg-note{font-size:12px;color:#909399;margin-top:8px;}
+  .cg-on{position:absolute;top:8px;right:10px;font-size:11px;color:#16af78;}
+  /* 消息中心 / 系统公告 */
+  .nt-head{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #EBEEF5;margin:-4px 0 4px;}
+  .nt-tabs{display:flex;gap:24px;}
+  .nt-tab{position:relative;padding:0 0 11px;font-size:14px;color:#606266;cursor:pointer;display:flex;align-items:center;gap:6px;}
+  .nt-tab.on{color:var(--el-color-primary);font-weight:600;box-shadow:inset 0 -2px 0 var(--el-color-primary);}
+  .nt-dot{background:#D93026;color:#fff;font-size:11px;line-height:16px;min-width:16px;padding:0 4px;border-radius:8px;text-align:center;}
+  .nt-more{font-size:12px;color:#8793a5;cursor:pointer;padding-bottom:11px;}
+  .nt-more:hover{color:var(--el-color-primary);}
+  .nt-item{display:flex;align-items:center;gap:8px;padding:11px 2px;border-bottom:1px solid #F5F7FA;cursor:pointer;font-size:14px;}
+  .nt-item:last-child{border-bottom:none;}
+  .nt-item:hover .nt-title{color:var(--el-color-primary);}
+  .nt-unread{width:6px;height:6px;border-radius:50%;background:#D93026;flex-shrink:0;}
+  .nt-tag{font-size:12px;color:#3d5488;background:#EEF3FF;border-radius:3px;padding:1px 7px;flex-shrink:0;}
+  .nt-title{color:#333;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .nt-time{color:#909399;font-size:12px;flex-shrink:0;}
+  .nt-empty{padding:26px;text-align:center;color:#909399;font-size:13px;}
+  /* 全链路流水线 */
+  .wb-pipe{display:flex;align-items:stretch;gap:4px;overflow-x:auto;}
+  .wb-pipe-step{flex:1;min-width:104px;text-align:center;padding:14px 8px;border:1px solid #EBEEF5;border-radius:6px;cursor:pointer;background:#fff;transition:.15s;}
+  .wb-pipe-step:hover{border-color:var(--el-color-primary);}
+  .wb-pipe-step.warn{border-color:#F5C6C4;background:#FEF8F8;}
+  .wb-pipe-num{font-size:22px;font-weight:700;color:#333;line-height:28px;}
+  .wb-pipe-step.warn .wb-pipe-num{color:#D93026;}
+  .wb-pipe-lb{font-size:13px;color:#606266;margin-top:2px;}
+  .wb-pipe-warn{font-size:11px;color:#D93026;margin-top:4px;}
+  .wb-pipe-arrow{align-self:center;color:#C0C4CC;font-size:18px;flex-shrink:0;}
+  /* §卡片式表格(cardMeta·2026-08-06)：真系统订单管理一条订单=一张卡（卡头通栏/异常条/明细行/卡尾备注） */
+  .ord-cards{width:100%;overflow-x:auto;}
+  .ord-cards .oc-row{display:flex;align-items:flex-start;}
+  .ord-cards .oc-thead{height:40px;align-items:center;background:#F5F7FA;color:#909399;font-size:14px;font-weight:700;border-bottom:1px solid #EBEEF5;}
+  .ord-cards .oc-sel{width:44px;flex:none;display:flex;align-items:center;justify-content:center;padding-top:2px;}
+  .ord-cards .oc-cell{flex:none;padding:0 12px;font-size:14px;line-height:23px;color:#333;word-break:break-word;}
+  .ord-cards .oc-ops{display:flex;align-items:center;gap:4px;}
+  .ord-cards .oc-card{border:1px solid #EBEEF5;border-top:none;background:#fff;}
+  .ord-cards .oc-head{display:flex;align-items:center;gap:22px;padding:9px 12px;background:#F0F2F7;font-size:14px;color:#333;}
+  .ord-cards .oc-head .oc-h{white-space:nowrap;}
+  .ord-cards .oc-alert{padding:7px 12px;margin:0 12px;background:#FEF0F0;color:#D93026;font-size:14px;line-height:20px;}
+  .ord-cards .oc-body{padding:12px 0;}
+  .ord-cards .oc-foot{display:flex;align-items:center;gap:22px;padding:9px 12px;border-top:1px solid #EBEEF5;font-size:14px;color:#333;}
+  /* §pageForm 设置卡片(2026-08-06)：真系统「设置」类页面的开关/单选/推荐徽标/编号说明 */
+  .pf-tip{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;margin-left:6px;border-radius:50%;background:#c0c4cc;color:#fff;font-size:10px;cursor:help;vertical-align:middle;}
+  .pf-badge{flex-basis:100%;width:100%;display:inline-block;margin-top:6px;padding:3px 10px;background:#fdf6ec;color:#E6912B;border-radius:4px;font-size:12px;line-height:18px;width:fit-content;}
+  .pf-lines{flex-basis:100%;width:100%;margin:8px 0 0;padding-left:18px;color:#8793a5;font-size:12px;line-height:20px;}
+  .pf-radios{display:block;width:100%;}
+  .pf-radio-row{display:block;width:100%;margin-bottom:10px;}
+  .pf-radio-row .el-radio{height:auto;margin-right:0;}
+  /* §可点单元格：蓝链(规范"可点单元格=蓝链") */
+  .gl-table .cell-link{color:#3363FF;cursor:pointer;}
+  .gl-table .cell-link:hover{text-decoration:underline;}
+  /* §4.1 表头 sticky 吸顶 + §4.2 分页 sticky 吸底（真代码 el-table.scss）*/
+  .gl-table .el-table__header-wrapper{position:sticky;top:0;z-index:8;border-bottom:1px solid #DCDFE6;}
+  .gl-table .el-table .cell{font-size:14px;}
+  /* §行下「报错 + 给出路」提示带(2026-08-19·参考真实 ERP 异常提示：不只报错，右侧给可点出路)。
+     数据：失败行写 __fail:{title,detail,way:{label,act|opens}}；装配时不动，骨架用合成整通栏行渲染。
+     way 带 act/opens=蓝色可点出路(重新开票›/验证XML›/前往绑定›)；way 不带动作(如「无需处理」)=灰字不可点。 */
+  .gl-table .el-table__row.is-failband>td{background:#fef0f0 !important;border-bottom:1px solid #fde2e2;padding:6px 0;}
+  .gl-table .el-table__row.is-failband>td .cell{padding-top:2px;padding-bottom:2px;}
+  .rf-band{display:flex;align-items:center;gap:6px;color:#f56c6c;font-size:13px;line-height:1.6;padding-right:12px;}
+  .rf-band .rf-ico{flex:none;font-size:14px;line-height:1;}
+  .rf-band .rf-title{font-weight:600;color:#f56c6c;flex:none;}
+  .rf-band .rf-detail{color:#f56c6c;white-space:nowrap;}
+  /* 出路紧跟报错文字·左侧成组(错误 | 出路)：表格宽+固定操作列时，右对齐会跑出可视区被盖住，故不用 margin-left:auto */
+  .rf-band .rf-way{margin-left:14px;padding-left:14px;border-left:1px solid #f7b6b6;flex:none;color:#3363FF;cursor:pointer;font-weight:600;white-space:nowrap;}
+  .rf-band .rf-way.rf-none{color:#909399;cursor:default;font-weight:400;}
+  /* §提示带分级(v3.6)：默认红=已经出事了；lv-warn 橙=该干活了(还没造成既成事实)。
+     行底色也跟着换，否则橙字配红底不成立。 */
+  .rf-band.lv-warn,.rf-band.lv-warn .rf-title,.rf-band.lv-warn .rf-detail{color:#E6A23C;}
+  .rf-band.lv-warn .rf-way{border-left-color:#f3d19e;}
+  .gl-table .el-table__row.is-failband.lv-warn>td{background:#fdf6ec !important;border-bottom:1px solid #faecd8;}
+  .pagination-container{position:sticky;bottom:0;z-index:11;padding:12px 24px;background:#fff;border-top:1px solid #DCDFE6;display:flex;justify-content:flex-end;align-items:center;}
+  .pagination-container .el-pagination{justify-content:flex-end;}
+  /* ═══ 缺口 A-D（2026-07-11 接管扩展）：状态页签 / 编辑弹窗分块 / 详情整页 ═══ */
+  /* §状态页签(列表内·出库/入库/待处理等)：底 #F0F2F5、选中白底+边框#E4E7ED+#3363FF(同顶部页签规范·真代码 #tabsBox) */
+  .status-tabs{display:flex;gap:2px;background:#F0F2F5;border-radius:8px 8px 0 0;padding:4px 4px 0;margin:-4px 0 12px;flex-wrap:wrap;}
+  .status-tabs .stab{height:34px;line-height:34px;padding:0 16px;font-size:13px;color:#909399;cursor:pointer;border-radius:8px 8px 0 0;display:flex;align-items:center;gap:6px;}
+  .status-tabs .stab.on{background:#fff;border:1px solid #E4E7ED;border-bottom:none;color:#3363FF;font-weight:500;}
+  .status-tabs .stab-badge{background:#eef1f5;color:#5b6b82;border-radius:8px;padding:0 7px;font-size:11px;line-height:16px;}
+  .status-tabs .stab.on .stab-badge{background:#ebefff;color:#3363FF;}
+  /* §编辑弹窗表单分块(form-header__title + 列网格·真代码 form-box) */
+  .form-sec{margin-bottom:18px;} .form-sec-title{font-size:14px;font-weight:600;color:#333;border-bottom:1px solid #E4E7ED;padding-bottom:10px;margin-bottom:16px;}
+  .form-grid{display:grid;gap:0 20px;} .form-grid.cols-1{grid-template-columns:1fr;} .form-grid.cols-2{grid-template-columns:1fr 1fr;} .form-grid.cols-3{grid-template-columns:1fr 1fr 1fr;} .form-grid.cols-4{grid-template-columns:1fr 1fr 1fr 1fr;}
+  .form-grid .el-form-item{margin-bottom:16px;} .form-grid .el-form-item.span-2{grid-column:1/-1;}
+  .fdlg .el-input,.fdlg .el-select,.fdlg .el-date-editor{width:100%;}
+  /* §详情/编辑整页 + 左侧锚点栏(真代码 taxAnchors) */
+  .detail-view{display:flex;gap:14px;}
+  .detail-anchors{width:150px;flex-shrink:0;background:#fff;border:1px solid var(--border);border-radius:11px;padding:8px 0;position:sticky;top:70px;align-self:flex-start;}
+  .detail-anchors .da{padding:10px 18px;cursor:pointer;color:#555;font-size:13px;} .detail-anchors .da.on{color:#3363FF;font-weight:600;background:rgba(51,99,255,.06);border-right:2px solid #3363FF;}
+  .detail-body{flex:1;} .detail-topbar{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+  .detail-sec{background:#fff;border:1px solid var(--border);border-radius:11px;padding:16px 20px;margin-bottom:12px;}
+  /* §整页顶部操作条(v1.7)：按钮靠右，与标题同一行 */
+  .dv-topbtns{margin-left:auto;display:inline-flex;gap:10px;}
+  .detail-topbar{display:flex;align-items:center;gap:12px;}
+  .detail-footer{position:sticky;bottom:0;background:#fff;border-top:1px solid #DCDFE6;padding:12px 20px;text-align:center;margin:0 -20px -16px;border-radius:0 0 11px 11px;}
+  /* §8.3 状态步骤条(过程型单据查看页) */
+  .dv-steps{display:flex;align-items:center;background:#fff;border:1px solid var(--border);border-radius:11px;padding:18px 28px;margin-bottom:12px;}
+  .dv-step{display:flex;align-items:center;gap:10px;}
+  .dv-step-ic{width:26px;height:26px;border-radius:50%;border:2px solid #3363FF;color:#3363FF;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex:none;}
+  .dv-step.done .dv-step-ic,.dv-step.current .dv-step-ic{background:#3363FF;color:#fff;}
+  .dv-step.pending .dv-step-ic{border-color:#DCDFE6;color:#909399;}
+  .dv-step-lb{font-size:14px;color:#303133;font-weight:500;}
+  .dv-step.pending .dv-step-lb{color:#909399;}
+  .dv-step-sub{font-size:12px;color:#909399;line-height:1.5;}
+  .dv-step-line{flex:1;height:2px;background:#3363FF;margin:0 16px;}
+  .dv-step-line.pending{background:#DCDFE6;}
+  /* §富外壳：多选工具条(已选:N + 新增/批量) + 菜单「新」徽标(对齐旧手搓版) */
+  .sel-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .sel-toolbar .sel-count{font-size:12px;color:#909399;margin-right:2px;}
+  /* 菜单角标（如「新」）：淡橙、细边、小圆角——克制，不抢主色 */
+  .menu-badge{display:inline-block;margin-left:6px;font-size:10px;line-height:15px;padding:0 5px;border-radius:9px;
+              background:#FFF3E6;color:#E6912B;border:1px solid #FFE1BF;vertical-align:middle;font-weight:600;letter-spacing:.2px;}
+  /* §标题旁帮助图标：常驻长文收进 hover（页面干净·文案不丢） */
+  .help-q{display:inline-flex;align-items:center;gap:3px;color:#8793a5;font-size:12px;line-height:1;margin-left:10px;cursor:help;vertical-align:middle;transition:.15s;font-weight:400;}
+  .help-q:hover{border-color:#3363FF;color:#3363FF;}
+  .list-help-pop{max-width:540px !important;color:#5a6472 !important;font-size:13px !important;}
+</style>
+</head>
+<body>
+<div id="app">
+ <el-config-provider :locale="epLocale">
+  <div class="topbar">
+    <div class="brand"><span class="brand-logo">@@LOGO@@</span><span>@@TITLE@@</span></div>
+    <!-- §顶部主菜单（真系统 TF 范式·单行）：模块(一级菜单)直接排在顶栏里，紧挨 logo，悬停展开二级/三级多列大菜单。
+         多系统时先放系统切换按钮；单系统只放模块（2026-07-26 修：原来把模块丢到第二行 .modnav，不符真系统单行范式） -->
+    <!-- §顶栏：多系统→只放系统切换(WMS/OMS)，模块放到下方第二行 .modnav；单系统→模块直接排在顶栏单行(真系统范式) -->
+    <div class="topnav">
+      <template v-if="systems.length>1">
+        <div v-for="s in systems" :key="s.key" class="tn"><button class="tn-btn" :class="{active:currentSystem===s.key}" @click="setSys(s.key)">{{ L(s.label) }}</button></div>
+      </template>
+      <template v-else>
+        <div v-for="(it,i) in nav" :key="'m'+i" class="tn">
+          <button class="tn-btn" :class="{active:pageIn(it,currentPage)}" @click="goTopItem(it)">{{ L(it.group||it.label) }}<span v-if="it.group" class="tn-caret">▾</span></button>
+          <!-- 有子分组(三级菜单) → 加 .tn-mega 走多列横排（真系统悬停「设置」= 基础/订单/库存/授权/物流 五列并排）；
+               只有叶子项 → 保持单列窄下拉。2026-08-06 修：原来恒为单列，六个分组竖成一长条，与真系统不符。 -->
+          <div v-if="it.group && it.items && it.items.length" class="tn-drop"
+               :class="{'tn-mega': it.items.some(s=>s&&s.group)}">
+            <template v-for="sub in it.items">
+              <div v-if="sub && sub.group" class="tn-col"><div class="tn-col-title">{{ L(sub.group) }}</div><div v-for="leaf in sub.items" :key="leaf[0]" class="tn-sub" :class="{on:currentPage===leaf[0]}" @click="go(leaf[0])">{{ L(leaf[1]) }}</div></div>
+              <div v-else :key="sub[0]" class="tn-sub" :class="{on:currentPage===sub[0]}" @click="go(sub[0])">{{ L(sub[1]) }}</div>
+            </template>
+          </div>
+        </div>
+      </template>
+    </div>
+    <div class="right">
+      <!-- 多系统时下面这组工具(语言/菜单模式/消息/头像)移到第二行 .modnav 右侧(与模块导航对齐)；单系统留在顶栏 -->
+      <template v-if="systems.length<=1">
+      <el-dropdown v-if="locales.length>1" trigger="click" @command="setLang">
+        <span class="langsw">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3.5 9h17M3.5 15h17M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+          <span>{{ localeName(lang) }}</span>
+          <svg class="ic-caret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 4.5 6 7.5l3-3"/></svg>
+        </span>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item v-for="lc in locales" :key="lc" :command="lc" :disabled="lc===lang">{{ localeName(lc) }}</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+      <!-- §菜单模式切换（顶部导航 ⇄ 左侧栏）：位于语言切换器与标注开关之间；选择记忆在 localStorage -->
+      <div class="menusw">
+        <el-tooltip :content="T('menuTop')" placement="bottom">
+          <button class="ms" :class="{on:menuMode==='top'}" @click="setMenuMode('top')">
+            <svg class="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M2.5 8h15"/></svg>
+          </button>
+        </el-tooltip>
+        <el-tooltip :content="T('menuSide')" placement="bottom">
+          <button class="ms" :class="{on:menuMode==='side'}" @click="setMenuMode('side')">
+            <svg class="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M8 3.5v13"/></svg>
+          </button>
+        </el-tooltip>
+      </div>
+      <!-- §消息图标(真系统 🔔 + 红色角标)：点开是消息中心（原型级 mock） -->
+      <el-tooltip :content="T('msgs')" placement="bottom">
+        <span class="tb-bell" @click="msg(T('msgs'))">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 6-2 7-2 7h16s-2-1-2-7"/><path d="M10.5 19a2 2 0 0 0 3 0"/></svg>
+          <span v-if="notifCount" class="bell-dot">{{ notifCount>99?'99+':notifCount }}</span>
+        </span>
+      </el-tooltip>
+      <!-- §用户头像（真系统：账号名 + 圆形头像） -->
+      <el-dropdown trigger="click">
+        <span class="tb-user">
+          <span class="u-name">{{ userName }}</span>
+          <span class="u-avatar">{{ (userName||'U').slice(0,1).toUpperCase() }}</span>
+        </span>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item disabled>{{ userName }}</el-dropdown-item>
+            <el-dropdown-item divided @click="msg(T('profile'))">{{ T('profile') }}</el-dropdown-item>
+            <el-dropdown-item @click="msg(T('logout'))">{{ T('logout') }}</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+      </template>
+      <div class="anno-sw">
+        <span>{{ T('anno') }}</span><el-switch v-model="annoOn" @change="onAnnoToggle"></el-switch>
+        <template v-if="annoOn">
+          <span class="anno-author-only" style="width:1px;height:15px;background:rgba(255,255,255,.25);margin:0 2px;flex-shrink:0"></span>
+          <el-button class="anno-author-only" size="small" type="primary" plain @click="genPRD">📋 {{ T('copyScoped') }}</el-button>
+          <el-button class="anno-author-only" size="small" type="primary" plain @click="annoShare">📤 {{ T('exportShare') }}</el-button>
+          <el-button class="anno-author-only" size="small" type="warning" plain @click="annoDevkit" title="导出对接料喂你自己的AI生成任意栈代码">📦 {{ T('exportDevkit') }}</el-button>
+          <el-button class="anno-author-only" size="small" type="success" plain @click="annoGenCode" title="Proenga直接生成前后端骨架代码(默认栈)">🚀 {{ T('genCode') }}</el-button>
+          <el-button class="anno-author-only" size="small" plain @click="annoClear">🗑 {{ T('clear') }}</el-button>
+          <el-button class="anno-author-only" size="small" type="success" plain @click="annoRestore">↩ {{ T('restore') }}</el-button>
+        </template>
+      </div>
+    </div>
+  </div>
+  <!-- §第二行模块导航（多系统时·系统切换在上方顶栏，模块横排在此行 + 当前系统提示）·仅顶部菜单模式 -->
+  <div class="modnav" v-show="systems.length>1">
+    <template v-if="menuMode==='top'"><div v-for="(it,i) in nav" :key="i" class="mn">
+      <div class="mn-btn" :class="{on:pageIn(it,currentPage)}" @click="goTopItem(it)">{{ L(it.group||it.label) }}<span v-if="it.group" class="mn-caret">▾</span></div>
+      <div v-if="it.group && it.items && it.items.length" class="mn-drop">
+        <template v-for="sub in it.items">
+          <div v-if="sub && sub.group" class="mn-grp"><div class="mn-grp-title">{{ L(sub.group) }}</div><div v-for="leaf in sub.items" :key="leaf[0]" class="mn-sub" :class="{on:currentPage===leaf[0]}" @click="go(leaf[0])">{{ L(leaf[1]) }}</div></div>
+          <div v-else :key="sub[0]" class="mn-sub" :class="{on:currentPage===sub[0]}" @click="go(sub[0])">{{ L(sub[1]) }}</div>
+        </template>
+      </div>
+    </div></template>
+    <!-- §多系统时，语言/菜单模式/消息/头像 这组工具从顶栏移到此行右侧，与模块导航对齐 -->
+    <div class="mn-right">
+      <span class="mn-cur">{{ flowTip }}</span>
+      <el-dropdown v-if="locales.length>1" trigger="click" @command="setLang">
+        <span class="langsw">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3.5 9h17M3.5 15h17M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+          <span>{{ localeName(lang) }}</span>
+          <svg class="ic-caret" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 4.5 6 7.5l3-3"/></svg>
+        </span>
+        <template #dropdown><el-dropdown-menu><el-dropdown-item v-for="lc in locales" :key="lc" :command="lc" :disabled="lc===lang">{{ localeName(lc) }}</el-dropdown-item></el-dropdown-menu></template>
+      </el-dropdown>
+      <div class="menusw">
+        <el-tooltip :content="T('menuTop')" placement="bottom"><button class="ms" :class="{on:menuMode==='top'}" @click="setMenuMode('top')"><svg class="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M2.5 8h15"/></svg></button></el-tooltip>
+        <el-tooltip :content="T('menuSide')" placement="bottom"><button class="ms" :class="{on:menuMode==='side'}" @click="setMenuMode('side')"><svg class="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M8 3.5v13"/></svg></button></el-tooltip>
+      </div>
+      <el-tooltip :content="T('msgs')" placement="bottom"><span class="tb-bell" @click="msg(T('msgs'))"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 6-2 7-2 7h16s-2-1-2-7"/><path d="M10.5 19a2 2 0 0 0 3 0"/></svg><span v-if="notifCount" class="bell-dot">{{ notifCount>99?'99+':notifCount }}</span></span></el-tooltip>
+      <el-dropdown trigger="click">
+        <span class="tb-user"><span class="u-name">{{ userName }}</span><span class="u-avatar">{{ (userName||'U').slice(0,1).toUpperCase() }}</span></span>
+        <template #dropdown><el-dropdown-menu><el-dropdown-item disabled>{{ userName }}</el-dropdown-item><el-dropdown-item divided @click="msg(T('profile'))">{{ T('profile') }}</el-dropdown-item><el-dropdown-item @click="msg(T('logout'))">{{ T('logout') }}</el-dropdown-item></el-dropdown-menu></template>
+      </el-dropdown>
+    </div>
+  </div>
+  <div class="pagetabs" :class="{'pt-offset':menuMode==='side' && systems.length>1}">
+    <el-tabs v-model="currentPage" type="card" @tab-remove="closeTab" @tab-change="go">
+      <el-tab-pane v-for="t in openTabs" :key="t" :name="t" :label="metaOf(t)[0]" :closable="t!==homePage"></el-tab-pane>
+    </el-tabs>
+  </div>
+  <!-- §双菜单模式：menuMode='top' → 菜单在顶栏(无侧栏·内容全宽)；menuMode='side' → 左侧栏(经典B端) -->
+  <div style="display:flex">
+    <aside v-if="menuMode==='side'" class="sidebar" :class="{'sb-multi':systems.length>1}">
+      <el-menu class="sidemenu" :default-active="currentPage" @select="go">
+        <template v-for="it in nav">
+          <el-menu-item v-if="!it.group" :key="it.id" :index="it.id">{{ L(it.label) }}<span v-if="it.badge" class="menu-badge">{{ L(it.badge) }}</span></el-menu-item>
+          <el-sub-menu v-else :key="K(it.group)" :index="K(it.group)">
+            <template #title>{{ L(it.group) }}<span v-if="it.badge" class="menu-badge">{{ L(it.badge) }}</span></template>
+            <!-- §三级菜单（2026-07-26）：组内的项若本身是 {group,items} 则再嵌一层 el-sub-menu；否则是叶子页 [id,label] -->
+            <template v-for="sub in it.items">
+              <el-sub-menu v-if="sub && sub.group" :key="K(sub.group)" :index="K(sub.group)">
+                <template #title>{{ L(sub.group) }}</template>
+                <el-menu-item v-for="leaf in sub.items" :key="leaf[0]" :index="leaf[0]">{{ L(leaf[1]) }}<span v-if="leaf[2]&&leaf[2].badge" class="menu-badge">{{ L(leaf[2].badge) }}</span></el-menu-item>
+              </el-sub-menu>
+              <el-menu-item v-else :key="sub[0]" :index="sub[0]">{{ L(sub[1]) }}<span v-if="sub[2]&&sub[2].badge" class="menu-badge">{{ L(sub[2].badge) }}</span></el-menu-item>
+            </template>
+          </el-sub-menu>
+        </template>
+      </el-menu>
+    </aside>
+    <main class="main" :class="{'has-side': menuMode==='side'}">
+      <div class="content">
+        <!-- §详情/编辑整页(缺口C detailView)：detailData 非空 → 顶掉列表整页展示；左锚点栏 + 分块表单 + 底部保存/返回 -->
+        <div v-if="detailData" class="detail-view" :data-annotation="ak('详情')">
+          <div v-if="detailData.anchors && menuMode!=='side'" class="detail-anchors">
+            <div v-for="(an,ai) in detailData.anchors" :key="K(an.key)" class="da" :class="{on:(activeAnchor||(detailData.anchors[0]&&K(detailData.anchors[0].key)))===K(an.key)}" @click="gotoAnchor(K(an.key))">{{ L(an.label) }}</div>
+          </div>
+          <div class="detail-body">
+            <!-- §整页顶部操作条(v1.7)：detailData.btnPos==='top' → footerBtns 渲染在标题右侧(照 某真实业务系统 退票编辑页)。
+                 不写 btnPos 时此块不出现，按钮仍在底部固定条，与 v1.6 逐字一致。 -->
+            <div class="detail-topbar"><el-button size="small" @click="closeDetail">‹ {{ T('back') }}</el-button><b style="font-size:15px">{{ L(detailData.title) }}</b>
+              <span v-if="detailData.btnPos==='top' && detailData.footerBtns" class="dv-topbtns">
+                <el-button v-for="(b,bi) in detailData.footerBtns" :key="bi" size="small" :type="b.type||'default'" @click="detailAct(b)">{{ L(b.label) }}</el-button>
+              </span>
+            </div>
+            <!-- §8.3 过程型单据查看页 状态步骤条：detailData.statusSteps=[{label,by,time,state:done|current|pending}] -->
+            <div v-if="detailData.statusSteps" class="dv-steps">
+              <template v-for="(st,si) in detailData.statusSteps" :key="si">
+                <div class="dv-step" :class="st.state||'done'">
+                  <div class="dv-step-ic">{{ (st.state==='pending')?(si+1):'✓' }}</div>
+                  <div class="dv-step-tx"><div class="dv-step-lb">{{ L(st.label) }}</div><div v-if="st.by" class="dv-step-sub">{{ L(st.by) }}</div><div v-if="st.time" class="dv-step-sub">{{ st.time }}</div></div>
+                </div>
+                <div v-if="si < detailData.statusSteps.length-1" class="dv-step-line" :class="{pending:(detailData.statusSteps[si+1].state==='pending')}"></div>
+              </template>
+            </div>
+            <!-- §详情页 iframe（把交互编辑器等自包含页当"新增/编辑"页嵌入·2026-07-26）：detailData.iframeB64 有值时整块渲染 iframe，不走 sections -->
+            <iframe v-if="detailData.iframeB64" :srcdoc="b64page(detailData.iframeB64)" style="width:100%;height:calc(100vh - 215px);border:none;background:#fff;border-radius:6px" title="editor"></iframe>
+            <template v-else>
+            <div v-for="(sec,si) in detailData.sections" :key="si" class="detail-sec" :id="'da-'+K(sec.anchor||si)">
+              <!-- §注意事项框(真系统 el-alert warning·橙底ⓘ)：sec.alert = "单条" 或 ["条1","条2"] -->
+              <div v-if="sec.alert" class="tf-alert"><i class="tf-alert-ic">ⓘ</i><div class="tf-alert-body"><b>{{ T('noticeTitle') }}</b><div v-for="(ln,li) in (Array.isArray(sec.alert)?sec.alert:[sec.alert])" :key="li">{{ L(ln) }}</div></div></div>
+              <!-- §标题行内嵌按钮(v2.9)：sec.titleBtn={label,act} → 标题与按钮同一行（02 图「退货概览 ⟳计算」） -->
+              <div v-if="sec.title" class="form-sec-title sec-title-row">
+                <span>{{ L(sec.title) }}</span>
+                <el-button v-if="sec.titleBtn" size="small" text type="primary" class="sec-title-btn"
+                           @click="sec.titleBtn.act==='recalcReturn'?recalcReturn():fireBtn(sec.titleBtn)">{{ L(sec.titleBtn.label) }}</el-button>
+              </div>
+              <!-- §区块内页签(v1.3·2026-08-26)：sec.tabs=[{label, table?|fields?, cols?}] → 同一卡片内左右切换
+                   （详情页「明细 / 操作日志」通用范式）。不写 tabs 时 panes=[sec]，两个 component 退化为 div，
+                   渲染与旧版逐字一致 —— 结构上让「加了页签能力反而改坏老原型」不可能发生。 -->
+              <component :is="secIsTabs(sec)?'el-tabs':'div'" v-bind="secTabsBind(sec,si)" :class="secIsTabs(sec)?'dv-sec-tabs':''">
+              <component :is="secIsTabs(sec)?'el-tab-pane':'div'" v-for="(pn,pi) in secPanes(sec)" :key="pi" v-bind="secPaneBind(sec,pn,pi)">
+              <!-- §行内可编辑表格：pn.table.addBtn 顶部按钮；单元格 {ctrl:…} 走真 EP 组件 -->
+              <!-- §表格上方小标题（如「排除客户范围」），在按钮前 -->
+              <div v-if="pn.table && pn.table.label" style="font-weight:600;color:#333;font-size:13px;margin:2px 0 10px">{{ tbLabel(pn.table) }}</div>
+              <!-- §表格顶部按钮：带 addOpens 时点击弹出指定弹窗（如「选择客户」多选弹窗）；否则默认加一空行 -->
+              <el-button v-if="pn.table && pn.table.addBtn" size="small" type="primary" plain style="margin-bottom:12px" @click="pn.table.addOpens ? (dlgRow=null, dialogName=pn.table.addOpens) : addTableRow(pn.table)">{{ L(pn.table.addBtn) }}</el-button>
+              <!-- §表格右上搜索(真系统退货管理「产品标题」搜索)：pn.table.search=占位串 → 出搜索框，按首列文本过滤 -->
+              <!-- §表格右上搜索(v2.9)：search 可写字符串(纯搜索框)，也可写 {fields:[…],ph:''} → [字段▾][搜索框⌕]（02 图「产品标题▾ + 搜索」） -->
+              <div v-if="pn.table && pn.table.search" style="display:flex;justify-content:flex-end;margin-bottom:10px">
+                <div v-if="pn.table.search.fields" class="combo-filter combo-2">
+                  <el-select v-model="dvSearchField" class="combo-left" :placeholder="L(pn.table.search.fields[0])"><el-option v-for="o in pn.table.search.fields" :key="K(o)" :label="L(o)" :value="K(o)"></el-option></el-select>
+                  <el-input v-model="dvSearch" class="combo-mid" :placeholder="L(pn.table.search.ph||'')"><template #suffix><span class="combo-search-ic">⌕</span></template></el-input>
+                </div>
+                <el-input v-else v-model="dvSearch" size="small" clearable style="width:300px" :placeholder="L(pn.table.search)"><template #prefix><span style="color:#a8abb2">⌕</span></template></el-input>
+              </div>
+              <el-table v-if="pn.table" :data="dvVisRows(pn.table)" border size="small">
+                <el-table-column v-if="pn.table.radio" :label="L(pn.table.radio)" width="110"><template #default="{row}"><el-radio v-model="detailRadio" :value="row[0]" :label="row[0]"><span></span></el-radio></template></el-table-column>
+                <el-table-column v-for="(col,ci) in pn.table.columns" :key="ci" :min-width="(col&&col.width)||undefined" :width="(col&&col.headCheck)?52:undefined" :class-name="(col&&col.wrap)?'cell-wrap-col':''">
+                  <!-- §列头「批量编辑」(真系统退货管理·带*列支持批量设置)：列写 {label,bulk:true} → 表头出蓝色「批量编辑」，点→输入一次·全行套用 -->
+                  <!-- §表头全选框(v2.9)：列写 {headCheck:true} → 表头渲染半选态方框（02 图表头第一格 ▣） -->
+                  <template #header><el-checkbox v-if="col&&col.headCheck" :indeterminate="dvHeadState(pn.table)==='part'" :model-value="dvHeadState(pn.table)==='all'" @change="v=>dvHeadToggle(pn.table,v)"></el-checkbox><span v-else>{{ L((col&&col.label)||col) }}</span><el-tooltip v-if="col&&col.help" :content="L(col.help)" placement="top" effect="dark" popper-class="th-tip-wide"><span style="margin-left:4px;cursor:help;color:#a8abb2;font-size:12px;border:1px solid #c0c4cc;border-radius:50%;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;line-height:1">?</span></el-tooltip><a v-if="col&&col.bulk" style="color:#3363FF;font-size:12px;font-weight:400;margin-left:8px;cursor:pointer" @click="bulkEdit(pn.table,ci)">{{ T('bulkEdit') }}</a></template>
+                  <template #default="{row}">
+                    <template v-if="isCtrl(row[ci])">
+                      <template v-if="row[ci].ctrl==='select'"><el-select v-model="row[ci].value" size="small" style="width:100%"><el-option v-for="o in (row[ci].options||[])" :key="K(o)" :label="L(o)" :value="K(o)"></el-option></el-select><div v-if="row[ci].sub" class="cell-sub">{{ L(row[ci].sub) }}</div></template>
+                      <div v-else-if="row[ci].ctrl==='number'" style="display:flex;align-items:center;gap:4px"><el-input v-model="row[ci].value" size="small" style="width:72px" @input="autoRecalc(pn&&pn.table)"></el-input><span v-if="row[ci].suffix" style="color:#909399;font-size:13px">{{ row[ci].suffix }}</span></div>
+                      <el-checkbox v-else-if="row[ci].ctrl==='checkbox'" v-model="row[ci].value" @change="autoRecalc(pn&&pn.table)">{{ L(row[ci].text||'') }}</el-checkbox>
+                      <el-link v-else-if="row[ci].ctrl==='del'" type="danger" :underline="false" @click="msg(T('deleted'))">🗑</el-link>
+                <span v-else-if="row[ci].ctrl==='link'"><el-link v-for="(lk,li) in (Array.isArray(row[ci].links)?row[ci].links:[{text:row[ci].text}])" :key="li" type="primary" :underline="false" style="margin-right:12px" @click="(canFire(row[ci])||canFire(lk)) ? fireBtn(Object.assign({},row[ci],lk), row) : msg(L(lk.text))">{{ L(lk.text) }}</el-link></span>
+                      <el-input v-else v-model="row[ci].value" size="small" :placeholder="L(row[ci].ph||'')"></el-input>
+                    </template>
+                    <span v-else v-html="cell(row[ci])"></span>
+                  </template>
+                </el-table-column>
+              </el-table>
+              <el-form v-else label-position="top" size="small" class="form-grid" :class="'cols-'+(pn.cols||2)">
+                <el-form-item v-for="(fd,fi) in pn.fields" :key="fi" :required="!!fd.required" :class="{'span-2':fd.span===2}">
+                  <!-- §标签旁 ⓘ(v3.0)：字段写 help:'…' → 标签后跟一个问号 tooltip（02 图「退货产品金额 ⓘ」）。
+                       与 fd.hint（控件下方灰字）是两回事，可并存。 -->
+                  <template v-if="!(fd.type==='button'||fd.type==='html')" #label>
+                    <span>{{ L(fd.label) }}</span>
+                    <el-tooltip v-if="fd.help" :content="L(fd.help)" placement="top" effect="dark" popper-class="th-tip-wide">
+                      <span class="fd-help">?</span>
+                    </el-tooltip>
+                  </template>
+                  <el-select v-if="fd.type==='select'" v-model="fd.value" :multiple="!!fd.multiple" :placeholder="L(fd.ph||'')" :disabled="!!fd.disabled"><el-option v-for="o in (fd.options||[])" :key="K(o)" :label="L(o)" :value="K(o)" :disabled="!!optDisabledReason(fd,o)"><span>{{ L(o) }}</span><span v-if="optDisabledReason(fd,o)" class="opt-why">{{ optDisabledReason(fd,o) }}</span></el-option></el-select>
+                  <el-date-picker v-else-if="fd.type==='date'" v-model="fd.value" type="date"></el-date-picker>
+                  <template v-else-if="fd.type==='switch'"><el-switch v-model="fd.value"></el-switch><span v-if="fd.desc" class="fd-desc">{{ L(fd.desc) }}</span><div v-if="fd.sub" class="fd-sub">{{ L(fd.sub) }}</div></template>
+                  <!-- textarea 支持字数统计（真系统「补充信息(Fisco)」0/200） -->
+                  <el-input v-else-if="fd.type==='textarea'" v-model="fd.value" type="textarea" :rows="2" :maxlength="fd.max" :show-word-limit="!!fd.max"></el-input>
+                  <el-input v-else-if="fd.type==='password'" v-model="fd.value" type="password" show-password :placeholder="L(fd.ph||'')"></el-input>
+                  <span v-else-if="fd.type==='upload'" class="up-link" @click="msg(L(fd.label))">＋ {{ L(fd.upText||fd.label) }}</span>
+                  <div v-else-if="fd.type==='readonly'" style="color:#333;padding-top:6px">{{ L(fd.value) }}</div>
+                  <!-- §行内按钮(真系统退货概览「计算」)：{type:'button',act:'recalcReturn'} → 重算退货概览统计 -->
+                  <el-button v-else-if="fd.type==='button'" size="small" :type="fd.btnType||'default'" :disabled="!!fd.disabled" @click="fd.act==='recalcReturn'?recalcReturn():fireBtn(fd)">{{ L(fd.label) }}</el-button>
+          <!-- §富HTML预览（打印发票 DANFE 预览用）：type:'html' → v-html 渲染整段单据，可滚动 -->
+          <div v-else-if="fd.type==='html'" v-html="L(fd.value)" :style="fd.card?'':'max-height:62vh;overflow:auto;border:1px solid #e4e7ed;border-radius:4px;background:#fff'"></div>
+                  <!-- §选单据(v1.4)：type:'pick' → 只读输入 + 右侧蓝色「选择」文字链，点开 fd.opens 指定的弹窗。
+                       写法：{type:'pick', label:'采购入库单', ph:'请选择', pickText:'选择', opens:'pickInbound'} -->
+                  <div v-else-if="fd.type==='pick'" style="display:flex;align-items:center;gap:14px;width:100%">
+                    <el-input v-model="fd.value" readonly :placeholder="L(fd.ph||'')" :disabled="!!fd.disabled" style="flex:1"></el-input>
+                    <a class="fd-pick" @click="fd.opens ? (dlgRow=null, dialogName=fd.opens) : msg(L(fd.label))">{{ L(fd.pickText||T('select')||'选择') }}</a>
+                  </div>
+                  <!-- §5.3o 普通输入：支持【前缀标签】(真系统「交易性质」= [出库]+输入) 与【字数统计】(39/60)
+                       写法：{ label:"交易性质", prefix:"出库", max:60 } / { label:"税种名称", max:1000 } -->
+                  <el-input v-else v-model="fd.value" :placeholder="L(fd.ph||'')" :disabled="!!fd.disabled"
+                            :maxlength="fd.max" :show-word-limit="!!fd.max">
+                    <template v-if="fd.prefix" #prepend>{{ L(fd.prefix) }}</template>
+                  </el-input>
+                  <div v-if="fd.hint" class="fd-sub">{{ L(fd.hint) }}</div>
+                </el-form-item>
+              </el-form>
+              </component>
+              </component>
+            </div>
+            </template>
+            <!-- 底部固定条（§8.0/§5.3p 命名铁律·按场景，别一刀切）：
+                 · 只读态(detailData.readonly=true·「查看」) → 居中单个 [返回]，没有可提交的东西
+                 · 标准新增/编辑（默认） → [取消][保存]（真系统「新增商品」2026-07-26 DOM 实测。曾误当"整页一律提交"致漂移，已焊死默认=保存）
+                 · 设置/配置类整页 → 页面数据写 detailData.okText:'提交' 覆盖成 [取消][提交]（税种详情/发票主体设置 实测）
+                 · 向导/多按钮 → 用 detailData.footerBtns 完全自定义（继续/上一步/保存并生成…） -->
+            <div v-if="detailData.btnPos!=='top'" class="detail-footer">
+              <!-- §整页向导自定义底部按钮（关闭/保存并生成/上一步/保存&入库/保存&采购/开票） -->
+              <template v-if="detailData.footerBtns"><el-button v-for="(b,bi) in detailData.footerBtns" :key="bi" :type="b.type||'default'" @click="detailAct(b)">{{ L(b.label) }}</el-button></template>
+              <template v-else-if="detailData.readonly"><el-button type="primary" @click="closeDetail">{{ T('back') }}</el-button></template>
+              <template v-else><el-button @click="closeDetail">{{ T('cancel') }}</el-button><el-button type="primary" @click="detailSave">{{ detailData.okText ? L(detailData.okText) : T('save') }}</el-button></template>
+            </div>
+          </div>
+        </div>
+        <template v-if="!detailData">
+        <!-- §左侧状态面板(真系统「发票管理」实测：开票中/开票失败/已开票▾(近期·历史)/异常发票·带计数)；有则页面变「左面板+右内容」两栏 -->
+        <div :class="{'has-panel': !!cfg.statusPanel}">
+        <aside v-if="cfg.statusPanel" class="status-panel" :data-annotation="ak('状态面板')">
+          <div class="sp-title">{{ L(cfg.statusPanel.title) }}</div>
+          <template v-for="(it,i) in (cfg.statusPanel.items||[])">
+            <div v-if="!it.group" :key="'i'+i" class="sp-item" :class="{on:curPanel===K(it.key)}" @click="goPanel(K(it.key))">
+              <span>{{ L(it.label) }}</span><b class="sp-count">{{ it.count }}</b>
+            </div>
+            <div v-else :key="'g'+i" class="sp-group">
+              <div class="sp-item sp-grouphead" @click="panelOpen[K(it.group)]=!panelOpen[K(it.group)]"><span>{{ L(it.group) }}</span><span class="sp-caret">{{ panelOpen[K(it.group)]===false ? '›' : '⌄' }}</span></div>
+              <div v-show="panelOpen[K(it.group)]!==false">
+                <div v-for="(sub,si) in (it.items||[])" :key="si" class="sp-item sp-sub" :class="{on:curPanel===K(sub.key)}" @click="goPanel(K(sub.key))">
+                  <span>{{ L(sub.label) }}</span><b class="sp-count">{{ sub.count }}</b>
+                </div>
+              </div>
+            </div>
+          </template>
+        </aside>
+        <div :class="{'panel-content': !!cfg.statusPanel}">
+        <!-- §自定义页（2026-07-25）：cfg.iframeB64 = base64(完整自包含 HTML)。用 iframe srcdoc 隔离渲染，
+             其自带 CSS/JS 完全独立、不污染骨架，交互原样运行。适合移植高度定制的交互页（如计费试算器）。 -->
+        <iframe v-if="cfg.iframeB64" :srcdoc="b64page(cfg.iframeB64)" style="width:100%;height:calc(100vh - 170px);border:none;background:#fff;border-radius:6px" title="embed"></iframe>
+        <div v-if="cfg.banner" class="new-banner">✦ <b>{{ cfg.bannerType==='merge' ? T('mergeModule') : T('newModule') }}</b> · {{ L(cfg.banner) }}</div>
+        <!-- §工作台待办(todos·2026-08-06)：真实 ERP 首页第一屏回答的是「今天我该干什么」，不是「有多少单」。
+             每条 = 图标 + 事项 + 数量 + 去处理(可下钻到具体页)。数据：cfg.todos={title,items:[{icon,label,count,unit,tone,go}]} -->
+        <el-card v-if="cfg.todos" shadow="never" class="wb-card" :data-annotation="ak(L(cfg.todos.title))">
+          <template #header>
+            <b style="font-size:14px">{{ L(cfg.todos.title) }}</b>
+            <span v-if="cfg.todos.sub" style="color:#8793a5;font-size:12px;margin-left:8px">{{ L(cfg.todos.sub) }}</span>
+          </template>
+          <div class="wb-todos">
+            <div v-for="(it,i) in cfg.todos.items" :key="i" class="wb-todo" :class="it.tone||'blue'" @click="it.go?go(it.go):msg(L(it.label))">
+              <div class="wb-todo-ic">{{ it.icon || '●' }}</div>
+              <div class="wb-todo-main">
+                <div class="wb-todo-lb">{{ L(it.label) }}</div>
+                <div class="wb-todo-num">{{ it.count }}<span class="wb-todo-unit">{{ L(it.unit||'') }}</span></div>
+              </div>
+              <div class="wb-todo-go">{{ L(it.action || T('handle')) }} ›</div>
+            </div>
+          </div>
+        </el-card>
+        <!-- §AI 助手面板(aiPanel·2026-08-06)：不是空聊天框——左边可问(输入框+快捷问题)，右边 AI 主动推洞察(带下钻)。
+             数据：cfg.aiPanel={title,greeting,ph,chips:[{q,a}],insights:[{tone,text,go,action}]} -->
+        <el-card v-if="cfg.aiPanel" shadow="never" class="ai-card" :data-annotation="ak(L(cfg.aiPanel.title))">
+          <div class="ai-wrap">
+            <div class="ai-left">
+              <div class="ai-title"><span class="ai-badge">AI</span>{{ L(cfg.aiPanel.title) }}</div>
+              <div class="ai-greet">{{ L(cfg.aiPanel.greeting||'') }}</div>
+              <div class="ai-input">
+                <el-input v-model="aiQuery" :placeholder="L(cfg.aiPanel.ph||'')" @keyup.enter="askAI()"></el-input>
+                <el-button type="primary" @click="askAI()">{{ T('ask') }}</el-button>
+              </div>
+              <div class="ai-chips">
+                <span v-for="(c,ci) in (cfg.aiPanel.chips||[])" :key="ci" class="ai-chip" @click="askAI(c)">{{ L(c.q||c) }}</span>
+              </div>
+              <!-- 默认就展示第一个问题的回答：进页面即看到"AI 能答成什么样"，也避免左栏大片留白 -->
+              <div v-if="aiShown" class="ai-answer"><span class="ai-badge sm">AI</span><div v-html="L(aiShown)"></div></div>
+            </div>
+            <div class="ai-right">
+              <div class="ai-sub">{{ L(cfg.aiPanel.insightTitle || T('aiInsight')) }}</div>
+              <div v-for="(ins,ii) in (cfg.aiPanel.insights||[])" :key="ii" class="ai-ins" :class="ins.tone||'blue'" @click="ins.go?go(ins.go):msg(L(ins.text))">
+                <div class="ai-ins-tx" v-html="L(ins.text)"></div>
+                <div v-if="ins.action" class="ai-ins-go">{{ L(ins.action) }} ›</div>
+              </div>
+            </div>
+          </div>
+        </el-card>
+        <!-- §页面级设置表单(pageForm·2026-08-06)：真系统「设置」类页面本身就是若干配置卡片(开关/单选/公式)，
+             不是列表、也不靠点按钮才弹出。数据写 cfg.pageForm = { cards:[{title,desc,alert,cols,fields,footerBtns}] }。
+             field: {label,type:'switch'|'radio'|'select'|'text'|'textarea'|'readonly'|'link',value,options,desc,lines,hint,badge,tip,opens}
+             · radio 的 options 项可写 {label,badge} → 选项下方挂浅橙底👍推荐徽标(真系统「未付款锁定库存能更好的避免超卖」)
+             · lines:[..] → 编号说明列表(真系统开关下方的 1./2./3. 说明)
+             · 字段直接 v-model 到 PAGECFG(reactive) → 开关/单选真能点动，符合"原型必须像真系统可操作"铁律 -->
+        <template v-if="cfg.pageForm">
+          <el-card v-for="(cd,ci) in cfg.pageForm.cards" :key="ci" shadow="never" style="margin-bottom:16px" :data-annotation="ak(L(cd.title))">
+            <template #header>
+              <b style="font-size:14px">{{ L(cd.title) }}</b>
+              <span v-if="cd.tip" class="pf-tip" :title="L(cd.tip)">?</span>
+              <div v-if="cd.desc" style="color:#8793a5;font-size:12px;margin-top:4px;font-weight:400">{{ L(cd.desc) }}</div>
+            </template>
+            <div v-if="cd.alert" class="tf-alert"><i class="tf-alert-ic">ⓘ</i><div class="tf-alert-body"><div v-for="(ln,li) in (Array.isArray(cd.alert)?cd.alert:[cd.alert])" :key="li">{{ L(ln) }}</div></div></div>
+            <el-form label-position="top" size="small" class="form-grid" :class="'cols-'+(cd.cols||1)">
+              <el-form-item v-for="(fd,fi) in (cd.fields||[])" :key="fi" :label="L(fd.label)" :required="!!fd.required" :class="{'span-2':fd.span===2}">
+                <template v-if="fd.type==='switch'">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <el-switch v-model="fd.value"></el-switch>
+                    <span v-if="fd.desc" style="color:#333;font-size:13px">{{ L(fd.desc) }}</span>
+                    <span v-if="fd.tip" class="pf-tip" :title="L(fd.tip)">?</span>
+                  </div>
+                </template>
+                <template v-else-if="fd.type==='radio'">
+                  <el-radio-group v-model="fd.value" class="pf-radios">
+                    <div v-for="(o,oi) in (fd.options||[])" :key="oi" class="pf-radio-row">
+                      <el-radio :value="K(o.label||o)" :label="K(o.label||o)"><span>{{ L(o.label||o) }}</span></el-radio>
+                      <div v-if="o.badge" class="pf-badge">👍 {{ L(o.badge) }}</div>
+                      <div v-if="o.sub" class="fd-sub" style="margin-left:24px">{{ L(o.sub) }}</div>
+                    </div>
+                  </el-radio-group>
+                </template>
+                <template v-else-if="fd.type==='checklist'">
+                  <div v-for="(o,oi) in (fd.options||[])" :key="oi" class="pf-radio-row">
+                    <el-checkbox v-model="o.value"><span>{{ L(o.label||o) }}</span></el-checkbox>
+                    <span v-if="o.tip" class="pf-tip" :title="L(o.tip)">?</span>
+                    <div v-if="o.sub" class="fd-sub" style="margin-left:24px">{{ L(o.sub) }}</div>
+                  </div>
+                </template>
+                <el-select v-else-if="fd.type==='select'" v-model="fd.value" :placeholder="L(fd.ph||'')" style="max-width:320px"><el-option v-for="o in (fd.options||[])" :key="K(o)" :label="L(o)" :value="K(o)"></el-option></el-select>
+                <el-input v-else-if="fd.type==='textarea'" v-model="fd.value" type="textarea" :rows="2" :maxlength="fd.max" :show-word-limit="!!fd.max"></el-input>
+                <div v-else-if="fd.type==='readonly'" style="color:#333;padding-top:6px">{{ L(fd.value) }}</div>
+                <el-link v-else-if="fd.type==='link'" type="primary" :underline="false" @click="fd.opens?(dlgRow=null,dialogName=fd.opens):msg(L(fd.label))">{{ L(fd.linkText||fd.label) }}</el-link>
+                <el-input v-else v-model="fd.value" :placeholder="L(fd.ph||'')" style="max-width:320px" :maxlength="fd.max" :show-word-limit="!!fd.max"></el-input>
+                <div v-if="fd.badge" class="pf-badge">👍 {{ L(fd.badge) }}</div>
+                <ol v-if="fd.lines" class="pf-lines"><li v-for="(ln,li) in fd.lines" :key="li">{{ L(ln) }}</li></ol>
+                <div v-if="fd.hint" class="fd-sub">{{ L(fd.hint) }}</div>
+              </el-form-item>
+            </el-form>
+            <div v-if="cd.footerBtns" style="margin-top:8px">
+              <el-button v-for="(b,bi) in cd.footerBtns" :key="bi" :type="b.type||'default'" size="small" style="margin-right:12px" @click="b.opens?(dlgRow=null,dialogName=b.opens):msg(L(b.label)+T('executed'))">{{ L(b.label) }}</el-button>
+              <span v-if="cd.saveHint" style="color:#E6912B;font-size:12px">{{ L(cd.saveHint) }}</span>
+            </div>
+          </el-card>
+        </template>
+        <el-row v-if="cfg.stats" :gutter="14" style="margin-bottom:18px" :data-annotation="ak('查看')">
+          <!-- :md 补上大屏断点：只写 :sm 时 ≥768px 恒为每行 3 个，4/5 个指标卡会排成 3+1、3+2（2026-08-06 截图逮到）。
+               3 个卡时 md=8 与原来一致，行为不变。 -->
+          <el-col v-for="(s,i) in cfg.stats" :key="i" :span="Math.floor(24/Math.min(cfg.stats.length,6))" :xs="12" :sm="8" :md="Math.floor(24/Math.min(cfg.stats.length,6))">
+            <div class="stat-card" :class="s[3]||''"><div class="stat-label">{{ L(s[0]) }}</div><div class="stat-value">{{ L(s[1]) }}</div><div class="stat-hint">{{ L(s[2]||'') }}</div></div>
+          </el-col>
+        </el-row>
+        <el-row v-if="cfg.chart||cfg.donut" :gutter="16" style="margin-bottom:16px">
+          <el-col v-if="cfg.chart" :span="cfg.donut?14:24" :data-annotation="ak('查看')">
+            <el-card shadow="never"><template #header><b style="font-size:14px">{{ L(cfg.chart.title) }}</b><span style="color:#8793a5;font-size:10px;margin-left:8px">{{ L(cfg.chart.sub||'') }}</span></template>
+              <div class="chart"><div class="bars"><div v-for="(v,i) in cfg.chart.values" :key="i" class="bar" :style="{height:v+'%'}"></div></div></div>
+            </el-card>
+          </el-col>
+          <el-col v-if="cfg.donut" :span="cfg.chart?10:12" :data-annotation="ak('查看')">
+            <el-card shadow="never"><template #header><b style="font-size:14px">{{ L(cfg.donut.title) }}</b></template>
+              <div style="display:flex;align-items:center;gap:20px"><div class="donut" :data-label="L(cfg.donut.label)" :style="{background:'conic-gradient('+cfg.donut.grad+')'}"></div>
+                <ul class="rl"><li v-for="(it,i) in cfg.donut.items" :key="i"><i :style="{background:it[2]}"></i>{{ L(it[0]) }} <b>{{ it[1] }}</b></li></ul></div>
+            </el-card>
+          </el-col>
+        </el-row>
+        <!-- §注意事项框(列表页顶部·真系统税种管理等在用)：cfg.alert = "单条" 或 ["条1","条2"] -->
+        <!-- 说明块：标题可配（alertTitle）——真系统异常发票页的标题是「异常发票认定：」，不是「注意事项：」 -->
+        <div v-if="curAlert" class="tf-alert"><i class="tf-alert-ic">ⓘ</i><div class="tf-alert-body"><b>{{ curAlertTitle }}</b><div v-for="(ln,li) in (Array.isArray(curAlert)?curAlert:[curAlert])" :key="li">{{ L(ln) }}</div></div></div>
+        <!-- §5.3s 页面级右上角主按钮（真系统「同步发票」：在筛选区右上、**不在表格工具栏里**）
+             数据写 cfg.pageBtn = {label:'同步发票', opens:'syncInv'}；与表格工具栏的 primaryBtn 是两个位置，别混 -->
+        <div v-if="cfg.pageBtn" class="page-btn-row" :data-annotation="ak('页面操作')">
+          <!-- §pageBtn.menu：真系统「导入 & 导出 ▾」是下拉（导入XML / 按日期导出 / 按勾选导出·带分隔线） -->
+          <el-dropdown v-if="cfg.pageBtn.menu" trigger="click" @command="i=>fireBtn(cfg.pageBtn.menu[i])">
+            <el-button type="primary">{{ btnLabel(cfg.pageBtn) }}<span style="font-size:10px;margin-left:4px">▾</span></el-button>
+            <template #dropdown><el-dropdown-menu><el-dropdown-item v-for="(m,mi) in cfg.pageBtn.menu" :key="mi" :command="mi" :divided="!!m.divided">{{ btnLabel(m) }}</el-dropdown-item></el-dropdown-menu></template>
+          </el-dropdown>
+          <el-button v-else type="primary" @click="fireBtn(cfg.pageBtn)">{{ btnLabel(cfg.pageBtn) }}</el-button>
+        </div>
+        <!-- 筛选区也随状态（byStatus[x].filters）：真系统 8 项统一，只有组合控件默认字段随状态变 -->
+        <el-card v-if="curFilters" class="search-box" shadow="never" style="margin-bottom:16px" :data-annotation="ak('查询')">
+          <el-form :inline="true" size="default">
+            <!-- label 可省：真系统筛选区多为「纯占位下拉」（全部发票账号/全部状态…），没有前缀标签。写了 label 才显示 -->
+            <el-form-item v-for="(f,i) in curFilters" :key="i" :label="(f.type==='combo'||f.noLabel||!f.label)?'':L(f.label)">
+              <!-- §5.3b 组合筛选(真系统 zgl-search-box·下拉选字段+输入值+精确/模糊)：type:'combo' 时渲染三段组合控件 -->
+              <!-- §5.3b 组合筛选有 3 种形态（2026-07-14 实测校正）：
+                   ① 三段：[字段▾][输入⌕][精确/模糊▾]  ← 默认（TF OMS 发票管理）
+                   ② 两段：[字段▾][输入⌕]              ← 写 match:null（某真实业务系统 待导入的「发票号」）
+                   ③ 日期：[字段▾][日期选择器📅]        ← 写 dateMode:true（某真实业务系统 的「开票时间」= 选时间字段 + 选日期） -->
+              <div v-if="f.type==='combo'" class="combo-filter" :class="{'combo-2':!f.match&&!f.dateMode,'combo-date':f.dateMode}">
+                <!-- 左侧下拉的默认显示 = f.label（该状态的默认搜索字段：开票中=订单号 / 失败·近期·历史=发票号 / 异常=key）
+                     ⚠️ 别用 fields[0]——那是选项数组的第一个，会让所有状态都显示同一个字段（2026-07-13 截图逮到） -->
+                <el-select v-model="filterModel['cf'+i]" class="combo-left" :placeholder="L(f.label || (f.fields&&f.fields[0]))"><el-option v-for="o in (f.fields||[f.label])" :key="K(o)" :label="L(o)" :value="K(o)"></el-option></el-select>
+                <el-date-picker v-if="f.dateMode" v-model="filterModel[i]" class="combo-dt" type="daterange" unlink-panels :start-placeholder="T('startTime')" :end-placeholder="T('endTime')"></el-date-picker>
+                <template v-else>
+                  <el-input v-model="filterModel[i]" class="combo-mid" :placeholder="L(f.ph||'批量搜索用逗号,隔开')"><template #prefix><span class="combo-search-ic">⌕</span></template></el-input>
+                  <el-select v-if="f.match!==null && f.match!==false" v-model="filterModel['cm'+i]" class="combo-right" :placeholder="L((f.match&&f.match[0])||'精确搜索')"><el-option v-for="o in (f.match||['精确搜索','模糊搜索'])" :key="K(o)" :label="L(o)" :value="K(o)"></el-option></el-select>
+                </template>
+              </div>
+              <!-- 真系统筛选区无 label：字段名落到**占位符**（优先 f.ph，其次「全部+字段名」，再退 f.label） -->
+              <!-- §多选下拉面板(v2.5)：type:'multiSelect' —— 照 某真实业务系统「发票账号」实测：
+                   触发器长得像 select，点开是面板＝[搜索框⌕] + [☐全部] + [☐逐项…可滚动] + [取消][保存]。
+                   面板里的勾选先落在草稿 msDraft 上，点【保存】才写回 → 与真系统「改了不点保存不生效」一致。 -->
+              <el-popover v-else-if="f.type==='multiSelect'" :visible="msOpen['f'+i]" placement="bottom-start"
+                          :width="f.panelWidth||300" popper-class="ms-pop" trigger="manual" :teleported="true" transition="none">
+                <template #reference>
+                  <div class="ms-trigger" :class="{'is-open':msOpen['f'+i]}" @click="msToggle(f,i,'f',filterModel)">
+                    <span class="ms-text" :class="{'is-ph':!msSummary(f,i,'f',filterModel)}">{{ msSummary(f,i,'f',filterModel) || L(f.ph||f.label) }}</span>
+                    <span class="ms-caret">{{ msOpen['f'+i] ? '︿' : '﹀' }}</span>
+                  </div>
+                </template>
+                <div class="ms-panel">
+                  <el-input v-if="f.search!==false" v-model="msKw['f'+i]" class="ms-search" size="small" :placeholder="L(f.searchPh||'')">
+                    <template #suffix><span class="ms-ic">⌕</span></template>
+                  </el-input>
+                  <div class="ms-list">
+                    <label class="ms-item">
+                      <el-checkbox :model-value="msAllChecked(f,i,'f')" @change="v=>msSetAll(f,i,v,'f')">{{ L(f.allLabel||'全部') }}</el-checkbox>
+                    </label>
+                    <label v-for="(o,oi) in msVisible(f,i,'f')" :key="oi" class="ms-item">
+                      <el-checkbox :model-value="(msDraft['f'+i]||[]).includes(K(o))" @change="v=>msPick(f,i,K(o),v,'f')">{{ L(o) }}</el-checkbox>
+                    </label>
+                    <div v-if="!msVisible(f,i,'f').length" class="ms-empty">{{ T('noData') }}</div>
+                  </div>
+                  <div class="ms-foot">
+                    <a class="ms-cancel" @click="msCancel(f,i,'f')">{{ L(f.cancelText||'取消') }}</a>
+                    <a class="ms-save" @click="msSave(f,i,'f',filterModel)">{{ L(f.okText||'保存') }}</a>
+                  </div>
+                </div>
+              </el-popover>
+              <el-select v-else-if="f.type==='select'" v-model="filterModel[i]" :placeholder="f.ph?L(f.ph):(f.label?T('all')+L(f.label):T('all'))"><el-option v-for="o in (f.options||[])" :key="K(o)" :label="L(o)" :value="K(o)"></el-option></el-select>
+              <!-- §5.3 日期范围（真系统是「开始时间 ~ 结束时间」区间·非单日）：type:'date' → daterange，宽 427px(实测) -->
+              <el-date-picker v-else-if="f.type==='date'" v-model="filterModel[i]" type="daterange" unlink-panels :start-placeholder="T('startTime')" :end-placeholder="T('endTime')"></el-date-picker>
+              <el-input v-else v-model="filterModel[i]" :placeholder="L(f.ph||f.label||'')"></el-input>
+            </el-form-item>
+            <el-form-item><el-button type="primary" @click="doSearch">{{ T('search') }}</el-button><el-button @click="resetFilter">{{ T('reset') }}</el-button></el-form-item>
+            <!-- §筛选行尾按钮(真系统「高级搜索」漏斗 / 「同步订单」就在查询·重置右边)：
+                 走 fireBtn → 支持 {label,opens:'弹窗名'} 打开弹层、{label,act:'sync'} 触发同步动效。
+                 2026-08-06 修：原来恒为 msg() 只弹提示，「高级搜索」点了打不开弹窗＝假按钮。 -->
+            <el-form-item v-for="(b,bi) in (cfg.toolbar||[])" :key="bi"><el-button @click="fireBtn(b)">{{ btnLabel(b) }}</el-button></el-form-item>
+          </el-form>
+        </el-card>
+        <!-- §5.3i2 列/页签/工具栏/操作 全部走 cur* computed：左面板切状态时整套配置跟着换（真系统实测） -->
+        <el-card v-if="curColumns.length" class="gl-table" shadow="never" :data-annotation="ak('列表')">
+          <template #header v-if="curListTitle || (cfg.listHelp&&cfg.listHelp.length) || curListTotals"><b v-if="curListTitle && !cfg.hideListTitle" style="font-size:14px">{{ L(curListTitle) }}</b><el-tooltip v-if="cfg.listHelp && cfg.listHelp.length" placement="bottom-start" effect="light" popper-class="list-help-pop"><template #content><div v-for="(h,hi) in cfg.listHelp" :key="hi" style="margin:5px 0;line-height:1.7">{{ L(h) }}</div></template><span class="help-q">&#9432; 说明</span></el-tooltip><span v-else style="color:#8793a5;font-size:10px;margin-left:8px">{{ L(cfg.listSub||'') }}</span><span v-if="curListTotals" style="float:right;color:#444;font-size:13px;font-weight:600" v-html="L(curListTotals)"></span><el-button v-if="cfg.primaryBtn && !cfg.selectable" type="primary" size="small" style="float:right" @click="fireBtn(cfg.primaryBtn)">{{ btnLabel(cfg.primaryBtn) }}</el-button></template>
+          <!-- §状态页签(缺口A)：出库/入库、待处理/已处理… 只做视觉高亮切换(mock)，第一个默认选中。异常发票没有页签→byStatus 里写 statusTabs:null -->
+          <div v-if="curStatusTabs" class="status-tabs" :data-annotation="ak('状态页签')">
+            <span v-for="(st,si) in curStatusTabs" :key="K(st.key)" class="stab" :class="{on: activeStatus? activeStatus===K(st.key) : si===0}" @click="goTab(K(st.key))">{{ L(st.label) }}<span v-if="st.count!=null" class="stab-badge">{{ st.count }}</span></span>
+          </div>
+          <!-- §快捷筛选(v2.2)：第二维度一行可点标签（开票状态 / 失败原因…）。与主状态页签可叠加，
+               点击复用 v1.9 的 __filterKw 过滤 —— 不新造一套过滤逻辑，避免两处行为不一致。 -->
+          <div v-if="curQuickFilters" class="qf-bar" :data-annotation="ak('快捷筛选')">
+            <span class="qf-label">{{ L(curQuickFilters.label) }}：</span>
+            <span v-for="(it,qi) in curQuickFilters.items" :key="qi"
+                  class="qf-item" :class="['qf-'+(it.tone||'plain'), {'is-on': qfOn===qi}]"
+                  @click="qfPick(qi,it)">{{ L(it.text) }}<b v-if="it.count!=null" class="qf-n">{{ it.count }}</b></span>
+          </div>
+          <!-- §多选工具条(富外壳)：cfg.selectable 时表格加勾选列 + 「已选:N」+ 新增/批量按钮（对齐旧手搓版）。
+               2026-08-02：有 primaryBtn / selectActions(如导出) 时也渲染工具条，「已选:N」仅 selectable 时显示（报表无勾选也能有导出按钮）。 -->
+          <div v-if="cfg.selectable || cfg.primaryBtn || curSelActions.length" class="sel-toolbar" :data-annotation="ak('批量')">
+            <span v-if="cfg.selectable" class="sel-count">{{ T('selected') }}：{{ selCount }}</span>
+            <el-button v-if="cfg.primaryBtn" type="primary" size="small" @click="cfg.primaryBtn.display ? null : fireBtn(cfg.primaryBtn)">{{ btnLabel(cfg.primaryBtn) }}</el-button>
+            <!-- §工具栏按钮两类，别一刀切禁用（2026-07-12 用户逮到「新增样品/赠品税种」永远点不动）：
+                 ① 真·批量操作(删除/批量启用…)：写字符串 或 {label} → 依赖勾选，未选中时禁用（默认）
+                 ② 新增类动作(新增样品/赠品税种…)：写 {label, needSel:false} → **任何时候都能点**，与勾选无关
+                 两类都支持 opens:'弹窗名' → 点开弹窗（不写则弹提示）。 -->
+            <template v-for="(b,bi) in curSelActions" :key="bi">
+            <!-- §b.menu：真系统「打印发票 ▾」是下拉（DANFE / 简易 DANFE / 简易 DANFE-面单） -->
+            <el-dropdown v-if="b.menu" trigger="click" :disabled="needSel(b) && !selCount" @command="i=>fireBtn(b.menu[i])">
+              <el-button size="small" :disabled="needSel(b) && !selCount">{{ btnLabel(b) }}<span style="font-size:10px;margin-left:4px">▾</span></el-button>
+              <template #dropdown><el-dropdown-menu><el-dropdown-item v-for="(m,mi) in b.menu" :key="mi" :command="mi" :divided="!!m.divided">{{ btnLabel(m) }}</el-dropdown-item></el-dropdown-menu></template>
+            </el-dropdown>
+            <el-button v-else size="small"
+                       :disabled="needSel(b) && !selCount" @click="fireBtn(b)">{{ btnLabel(b) }}</el-button>
+            </template>
+          </div>
+          <!-- §按状态切换：数据/列/操作 全部走 cur*（真系统各状态列数都不同：开票中10列 / 近期12列 / 异常7列）
+               §5.3q 加载态：查询/重置/切状态时表格盖 EP loading（真系统实测：白色半透遮罩 rgba(255,255,255,.9) + 主色转圈·无文案） -->
+          <el-table v-if="!curCardMeta" ref="tblRef" v-loading="loading" :data="renderRows" stripe @selection-change="onSelChange" @click="onCellAct" :span-method="rowSpan" :row-class-name="rowClass" :cell-style="bandCellStyle">
+            <el-table-column v-if="cfg.selectable" type="selection" width="44" :selectable="rowSelectable"></el-table-column>
+            <!-- 列可写 "名" / {label,width} / {group,children:[…]}（分组表头，父跨子列·居中）。
+                 children 里的子项还可再写 {group,children:[…]} → 三层表头（模式→指标→良品/不良品）。2026-07-31 -->
+            <template v-for="(g,gi) in colTree" :key="gi">
+              <el-table-column v-if="g.group" :label="L(g.group)" align="center">
+                <template v-for="(ch,ci) in g.children" :key="ci">
+                  <el-table-column v-if="ch.group" :label="L(ch.group)" align="center">
+                    <el-table-column v-for="(lf,li) in ch.children" :key="li" :label="L(lf.label)" :min-width="lf.width" align="center">
+                      <template #default="{row}"><span v-html="cell(row[lf.idx])"></span></template>
+                    </el-table-column>
+                  </el-table-column>
+                  <el-table-column v-else :label="L(ch.label)" :min-width="ch.width" align="center">
+                    <template #default="{row}"><span v-html="cell(row[ch.idx])"></span></template>
+                  </el-table-column>
+                </template>
+              </el-table-column>
+              <el-table-column v-else :label="L(g.label)" :min-width="g.width">
+                <!-- §报错+给出路提示带：合成通栏行(__band)在第一数据列(idx 0)渲染整条带；其余列被 span 抹掉 -->
+                <template #default="{row}">
+                  <div v-if="row.__band && g.idx===0" class="rf-band" :class="bandLv(row.__band)">
+                    <span class="rf-ico">&#9888;</span>
+                    <b class="rf-title">{{ L(row.__band.title) }}</b>
+                    <span v-if="row.__band.detail" class="rf-detail">：{{ L(row.__band.detail) }}</span>
+                    <a class="rf-way" :class="{'rf-none': !bandWayOk(row.__band.way)}" @click.stop="bandWayOk(row.__band.way) && fireBtn(row.__band.way, row.__row)">{{ row.__band.way ? L(row.__band.way.label) : '' }}<span v-if="row.__band.way && (row.__band.way.act || row.__band.way.opens || row.__band.way.opensFP)"> &rsaquo;</span></a>
+                  </div>
+                  <span v-else-if="!row.__band && curLinkCols.includes(g.idx)" class="cell-link" data-nav="1" v-html="cell(row[g.idx])"></span>
+                  <span v-else-if="!row.__band" v-html="cell(row[g.idx])"></span>
+                </template>
+              </el-table-column>
+            </template>
+            <!-- §行内操作：真系统是**蓝色图标**(rgba(51,99,255,.8)·28px·带 tooltip)，不是文字链接。
+                 动作写 {label:"设置", icon:"edit"} → 出图标+悬停提示；不写 icon → 退回文字链接（老原型兼容）。 -->
+            <el-table-column v-if="curActions" :label="T('ops')" :width="curActionsWidth" fixed="right">
+              <!-- 必须把当前行 row 传给 fireBtn，否则「删除」不知道删哪行（2026-07-12：所有增删改都要真能操作）
+                   §行内操作可按行隐藏：动作写 {hideIf:'终态'} → 该行任一单元格文本含「终态」标记时不显示
+                   （真系统「交易未完成 (Não Realizada)」是终态，不能再声明）-->
+              <template #default="{row}">
+                <template v-for="(a,ai) in curActions" :key="ai">
+                <template v-if="!actHidden(a,row)">
+                  <!-- §a.menu：真系统行内「更多 ▾」下拉（生成采购单 / 开退票 / 导出），项走 fireBtn(项,row)（blockIf 照常生效） -->
+                  <el-dropdown v-if="a.menu" trigger="click" style="margin-right:8px;vertical-align:middle" @command="i=>fireBtn(a.menu[i],row)">
+                    <span style="color:#3363FF;cursor:pointer;font-size:13px">{{ btnLabel(a) }}<span style="font-size:10px;margin-left:2px">▾</span></span>
+                    <template #dropdown><el-dropdown-menu><el-dropdown-item v-for="(m,mi) in a.menu" :key="mi" :command="mi" :divided="!!m.divided">{{ btnLabel(m) }}</el-dropdown-item></el-dropdown-menu></template>
+                  </el-dropdown>
+                  <el-tooltip v-else-if="actIcon(a)" :content="btnLabel(a)" placement="top">
+                    <span class="row-ic" @click="fireBtn(a,row)">{{ actIcon(a) }}</span>
+                  </el-tooltip>
+                  <el-link v-else type="primary" :underline="false" style="margin-right:8px;vertical-align:middle" @click="fireBtn(a,row)">{{ btnLabel(a) }}</el-link>
+                </template>
+                </template>
+              </template>
+            </el-table-column>
+          </el-table>
+          <!-- §卡片式表格行(cardMeta·2026-08-06)：真系统「订单管理」一条订单不是一行，而是【卡头行(通栏·浅灰蓝) + 异常提示条(浅红·仅异常时)
+               + 明细行(按列对齐) + 卡尾备注行(通栏)】四段一张卡。el-table 表达不了跨列通栏行，故用 flex 网格还原。
+               数据：cfg.cardMeta = [ {head:[单元格…], alert:…, foot:…}, … ]，与 cfg.rows 按下标一一对应
+                     —— rows 仍是标准二维数组，分页/圈选/导出/闸全部照常生效，卡片只是多一层壳。 -->
+          <div v-if="curCardMeta" class="ord-cards" v-loading="loading">
+            <div class="oc-row oc-thead">
+              <span v-if="cfg.selectable" class="oc-sel"></span>
+              <span v-for="(g,gi) in colTree" :key="gi" class="oc-cell" :style="{width:g.width+'px'}">{{ L(g.label) }}</span>
+              <span v-if="curActions" class="oc-cell oc-ops" :style="{width:curActionsWidth+'px'}">{{ T('ops') }}</span>
+            </div>
+            <div v-for="(row,ri) in curRows" :key="ri" class="oc-card" :data-annotation="ak(T('ops'))">
+              <div v-if="cardMetaOf(ri).head" class="oc-head">
+                <el-checkbox v-if="cfg.selectable" v-model="cardSel[ri]"><span></span></el-checkbox>
+                <span v-for="(h,hi) in cardMetaOf(ri).head" :key="hi" class="oc-h" v-html="cell(h)"></span>
+              </div>
+              <div v-if="cardMetaOf(ri).alert" class="oc-alert" v-html="cell(cardMetaOf(ri).alert)"></div>
+              <div class="oc-row oc-body" @click="onCellAct">
+                <span v-if="cfg.selectable" class="oc-sel"></span>
+                <span v-for="(g,gi) in colTree" :key="gi" class="oc-cell" :style="{width:g.width+'px'}" v-html="cell(row[g.idx])"></span>
+                <span v-if="curActions" class="oc-cell oc-ops" :style="{width:curActionsWidth+'px'}">
+                  <template v-for="(a,ai) in curActions" :key="ai">
+                    <template v-if="!actHidden(a,row)">
+                      <el-tooltip v-if="actIcon(a)" :content="btnLabel(a)" placement="top">
+                        <span class="row-ic" @click="fireBtn(a,row)">{{ actIcon(a) }}</span>
+                      </el-tooltip>
+                      <el-link v-else type="primary" :underline="false" style="margin-right:8px" @click="fireBtn(a,row)">{{ btnLabel(a) }}</el-link>
+                    </template>
+                  </template>
+                </span>
+              </div>
+              <div v-if="cardMetaOf(ri).foot" class="oc-foot" v-html="cell(cardMetaOf(ri).foot)"></div>
+            </div>
+          </div>
+          <!-- §4.2 分页：layout 含 sizes 时 page-size 必须 v-model 绑定，否则 EP 静默返回 null、整条分页不渲染（生产版 Vue 无警告）。2026-07-10 实测逮到。 -->
+          <div v-if="cfg.rows" class="pagination-container" style="margin-top:12px"><el-pagination background layout="total, sizes, prev, pager, next, jumper" :total="curTotal" :page-sizes="[10, 25, 50, 100]" v-model:page-size="pageSize" v-model:current-page="pageNo"></el-pagination></div>
+        </el-card>
+        <!-- custom 复杂页：整块原始 HTML。多语时写成 {"zh":"<div>…","en":"…","pt":"…"}，L() 自动选当前语言；写成字符串则各语言同显。 -->
+        <!-- §全链路流水线(pipeline·2026-08-06)：把订单/单据在各环节的堆积量横向串起来，一眼看出卡在哪。
+             数据：cfg.pipeline={title,steps:[{label,count,go,warn}]}；warn:true → 该环节标红提示堆积 -->
+        <el-card v-if="cfg.pipeline" shadow="never" class="wb-card" :data-annotation="ak(L(cfg.pipeline.title))">
+          <template #header>
+            <b style="font-size:14px">{{ L(cfg.pipeline.title) }}</b>
+            <span v-if="cfg.pipeline.sub" style="color:#8793a5;font-size:12px;margin-left:8px">{{ L(cfg.pipeline.sub) }}</span>
+          </template>
+          <div class="wb-pipe">
+            <template v-for="(s,si) in cfg.pipeline.steps" :key="si">
+              <div class="wb-pipe-step" :class="{warn:s.warn}" @click="s.go?go(s.go):msg(L(s.label))">
+                <div class="wb-pipe-num">{{ s.count }}</div>
+                <div class="wb-pipe-lb">{{ L(s.label) }}</div>
+                <div v-if="s.warn" class="wb-pipe-warn">▲ {{ L(s.warnText || T('backlog')) }}</div>
+              </div>
+              <div v-if="si < cfg.pipeline.steps.length-1" class="wb-pipe-arrow">›</div>
+            </template>
+          </div>
+        </el-card>
+        <!-- §平台连接宫格(connectGrid·2026-08-06)：跨境 ERP 的「接店铺/连商店」页范式——一排品牌卡，点了去授权。
+             数据：cfg.connectGrid={title,sub,items:[{name,color,bg,sub,connected}]}
+             品牌 logo 用「品牌色文字标」渲染，不引外部图片 → 离线版零依赖。 -->
+        <el-card v-if="cfg.connectGrid" shadow="never" class="wb-card" :data-annotation="ak(L(cfg.connectGrid.title))">
+          <template #header>
+            <b style="font-size:14px">{{ L(cfg.connectGrid.title) }}</b>
+          </template>
+          <div v-if="cfg.connectGrid.sub" class="cg-sub">{{ L(cfg.connectGrid.sub) }}</div>
+          <div class="cg-grid">
+            <div v-for="(it,i) in cfg.connectGrid.items" :key="i" class="cg-item" :class="{on:it.connected}"
+                 @click="it.opens?(dlgRow=null,dialogName=it.opens):msg(L(it.name)+' · '+T('connect'))">
+              <div class="cg-logo" :style="{background:it.bg||'#fff',color:it.color||'#333'}">{{ it.name }}</div>
+              <div v-if="it.sub" class="cg-note">{{ L(it.sub) }}</div>
+              <div v-if="it.connected" class="cg-on">✓ {{ T('connected') }}</div>
+            </div>
+          </div>
+        </el-card>
+        <!-- §消息中心/系统公告(notices·2026-08-06)：真系统首页右侧的「消息通知 | 消息公告」双页签 + 更多。
+             数据：cfg.notices={tabs:[{key,label,more,items:[{title,time,tag,unread}]}]} -->
+        <el-card v-if="cfg.notices" shadow="never" class="wb-card" :data-annotation="ak(L((cfg.notices.tabs&&cfg.notices.tabs[0]&&cfg.notices.tabs[0].label)||'消息'))">
+          <div class="nt-head">
+            <div class="nt-tabs">
+              <span v-for="(tb,ti) in cfg.notices.tabs" :key="ti" class="nt-tab" :class="{on:(noticeTab||K(cfg.notices.tabs[0].key))===K(tb.key)}" @click="noticeTab=K(tb.key)">
+                {{ L(tb.label) }}
+                <span v-if="unreadOf(tb)" class="nt-dot">{{ unreadOf(tb) }}</span>
+              </span>
+            </div>
+            <span class="nt-more" @click="msg(L(curNotice.more||T('more')))">{{ T('more') }} ›</span>
+          </div>
+          <div class="nt-list">
+            <div v-for="(it,ii) in (curNotice.items||[])" :key="ii" class="nt-item" @click="msg(L(it.title))">
+              <span v-if="it.unread" class="nt-unread"></span>
+              <span v-if="it.tag" class="nt-tag">{{ L(it.tag) }}</span>
+              <span class="nt-title">{{ L(it.title) }}</span>
+              <span class="nt-time">{{ it.time }}</span>
+            </div>
+            <div v-if="!(curNotice.items||[]).length" class="nt-empty">{{ T('noData') }}</div>
+          </div>
+        </el-card>
+        <div v-if="cfg.custom" v-html="L(cfg.custom)" :data-annotation="ak('查看')"></div>
+        <el-card v-if="cfg.note" shadow="never" style="margin-top:16px"><div style="color:#66778d;font-size:12px;line-height:1.6">{{ L(cfg.note) }}</div></el-card>
+        <el-card v-if="cfg.building" shadow="never"><div style="padding:46px 18px;text-align:center;color:#8190a4"><b style="display:block;color:#3a4760;font-size:14px;margin-bottom:6px">{{ L(cfg.building) }}</b>{{ T('buildingHint') }}</div></el-card>
+        </div><!-- /panel-content -->
+        </div><!-- /has-panel -->
+        </template>
+      </div>
+    </main>
+    <!-- §编辑弹窗(缺口B formDialog)：多 tab 分块表单·primaryBtn/操作 opens='formDialog' 打开 -->
+    <el-dialog class="fdlg" v-model="formVisible" v-if="cfg.formDialog" :title="L(cfg.formDialog.title)" :width="cfg.formDialog.width||'760px'" append-to-body :data-annotation="ak('弹窗')">
+      <el-tabs v-if="cfg.formDialog.tabs" v-model="activeFormTab">
+        <el-tab-pane v-for="(tab,ti) in cfg.formDialog.tabs" :key="K(tab.key)" :label="L(tab.label)" :name="K(tab.key)">
+          <div v-for="(sec,si) in tab.sections" :key="si" class="form-sec">
+            <div v-if="sec.title" class="form-sec-title">{{ L(sec.title) }}</div>
+            <el-table v-if="sec.table" :data="sec.table.rows" border size="small">
+              <el-table-column v-for="(col,ci) in sec.table.columns" :key="ci" :label="L(col)"><template #default="{row}"><span v-html="cell(row[ci])"></span></template></el-table-column>
+            </el-table>
+            <el-form v-else label-position="top" size="small" class="form-grid" :class="'cols-'+(sec.cols||2)">
+              <el-form-item v-for="(fd,fi) in sec.fields" :key="fi" :label="L(fd.label)" :class="{'span-2':fd.span===2}">
+                <el-select v-if="fd.type==='select'" v-model="fd.value"><el-option v-for="o in (fd.options||[])" :key="K(o)" :label="L(o)" :value="K(o)"></el-option></el-select>
+                <el-date-picker v-else-if="fd.type==='date'" v-model="fd.value" type="date"></el-date-picker>
+                <el-switch v-else-if="fd.type==='switch'" v-model="fd.value"></el-switch>
+                <el-input v-else-if="fd.type==='textarea'" v-model="fd.value" type="textarea" :rows="2"></el-input>
+                <el-input v-else-if="fd.type==='password'" v-model="fd.value" type="password" show-password></el-input>
+                <div v-else-if="fd.type==='readonly'" style="color:#333;padding-top:6px">{{ L(fd.value) }}</div>
+          <!-- §富HTML预览（打印发票 DANFE 预览用）：type:'html' → v-html 渲染整段单据，可滚动 -->
+          <div v-else-if="fd.type==='html'" v-html="L(fd.value)" :style="fd.card?'':'max-height:62vh;overflow:auto;border:1px solid #e4e7ed;border-radius:4px;background:#fff'"></div>
+                <el-input v-else v-model="fd.value" :placeholder="L(fd.ph||'')"></el-input>
+              </el-form-item>
+            </el-form>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
+      <div v-else v-for="(sec,si) in (cfg.formDialog.sections||[])" :key="si" class="form-sec">
+        <div v-if="sec.title" class="form-sec-title">{{ L(sec.title) }}</div>
+        <el-form label-position="top" size="small" class="form-grid" :class="'cols-'+(sec.cols||2)">
+          <el-form-item v-for="(fd,fi) in sec.fields" :key="fi" :label="L(fd.label)" :class="{'span-2':fd.span===2}">
+            <el-select v-if="fd.type==='select'" v-model="fd.value"><el-option v-for="o in (fd.options||[])" :key="K(o)" :label="L(o)" :value="K(o)"></el-option></el-select>
+            <el-date-picker v-else-if="fd.type==='date'" v-model="fd.value" type="date"></el-date-picker>
+            <el-switch v-else-if="fd.type==='switch'" v-model="fd.value"></el-switch>
+            <el-input v-else-if="fd.type==='textarea'" v-model="fd.value" type="textarea" :rows="2"></el-input>
+            <el-input v-else-if="fd.type==='password'" v-model="fd.value" type="password" show-password></el-input>
+            <div v-else-if="fd.type==='readonly'" style="color:#333;padding-top:6px">{{ L(fd.value) }}</div>
+          <!-- §富HTML预览（打印发票 DANFE 预览用）：type:'html' → v-html 渲染整段单据，可滚动 -->
+          <div v-else-if="fd.type==='html'" v-html="L(fd.value)" :style="fd.card?'':'max-height:62vh;overflow:auto;border:1px solid #e4e7ed;border-radius:4px;background:#fff'"></div>
+            <el-input v-else v-model="fd.value" :placeholder="L(fd.ph||'')"></el-input>
+          </el-form-item>
+        </el-form>
+      </div>
+      <template #footer><el-button @click="formVisible=false">{{ T('cancel') }}</el-button><el-button type="primary" @click="formVisible=false;msg(T('save'))">{{ T('confirm') }}</el-button></template>
+    </el-dialog>
+    <!-- §内置「导入」弹窗（任何叫「导入」的按钮都能用·不必逐页配数据）：选文件 + 下载模板 + 确定 -->
+    <el-dialog class="fdlg" v-model="importOpen" :title="T('importTitle')" width="480px" append-to-body>
+      <div style="font-size:14px;color:#444;line-height:1.9">
+        <div style="margin-bottom:10px">{{ T('importHint') }}</div>
+        <label class="up-link" style="display:inline-flex">
+          ＋ {{ T('pickFile') }}
+          <input type="file" accept=".xlsx,.xls,.csv" style="display:none" @change="pickImportFile">
+        </label>
+        <div v-if="importFile" style="margin-top:8px;color:#3363FF">📄 {{ importFile }}</div>
+        <div class="fd-sub" style="margin-top:10px">{{ T('importTpl') }}</div>
+      </div>
+      <template #footer>
+        <el-button @click="importOpen=false">{{ T('cancel') }}</el-button>
+        <el-button type="primary" @click="confirmImport">{{ T('confirm') }}</el-button>
+      </template>
+    </el-dialog>
+    <!-- §通用弹窗(缺口D dialogs)：操作按钮 opens=<弹窗名> 打开
+         ⚠️ 字段块 与 表格 【可以同时有】——先字段、再表格（真系统「生成采购单」= 仓库/供应商/费用字段 + SKU配对表）。
+            旧版写成 v-if 表格 / v-else-if 字段 = 二选一 → 两者都配时字段整块消失（2026-07-14 实测逮到）。 -->
+    <el-dialog :class="['fdlg', cfg.dialogs[dialogName]&&cfg.dialogs[dialogName].noHeader?'no-header':'']" v-if="dialogName && cfg.dialogs && cfg.dialogs[dialogName]" v-model="dlgOpen" :title="L(cfg.dialogs[dialogName].title)" :width="cfg.dialogs[dialogName].width||'620px'" append-to-body :data-annotation="ak('弹窗')">
+      <el-form v-if="cfg.dialogs[dialogName].fields" label-position="top" size="small" class="form-grid" :class="'cols-'+(cfg.dialogs[dialogName].cols||2)">
+        <!-- 必填红星：fd.required → is-required（真系统 CNPJ*/A1证书*/A1密码* 都带星） -->
+        <template v-for="(fd,fi) in cfg.dialogs[dialogName].fields" :key="fi">
+        <!-- §条件字段 showWhen={f:控制字段下标, eq:'值'}：真系统「理由」仅在选 Operação Não Realizada 时出现 -->
+        <el-form-item v-if="fdShow(cfg.dialogs[dialogName].fields, fd)" :label="(fd.type==='combo'||fd.noLabel)?'':L(fd.label)" :required="!!fd.required" :class="{'span-2':fd.span===2}">
+          <!-- §弹窗组合筛选(v2.3)：type:'combo' —— 与列表筛选区 §5.3b 同一套结构/样式/形态判定，
+               只是 v-model 落在 dlgFilterModel 上（弹窗筛选与列表筛选互不干扰）。
+               写法：{type:'combo', label:'发票号', fields:['发票号','序列号','Key'], ph:'批量搜索用逗号,隔开', match:null}
+                     dateMode:true → [字段▾][日期区间📅] -->
+          <!-- §弹窗多选下拉面板(v2.6)：与列表筛选区同一套 helpers，pfx='d'、model=dlgFilterModel -->
+          <!-- §确认清单(v3.2)：type:'reviewList' —— 实时读当前整页表格【已勾选】的行渲染，
+               勾几行就列几行、总数与金额实算。写死的静态清单会和表格对不上（2026-08-28 用户逮到）。
+               配置：{type:'reviewList', nameCol, qtyCol, head:[{label,value}], totalLabel, amountLabel} -->
+          <div v-if="fd.type==='reviewList'" class="rv-box">
+            <template v-if="(fd.head||[]).length">
+              <div v-for="(h,hi) in fd.head" :key="'h'+hi" class="rv-kv">
+                <span class="rv-k">{{ L(h.label) }}</span><span class="rv-v" v-html="L(h.value)"></span>
+              </div>
+              <div class="rv-hr"></div>
+            </template>
+            <div v-for="(it,ii) in reviewItems(fd)" :key="'i'+ii" class="rv-li">
+              <span class="rv-name">{{ it.name }}</span><span class="rv-num">×{{ it.qty }}</span>
+            </div>
+            <div v-if="!reviewItems(fd).length" class="rv-empty">{{ T('noData') }}</div>
+            <div class="rv-hr"></div>
+            <div class="rv-li rv-strong"><span>{{ L(fd.totalLabel||'总数量') }}</span><span class="rv-num">×{{ reviewTotal(fd).qty }}</span></div>
+            <div v-if="fd.amountLabel" class="rv-li rv-strong"><span>{{ L(fd.amountLabel) }}</span><span class="rv-num">{{ reviewTotal(fd).amountText }}</span></div>
+          </div>
+          <el-popover v-else-if="fd.type==='multiSelect'" :visible="msOpen['d'+fi]" placement="bottom-start"
+                      :width="fd.panelWidth||300" popper-class="ms-pop" trigger="manual" :teleported="true" transition="none">
+            <template #reference>
+              <div class="ms-trigger" :class="{'is-open':msOpen['d'+fi]}" @click="msToggle(fd,fi,'d',dlgFilterModel)">
+                <span class="ms-text" :class="{'is-ph':!msSummary(fd,fi,'d',dlgFilterModel)}">{{ msSummary(fd,fi,'d',dlgFilterModel) || L(fd.ph||fd.label) }}</span>
+                <span class="ms-caret">{{ msOpen['d'+fi] ? '︿' : '﹀' }}</span>
+              </div>
+            </template>
+            <div class="ms-panel">
+              <el-input v-if="fd.search!==false" v-model="msKw['d'+fi]" class="ms-search" size="small" :placeholder="L(fd.searchPh||'')">
+                <template #suffix><span class="ms-ic">⌕</span></template>
+              </el-input>
+              <div class="ms-list">
+                <label class="ms-item">
+                  <el-checkbox :model-value="msAllChecked(fd,fi,'d')" @change="v=>msSetAll(fd,fi,v,'d')">{{ L(fd.allLabel||'全部') }}</el-checkbox>
+                </label>
+                <label v-for="(o,oi) in msVisible(fd,fi,'d')" :key="oi" class="ms-item">
+                  <el-checkbox :model-value="(msDraft['d'+fi]||[]).includes(K(o))" @change="v=>msPick(fd,fi,K(o),v,'d')">{{ L(o) }}</el-checkbox>
+                </label>
+                <div v-if="!msVisible(fd,fi,'d').length" class="ms-empty">{{ T('noData') }}</div>
+              </div>
+              <div class="ms-foot">
+                <a class="ms-cancel" @click="msCancel(fd,fi,'d')">{{ L(fd.cancelText||'取消') }}</a>
+                <a class="ms-save" @click="msSave(fd,fi,'d',dlgFilterModel)">{{ L(fd.okText||'保存') }}</a>
+              </div>
+            </div>
+          </el-popover>
+          <div v-else-if="fd.type==='combo'" class="combo-filter" :class="{'combo-2':!fd.match&&!fd.dateMode,'combo-date':fd.dateMode}">
+            <el-select v-model="dlgFilterModel['cf'+fi]" class="combo-left" :placeholder="L(fd.label || (fd.fields&&fd.fields[0]))"><el-option v-for="o in (fd.fields||[fd.label])" :key="K(o)" :label="L(o)" :value="K(o)"></el-option></el-select>
+            <el-date-picker v-if="fd.dateMode" v-model="dlgFilterModel[fi]" class="combo-dt" type="daterange" unlink-panels :start-placeholder="T('startTime')" :end-placeholder="T('endTime')"></el-date-picker>
+            <template v-else>
+              <el-input v-model="dlgFilterModel[fi]" class="combo-mid" :placeholder="L(fd.ph||'批量搜索用逗号,隔开')"><template #prefix><span class="combo-search-ic">⌕</span></template></el-input>
+              <el-select v-if="fd.match!==null && fd.match!==false" v-model="dlgFilterModel['cm'+fi]" class="combo-right" :placeholder="L((fd.match&&fd.match[0])||'精确搜索')"><el-option v-for="o in (fd.match||['精确搜索','模糊搜索'])" :key="K(o)" :label="L(o)" :value="K(o)"></el-option></el-select>
+            </template>
+          </div>
+          <el-select v-else-if="fd.type==='select'" v-model="fd.value" :placeholder="L(fd.ph||'')" :disabled="!!fd.disabled"><el-option v-for="o in (fd.options||[])" :key="K(o)" :label="L(o)" :value="K(o)" :disabled="!!optDisabledReason(fd,o)"><span>{{ L(o) }}</span><span v-if="optDisabledReason(fd,o)" class="opt-why">{{ optDisabledReason(fd,o) }}</span></el-option></el-select>
+          <el-date-picker v-else-if="fd.type==='date'" v-model="fd.value" type="date"></el-date-picker>
+          <el-switch v-else-if="fd.type==='switch'" v-model="fd.value"></el-switch>
+          <el-input v-else-if="fd.type==='textarea'" v-model="fd.value" type="textarea" :rows="2" :maxlength="fd.max" :show-word-limit="!!fd.max"></el-input>
+          <el-input v-else-if="fd.type==='password'" v-model="fd.value" type="password" show-password :placeholder="L(fd.ph||'')"></el-input>
+          <!-- §5.3r 多选网格（真系统「同步采购发票」弹窗：全选 + 两列勾选框·每项=名称+灰色副行(CNPJ)·可滚动）
+               数据写 { type:'checkGrid', allLabel:'全部公司', items:[{label:'APAUL COM LTDA', sub:'64.962.869/0001-08'},…] } -->
+          <div v-else-if="fd.type==='checkGrid'" class="chk-grid-wrap">
+            <el-checkbox v-model="fd._all" @change="v=>{ (fd.items||[]).forEach(it=>it._on=v); }">{{ L(fd.allLabel||'全部') }}</el-checkbox>
+            <div class="chk-grid-hr"></div>
+            <div class="chk-grid">
+              <label v-for="(it,ii) in (fd.items||[])" :key="ii" class="chk-cell">
+                <el-checkbox v-model="it._on" @change="()=>{ fd._all = (fd.items||[]).every(x=>x._on); }">
+                  <span class="cg-name">{{ L(it.label) }}</span>
+                </el-checkbox>
+                <span v-if="it.sub" class="cg-sub">{{ L(it.sub) }}</span>
+              </label>
+            </div>
+          </div>
+          <!-- §上传字段(真系统「+ 上传证书」蓝链)：绝不能掉进 el-input，否则对象值渲染成 [object Object] -->
+          <span v-else-if="fd.type==='upload'" class="up-link" @click="msg(L(fd.label))">＋ {{ L(fd.upText||fd.label) }}</span>
+          <div v-else-if="fd.type==='readonly'" style="color:#333;padding-top:6px">{{ L(fd.value) }}</div>
+          <!-- §富HTML预览（打印发票 DANFE 预览用）：type:'html' → v-html 渲染整段单据，可滚动 -->
+          <div v-else-if="fd.type==='html'" v-html="L(fd.value)" :style="fd.card?'':'max-height:62vh;overflow:auto;border:1px solid #e4e7ed;border-radius:4px;background:#fff'"></div>
+          <el-input v-else v-model="fd.value" :placeholder="L(fd.ph||'')" :disabled="!!fd.disabled" :maxlength="fd.max" :show-word-limit="!!fd.max">
+            <template v-if="fd.prefix" #prepend>{{ L(fd.prefix) }}</template>
+          </el-input>
+          <div v-if="fd.hint" class="fd-sub">{{ L(fd.hint) }}</div>
+          <!-- §选中后果说明（报告改进项#4·四态后果说明+风险标色）：select 配 optionHints[选中值]={c:'red|orange|blue|green|gray', t:文案} -->
+          <div v-if="fd.type==='select' && fd.optionHints && fd.optionHints[fd.value]" class="fd-sub" :style="{color:hintColor(fd.optionHints[fd.value].c), lineHeight:'1.7'}">{{ L(fd.optionHints[fd.value].t) }}</div>
+        </el-form-item>
+        </template>
+      </el-form>
+      <!-- 表格【在字段块之后】渲染，两者可共存（生成采购单 = 字段 + SKU配对表）；支持行内可编辑单元格与「添加XX」按钮 -->
+      <!-- §弹窗多表(v1.5)：dialogs.x.table 与可选的 dialogs.x.table2（带 label 小标题，如「商品明细」联动带出）。
+           单元格渲染只此一份，靠 v-for 遍历，杜绝两张表逐渐长歪。table.radio → 首列单选（真系统选单据是单选）。 -->
+      <template v-for="(tb,ti) in dlgTables(cfg.dialogs[dialogName])" :key="ti">
+        <div v-if="tb.label" style="font-weight:600;color:#333;font-size:13px;margin:16px 0 10px">{{ L(tb.label) }}</div>
+        <el-button v-if="tb.addBtn" size="small" style="margin:8px 0 10px" @click="addTableRow(tb)">{{ L(tb.addBtn) }}</el-button>
+        <el-table :data="tb.rows" border size="small" @click="onCellAct" :empty-text="L(tb.empty)||T('noData')">
+          <el-table-column v-if="tb.radio" :label="L(tb.radio)" width="90"><template #default="{row}"><el-radio v-model="dlgRadio" :value="row[0]" :label="row[0]"><span></span></el-radio></template></el-table-column>
+          <el-table-column v-for="(col,ci) in tb.columns" :key="ci" :label="L(colLabel(col))" :min-width="colWidth(col,ci)">
+            <template #default="{row}">
+              <template v-if="isCtrl(row[ci])">
+                <template v-if="row[ci].ctrl==='select'"><el-select v-model="row[ci].value" size="small" style="width:100%"><el-option v-for="o in (row[ci].options||[])" :key="K(o)" :label="L(o)" :value="K(o)"></el-option></el-select><div v-if="row[ci].sub" class="cell-sub">{{ L(row[ci].sub) }}</div></template>
+                <el-checkbox v-else-if="row[ci].ctrl==='checkbox'" v-model="row[ci].value" @change="autoRecalc(pn&&pn.table)">{{ L(row[ci].text||'') }}</el-checkbox>
+                <el-link v-else-if="row[ci].ctrl==='del'" type="danger" :underline="false" @click="msg(T('deleted'))">🗑</el-link>
+                <span v-else-if="row[ci].ctrl==='link'"><el-link v-for="(lk,li) in (Array.isArray(row[ci].links)?row[ci].links:[{text:row[ci].text}])" :key="li" type="primary" :underline="false" style="margin-right:12px" @click="(canFire(row[ci])||canFire(lk)) ? fireBtn(Object.assign({},row[ci],lk), row) : msg(L(lk.text))">{{ L(lk.text) }}</el-link></span>
+                <el-input v-else v-model="row[ci].value" size="small" :placeholder="L(row[ci].ph||'')"></el-input>
+              </template>
+              <span v-else v-html="cell(row[ci])"></span>
+            </template>
+          </el-table-column>
+        </el-table>
+        <!-- §弹窗分页(v2.3)：tb.pager={total,page,size,sizes} → 总计 N ｜ ‹x/y› ｜ N条▾（照 某真实业务系统 选票弹窗） -->
+        <div v-if="tb.pager" class="dlg-pager">
+          <el-pagination background layout="total, sizes, prev, pager, next, jumper" :total="tb.pager.total||0" :page-sizes="tb.pager.sizes||[10,25,50,100]" v-model:page-size="tb.pager.size" v-model:current-page="tb.pager.page" :pager-count="5"></el-pagination>
+        </div>
+      </template>
+      <div v-if="cfg.dialogs[dialogName].note" style="color:#66778d;font-size:12px;margin-top:10px">{{ L(cfg.dialogs[dialogName].note) }}</div>
+      <!-- 按钮文案可配（真系统新增向导是「继续」不是「确定」）：dialogs.x.okText / cancelText。
+           dialogs.x.viewOnly=true → 只读明细弹窗，隐藏底部取消/确定，只留右上角×关闭。2026-07-31 -->
+      <template #footer v-if="!cfg.dialogs[dialogName].viewOnly"><el-button @click="dialogName=''">{{ L(cfg.dialogs[dialogName].cancelText)||T('cancel') }}</el-button><!-- §okButtons(v2.0)：项可写字符串，也可写 {label, goto|opens|download|act} → 走 fireBtn，能真跳转/真下载 -->
+        <template v-if="cfg.dialogs[dialogName].okButtons"><el-button v-for="(b,bi) in cfg.dialogs[dialogName].okButtons" :key="bi" :type="(b&&b.btnType)||'primary'" @click="(b&&typeof b==='object'&&(b.goto||b.opens||b.download||b.act||b.copy)) ? fireBtn(b) : (dialogName='',msg(L(b)))">{{ btnLabel(b) }}</el-button></template><el-button v-else type="primary" @click="dlgOk()">{{ L(cfg.dialogs[dialogName].okText)||T('confirm') }}</el-button></template>
+    </el-dialog>
+  </div>
+ </el-config-provider>
+</div>
+
+@@ANNOTATION_LAYER@@
+
+<script>
+(function(){
+  const { createApp, ref, reactive, computed } = Vue;
+
+  /* ═══ §5.5 多语言（固定·标准件·AI 不重打）═══════════════════════════════
+     文案层三语：任何文案写成 {"zh":"…","en":"…","pt":"…"} 即自动跟随切换；
+     写成普通字符串则各语言同显（向后兼容旧 project-data）。
+     表格里的 mock 业务数据不翻译（它是假数据，翻了无价值）。
+     __DESIGN_CHOICE__ 里的 locales / defaultLocale 由装配器按三问答案写入。 */
+  window.__DESIGN_CHOICE__=@@DESIGN_CHOICE@@;   /* 三问所选(ui/form/region/currency/timezone/locales/defaultLocale)·供 choice-conformance-gate 自检"原型==所选" */
+  const LOCALE_META = { zh:{name:'中文',html:'zh-CN'}, en:{name:'English',html:'en-US'}, pt:{name:'Português',html:'pt-BR'}, spa:{name:'Español',html:'es'} };
+  const LOCALE_KEYS = Object.keys(LOCALE_META);
+  const UI_DICT = {
+    connect:      {zh:'去连接授权',          en:'Connect',               pt:'Conectar',              spa:'Conectar'},
+    connected:    {zh:'已连接',              en:'Connected',             pt:'Conectado',             spa:'Conectado'},
+    more:         {zh:'更多',                en:'More',                  pt:'Mais',                  spa:'Más'},
+    bulkEdit:     {zh:'批量编辑',            en:'Bulk edit',             pt:'Edição em lote',        spa:'Edición masiva'},
+    noData:       {zh:'暂无数据',            en:'No data',               pt:'Sem dados',             spa:'Sin datos'},
+    handle:       {zh:'去处理',              en:'Handle',                pt:'Tratar',                spa:'Gestionar'},
+    backlog:      {zh:'堆积',                en:'Backlog',               pt:'Acúmulo',               spa:'Acumulación'},
+    ask:          {zh:'提问',                en:'Ask',                   pt:'Perguntar',             spa:'Preguntar'},
+    aiInsight:    {zh:'AI 主动洞察',         en:'AI insights',           pt:'Insights da IA',        spa:'Insights de IA'},
+    aiEmpty:      {zh:'请输入你想问的问题',   en:'Type your question first', pt:'Digite sua pergunta',  spa:'Escriba su pregunta'},
+    aiFallback:   {zh:'原型演示：正式版会基于你的订单、库存、成本与税务数据实时推理后回答。', en:'Prototype demo: the live version answers from your real order, stock, cost and tax data.', pt:'Demo do protótipo: a versão real responde com base em seus dados reais de pedidos, estoque, custo e impostos.', spa:'Demo del prototipo: la versión real responde con sus datos reales de pedidos, stock, coste e impuestos.'},
+    anno:         {zh:'标注',                en:'Annotate',              pt:'Anotação',              spa:'Anotación'},
+    copyScoped:   {zh:'复制已圈功能',        en:'Copy Scoped',           pt:'Copiar Selecionados',   spa:'Copiar Seleccionados'},
+    exportShare:  {zh:'导出分享版',          en:'Export Share',          pt:'Exportar Compartilhado',spa:'Exportar Compartido'},
+    exportDevkit: {zh:'导出对接料·喂AI',      en:'Export DevKit·feed AI', pt:'Exportar Kit·p/IA',     spa:'Exportar Kit·a IA'},
+    genCode:      {zh:'一键生成代码',          en:'Generate Code',         pt:'Gerar Código',          spa:'Generar Código'},
+    clear:        {zh:'清空',                en:'Clear',                 pt:'Limpar',                spa:'Limpiar'},
+    restore:      {zh:'恢复标注',            en:'Restore',               pt:'Restaurar',             spa:'Restaurar'},
+    search:       {zh:'查询',                en:'Search',                pt:'Buscar',                spa:'Buscar'},
+    reset:        {zh:'重置',                en:'Reset',                 pt:'Limpar',                spa:'Restablecer'},
+    ops:          {zh:'操作',                en:'Actions',               pt:'Ações',                 spa:'Acciones'},
+    all:          {zh:'全部',                en:'All',                   pt:'Todos',                 spa:'Todos'},
+    current:      {zh:'当前',                en:'Current',               pt:'Atual',                 spa:'Actual'},
+    page:         {zh:'页面',                en:'Page',                  pt:'Página',                spa:'Página'},
+    newModule:    {zh:'新增模块',            en:'New Module',            pt:'Novo Módulo',           spa:'Nuevo Módulo'},
+    mergeModule:  {zh:'重组合并',            en:'Merged',                pt:'Reorganizado',          spa:'Reorganizado'},
+    building:     {zh:'建设中',              en:'Under Construction',    pt:'Em Construção',         spa:'En Construcción'},
+    buildingHint: {zh:'本页按数据接入中。框架/系统切换/标注层已就绪。', en:'This page is being wired to data. Shell / system switch / annotation layer are ready.', pt:'Esta página está sendo conectada aos dados. Estrutura / troca de sistema / camada de anotação prontas.', spa:'Esta página se está conectando a los datos. Estructura / cambio de sistema / capa de anotación listas.'},
+    filterApplied:{zh:'已应用筛选条件',      en:'Filters applied',       pt:'Filtros aplicados',     spa:'Filtros aplicados'},
+    executed:     {zh:'：已执行',            en:': executed',            pt:': executado',           spa:': ejecutado'},
+    opened:       {zh:'：已打开',            en:': opened',              pt:': aberto',              spa:': abierto'},
+    annoOn:       {zh:'标注已开启 · 右键元素/框选区域生成 PRD 标注', en:'Annotation on · right-click an element / drag to frame an area', pt:'Anotação ativada · clique direito no elemento / arraste para enquadrar', spa:'Anotación activada · clic derecho en el elemento / arrastre para enmarcar'},
+    annoOff:      {zh:'标注已关闭',          en:'Annotation off',        pt:'Anotação desativada',   spa:'Anotación desactivada'},
+    annoZhForced: {zh:'标注与 PRD 以中文为准，已切回中文', en:'Annotation & PRD use Chinese as the source of truth — switched back to Chinese', pt:'Anotação e PRD usam chinês como fonte da verdade — voltou para chinês', spa:'La anotación y el PRD usan chino como fuente de verdad — se volvió al chino'},
+    langLocked:   {zh:'标注开启中，语言已锁定为中文（关闭标注后可切换）', en:'Annotation is on — language locked to Chinese (turn it off to switch)', pt:'Anotação ativada — idioma travado em chinês (desative para trocar)', spa:'Anotación activada — idioma bloqueado en chino (desactívela para cambiar)'},
+    layerLoading: {zh:'标注层加载中…',       en:'Annotation layer loading…', pt:'Carregando camada de anotação…', spa:'Cargando capa de anotación…'},
+    back:         {zh:'返回',                en:'Back',                  pt:'Voltar',                spa:'Volver'},
+    save:         {zh:'保存',                en:'Save',                  pt:'Salvar',                spa:'Guardar'},
+    saved:        {zh:'已保存',              en:'Saved',                 pt:'Salvo',                 spa:'Guardado'},
+    cancel:       {zh:'取消',                en:'Cancel',                pt:'Cancelar',              spa:'Cancelar'},
+    confirm:      {zh:'确定',                en:'Confirm',               pt:'Confirmar',             spa:'Confirmar'},
+    selected:     {zh:'已选',                en:'Selected',              pt:'Selecionados',          spa:'Seleccionados'},
+    noticeTitle:  {zh:'注意事项：',           en:'Notes:',                pt:'Observações:',          spa:'Notas:'},
+    deleted:      {zh:'已删除',              en:'Deleted',               pt:'Excluído',              spa:'Eliminado'},
+    delTitle:     {zh:'删除确认',             en:'Confirm deletion',      pt:'Confirmar exclusão',    spa:'Confirmar eliminación'},
+    importTitle:  {zh:'导入',                 en:'Import',                pt:'Importar',              spa:'Importar'},
+    importHint:   {zh:'请选择要导入的文件（支持 .xlsx / .xls / .csv）',
+                   en:'Choose a file to import (.xlsx / .xls / .csv)',
+                   pt:'Escolha o arquivo (.xlsx / .xls / .csv)',
+                   spa:'Elija el archivo (.xlsx / .xls / .csv)'},
+    pickFile:     {zh:'选择文件',             en:'Choose file',           pt:'Escolher arquivo',      spa:'Elegir archivo'},
+    importTpl:    {zh:'首次导入建议先下载模板，按模板格式填写。',
+                   en:'First time? Download the template and follow its format.',
+                   pt:'Primeira vez? Baixe o modelo e siga o formato.',
+                   spa:'¿Primera vez? Descargue la plantilla y siga el formato.'},
+    imported:     {zh:'已导入 {f}',           en:'Imported {f}',          pt:'Importado {f}',         spa:'Importado {f}'},
+    exported:     {zh:'已导出 {n} 条记录',     en:'Exported {n} record(s)', pt:'{n} registro(s) exportado(s)', spa:'{n} registro(s) exportado(s)'},
+    delConfirm:   {zh:'确定删除选中的 {n} 条记录？删除后不可恢复。',
+                   en:'Delete {n} selected record(s)? This cannot be undone.',
+                   pt:'Excluir {n} registro(s) selecionado(s)? Não pode ser desfeito.',
+                   spa:'¿Eliminar {n} registro(s)? No se puede deshacer.'},
+    startTime:    {zh:'开始时间',            en:'Start time',            pt:'Data inicial',          spa:'Fecha inicial'},
+    endTime:      {zh:'结束时间',            en:'End time',              pt:'Data final',            spa:'Fecha final'},
+    rowAdded:     {zh:'已添加一行',           en:'Row added',             pt:'Linha adicionada',      spa:'Fila añadida'},
+    submit:       {zh:'提交',                 en:'Submit',                pt:'Enviar',                spa:'Enviar'},
+    synced:       {zh:'同步完成',             en:'Sync completed',        pt:'Sincronização concluída', spa:'Sincronización completa'},
+    blocked:      {zh:'当前状态不允许此操作',   en:'Not allowed in current status', pt:'Não permitido no status atual', spa:'No permitido en este estado'},
+    submitted:    {zh:'已提交',               en:'Submitted',             pt:'Enviado',               spa:'Enviado'},
+    menuMode:     {zh:'菜单模式',             en:'Menu layout',           pt:'Layout do menu',        spa:'Diseño de menú'},
+    menuTop:      {zh:'顶部导航',             en:'Top navigation',        pt:'Menu superior',         spa:'Menú superior'},
+    menuSide:     {zh:'左侧菜单',             en:'Side menu',             pt:'Menu lateral',          spa:'Menú lateral'},
+    msgs:         {zh:'消息',                 en:'Notifications',         pt:'Notificações',          spa:'Notificaciones'},
+    profile:      {zh:'个人中心',             en:'Profile',               pt:'Perfil',                spa:'Perfil'},
+    logout:       {zh:'退出登录',             en:'Log out',               pt:'Sair',                  spa:'Cerrar sesión'}
+  };
+  /* EP 内置文案（分页"共 N 条/前往"、空状态、下拉无数据）不跟随本层，需喂给 el-config-provider。
+     不引 EP 的 4 个 locale CDN 包（离线单文件铁律：每个 CDN 依赖都要多维护一次内联），
+     只内联原型真正用得到的那几条。缺的键 EP 自动回退英文，不会报错。 */
+  const EP_LOCALE = {
+    zh:  { name:'zh-cn', el:{ pagination:{goto:'前往',pagesize:'条/页',total:'共 {total} 条',pageClassifier:'页'}, table:{emptyText:'暂无数据'}, select:{noData:'无数据',noMatch:'无匹配数据',placeholder:'请选择'} } },
+    en:  { name:'en',    el:{ pagination:{goto:'Go to',pagesize:'/page',total:'Total {total}',pageClassifier:''}, table:{emptyText:'No Data'}, select:{noData:'No data',noMatch:'No matching data',placeholder:'Select'} } },
+    pt:  { name:'pt-br', el:{ pagination:{goto:'Ir para',pagesize:'/página',total:'Total {total}',pageClassifier:''}, table:{emptyText:'Sem dados'}, select:{noData:'Sem dados',noMatch:'Nenhum resultado',placeholder:'Selecione'} } },
+    spa: { name:'es',    el:{ pagination:{goto:'Ir a',pagesize:'/página',total:'Total {total}',pageClassifier:''}, table:{emptyText:'Sin datos'}, select:{noData:'Sin datos',noMatch:'Sin coincidencias',placeholder:'Seleccionar'} } }
+  };
+  const _CH = window.__DESIGN_CHOICE__ || {};
+  const locales = (Array.isArray(_CH.locales) && _CH.locales.length ? _CH.locales : ['zh']).filter(l => LOCALE_KEYS.includes(l));
+  const DEFAULT_LOCALE = locales.includes(_CH.defaultLocale) ? _CH.defaultLocale : locales[0];
+  const lang = ref((function(){ try{ const s=localStorage.getItem('__proto_lang__'); if(s && locales.includes(s)) return s; }catch(_){} return DEFAULT_LOCALE; })());
+  /* 是不是"三语文案对象"：键全部落在 zh/en/pt/spa 里且至少一个 */
+  const isI18n = v => !!v && typeof v==='object' && !Array.isArray(v) && Object.keys(v).length>0 && Object.keys(v).every(k=>LOCALE_KEYS.includes(k));
+  /* L(v)：解析当前语言文案；普通字符串/数字原样返回（向后兼容） */
+  function L(v){ if(v==null) return ''; if(isI18n(v)) return v[lang.value] || v[DEFAULT_LOCALE] || v.zh || v[Object.keys(v)[0]] || ''; return v; }
+  /* K(v)：取稳定原始键（v-for :key / :index / :value 用，绝不随语言变） */
+  const K = v => isI18n(v) ? (v.zh || v[Object.keys(v)[0]]) : v;
+  /* T(key)：外壳固定文案 */
+  const T = k => L(UI_DICT[k]);
+  const epLocale = computed(()=> EP_LOCALE[lang.value] || EP_LOCALE.en);
+  const localeName = lc => (LOCALE_META[lc]||{}).name || lc;
+  function setLang(lc){ if(!locales.includes(lc)) return; lang.value=lc; try{ localStorage.setItem('__proto_lang__',lc); }catch(_){} document.documentElement.lang=(LOCALE_META[lc]||{}).html||lc; window.__LANG__=lc; }
+  setLang(lang.value);
+
+  /* ===== 渲染器助手（固定·标准件）：纯 JSON 单元渲染。标签单元 = {t,c}；三语对象走 L()；其它原样 ===== */
+  function cell(v){ if(v&&typeof v==='object'&&'t'in v){ const c=v.c||'blue';
+      /* 状态值：圆点+彩色文字（规范§4.3「状态文字非标签」·不加边框/底色）；数据写 {"t":"已授权","c":"green","dot":true} */
+      if(v.dot){ const dc={green:'#67C23A',orange:'#F2AC3A',red:'#F56C6C',blue:'#3363FF',gray:'#909399',purple:'#6e56c7'}[c]||'#3363FF'; return '<span style="display:inline-flex;align-items:center;gap:5px;color:'+dc+';font-size:14px"><i style="width:6px;height:6px;border-radius:50%;background:'+dc+';flex-shrink:0"></i>'+L(v.t)+'</span>'; }
+      /* 可点/可编辑单元格：蓝色链接（+可选行内铅笔✎）；数据写 {"t":"多个(2)","link":true,"edit":true} */
+      if(v.link){ return '<span style="display:inline-flex;align-items:center;gap:4px;color:#3363FF;font-size:14px;cursor:pointer">'+L(v.t)+(v.edit?'<i style="font-style:normal;font-size:12px;opacity:.7">✎</i>':'')+'</span>'; }
+      /* 类型/来源标签：填充药丸（§4.3 类型2·真系统实测 12px）；数据写 {"t":"ML Full","c":"purple"}
+         文本+标签同格：数据直接写含标签的原始 HTML 字符串即可（cell 原样输出）。 */
+      const fg={green:'#18865b',orange:'#bd711f',red:'#c54848',gray:'#5b6b82',purple:'#6e56c7'}[c]||'#436bd4'; const bg={green:'#eaf9f2',orange:'#fff5e7',red:'#fff0f0',gray:'#eef1f5',purple:'#f2efff'}[c]||'#eef3ff'; return '<span style="display:inline-flex;align-items:center;padding:3px 7px;border-radius:4px;font-size:12px;font-weight:650;color:'+fg+';background:'+bg+'">'+L(v.t)+'</span>'; }
+    if(isI18n(v)) return String(L(v)); return v==null?'':String(v); }
+  /* §行内可编辑单元格(真系统「已绑定店铺」实测：单元格内嵌 select/数字+%/勾选框/输入/删除图标)
+     数据写 {"ctrl":"select","options":[...],"value":"…"} / {"ctrl":"number","value":30,"suffix":"%"}
+            {"ctrl":"checkbox","value":false,"text":"含买家运费开票"} / {"ctrl":"input","value":"zp"} / {"ctrl":"del"}
+     ⚠️ 必须走真 EP 组件（不能像 cell() 那样吐 HTML 字符串·v-html 渲染不出 Vue 组件）。 */
+  const isCtrl = v => !!(v && typeof v==='object' && 'ctrl' in v);
+  /* §列定义：列可写 "名" / {zh,en,pt} / {label:…, width:240}。带 label 键 = 带宽度的列定义（i18n 对象没有 label 键，不会误判） */
+  /* §行内操作图标（真系统实测：主色蓝 80% 透明·28px·带 tooltip）。动作写 {label,icon:"edit"|"delete"|"view"|"copy"} */
+  /* 别名(del/remove/detail/log/sync/refresh)：作者常写简写，没映射会把 "del" 当图标字面量印出来（2026-08-06 实测逮到）→ 收进表，结构上不再漏 */
+      const ACT_ICONS = { edit:'✎', delete:'🗑', del:'🗑', remove:'🗑', view:'👁', detail:'👁', copy:'⧉', download:'⤓', setting:'✎', log:'🗒', sync:'⟳', refresh:'⟳' };
+  const actIcon = a => (a && typeof a==='object' && a.icon) ? (ACT_ICONS[a.icon] || a.icon) : null;
+  const colLabel = c => (c && typeof c==='object' && 'label' in c) ? c.label : c;
+  const colWidth = (c,i) => (c && typeof c==='object' && c.width) ? c.width : (i===0?140:100);
+  /* ===== 项目数据（装配器注入·唯一允许 AI 产出的部分·纯 JSON）===== */
+  @@PROJECT_DATA_JS@@
+  createApp({
+    setup(){
+      /* URL 深链（截图自动化 / 回路闸用）：?sys=OMS&page=OMS-recharge-list 直达指定系统+页面；无效值回退首页 */
+      const _q = new URLSearchParams(location.search);
+      const _qSys = _q.get('sys');
+      const _defSys = (typeof DEFAULT_SYS!=='undefined' && DEFAULT_SYS && SYSTEMS.find(s=>s.key===DEFAULT_SYS)) ? DEFAULT_SYS : SYSTEMS[0].key;
+      const currentSystem = ref((_qSys && SYSTEMS.find(s=>s.key===_qSys)) ? _qSys : _defSys);
+      const homePage = ref(HOME[currentSystem.value]);
+      const _qPage = _q.get('page');
+      const _initPage = (_qPage && PAGECFG[_qPage]) ? _qPage : homePage.value;
+      const currentPage = ref(_initPage);
+      const openTabs = ref(_initPage===homePage.value ? [homePage.value] : [homePage.value, _initPage]);
+      const annoOn = ref(false);
+      const pageSize = ref(25);   /* §4.2 必须 ref：el-pagination 的 sizes 需要 v-model:page-size */
+      const pageNo = ref(1);
+      const filterModel = reactive({});
+      /* §详情页单选列(真系统「默认税种」radio 列)：存当前选中行的首列值 */
+      const detailRadio = ref('');
+      /* §顶栏消息图标 + 用户头像（真系统：🔔红角标 + 账号名+圆头像）。数据可由 project-data 覆盖：topbar:{user,notif} */
+      const TB = (typeof PROJECT_TOPBAR!=='undefined' && PROJECT_TOPBAR) || {};
+      const userName = ref(TB.user || 'admin');
+      const notifCount = ref(TB.notif != null ? Number(TB.notif) : 0);
+      /* §菜单模式：'top'=顶部导航(默认·真系统 TF OMS 模式) / 'side'=左侧栏(经典B端)。用户可切换，选择记忆到 localStorage */
+      const menuMode = ref((()=>{ try{ const v=localStorage.getItem('__proto_menu__'); return (v==='side'||v==='top')?v:'top'; }catch(_){ return 'top'; } })());
+      function setMenuMode(m){ if(m!=='top'&&m!=='side') return; menuMode.value=m; try{ localStorage.setItem('__proto_menu__',m); }catch(_){} }
+      /* §左侧状态面板(真系统「发票管理」)：当前选中项 + 分组展开态 */
+      const activePanel = ref('');
+      const panelOpen = reactive({});
+      /* 左面板首项 = 默认选中（换页时重算，保证进页面就有数据、不空） */
+      const firstPanelKey = computed(()=>{
+        const it = ((cfg.value.statusPanel||{}).items||[])[0];
+        if(!it) return '';
+        return it.group ? K((it.items||[])[0] && (it.items||[])[0].key) : K(it.key);
+      });
+      const curPanel = computed(()=> activePanel.value || firstPanelKey.value);
+      /* ═══ §5.3i2 按状态覆盖【整套页面配置】（2026-07-13 实测校正）═══
+         真系统「发票管理」点左面板切状态时，**不只是换数据** —— 列/工具栏/页签/行内操作都跟着换：
+           开票中/开票失败 → 10列·无操作列·无工具栏·有出库入库页签
+           近期/历史发票   → 12列(+状态+时间+操作)·工具栏[打印发票/开退票/开具CC-e/取消发票/导出]
+           异常发票        → 完全不同的7列(key/订单信息/平台信息/异常原因/处理结果/时间/操作)·**没有页签**·工具栏[开退票/取消发票/标记为已忽略]
+         数据写法：cfg.byStatus = { "<状态key>": { columns?, rows?, actions?, selectActions?, statusTabs?, total?, listTitle? } }
+         （旧的 cfg.rowsByStatus 仍兼容：只换数据。）
+         pageCfg：当前状态的有效配置 = cfg 与 byStatus[当前状态] 合并（后者优先，null 可显式抹掉，如异常发票的 statusTabs:null） */
+      const stCfg = computed(()=>{
+        const m = cfg.value.byStatus;
+        return (m && curPanel.value && m[curPanel.value]) ? m[curPanel.value] : null;
+      });
+      /* §5.3i3 顶部状态页签也能覆盖配置（2026-07-14 用户逮到：「已处理」的票已经声明过了，不该还能点「发票声明」）
+         优先级：statusTabs[当前页签] > byStatus[左面板状态] > 顶层 cfg
+         页签项直接挂覆盖字段即可：{key:'done', label:'已处理', count:3, rows:[…], actions:[查看]} */
+      const tabCfg = computed(()=>{
+        const tabs = (stCfg.value && ('statusTabs' in stCfg.value)) ? stCfg.value.statusTabs : cfg.value.statusTabs;
+        if(!tabs || !tabs.length) return null;
+        const k = activeStatus.value || K(tabs[0].key);
+        return tabs.find(t=>K(t.key)===k) || tabs[0];
+      });
+      const pick2 = k => {
+        const t = tabCfg.value; if(t && (k in t) && k!=='key' && k!=='label' && k!=='count') return t[k];
+        const s = stCfg.value;  if(s && (k in s)) return s[k];
+        return cfg.value[k];
+      };
+      const curFilters      = computed(()=> pick2('filters'));   /* 筛选也随状态（组合控件默认字段：开票中=订单号/失败=发票号/异常=key） */
+      const curAlert        = computed(()=> pick2('alert'));      /* 说明块也随状态（真系统「异常发票认定」只在异常发票页显示） */
+      const curAlertTitle   = computed(()=> { const t = pick2('alertTitle'); return t ? L(t) : T('noticeTitle'); });
+      const curColumns      = computed(()=> pick2('columns') || []);
+      /* §统计条随页签(v2.1)：失败页签要显示「失败原因分布」，与列/行/操作一样按页签取 */
+      const curListTotals   = computed(()=> pick2('listTotals'));
+      /* §快捷筛选(v2.2)：随状态页签取；点击写入 __filterKw（与查询共用一条过滤链，不另起炉灶） */
+      const curQuickFilters = computed(()=> pick2('quickFilters'));
+      const qfOn = ref(0);
+      function qfPick(i,it){ qfOn.value=i; const kw=(it&&it.kw)?String(it.kw):''; __filterKw.value = kw?[kw]:[];
+        selRows.value=[]; selCount.value=0; if(tblRef.value&&tblRef.value.clearSelection) tblRef.value.clearSelection();
+        withLoading(400); }
+      /* §分组表头（2026-07-25）：列可写 {group:"共享池", children:[{label:"在库"},{label:"锁定"},{label:"可用"}]}
+         → 渲染成两级 el-table-column（父跨子列·居中）。子列各占一个 flat 单元格下标(idx)，与 row 一一对应。
+         普通列(字符串/{label,width})照旧 → 全展开成 leaf，向后兼容旧原型不受影响。 */
+      const colTree = computed(()=>{
+        let idx = 0; const out = [];
+        const mkLeaf = (c)=>({ leaf:true, label: colLabel(c), width: (c&&c.width)||90, idx: idx++ });
+        for(const c of (curColumns.value||[])){
+          if(c && typeof c==='object' && c.group && Array.isArray(c.children)){
+            const kids = c.children.map(ch=>{
+              /* 子项再是 {group,children} → 三层表头 */
+              if(ch && ch.group && Array.isArray(ch.children)){
+                return { group: ch.group, children: ch.children.map(lf=>mkLeaf(lf)) };
+              }
+              return mkLeaf(ch);
+            });
+            out.push({ group: c.group, children: kids });
+          } else {
+            out.push({ leaf:true, label: colLabel(c), width: colWidth(c, idx), idx: idx++ });
+          }
+        }
+        return out;
+      });
+      /* §自定义页 base64 解码（UTF-8 安全）→ iframe srcdoc */
+      function b64page(b){ try{ return decodeURIComponent(escape(atob(b))); }catch(e){ try{ return atob(b); }catch(_){ return ''; } } }
+      const curActions      = computed(()=> pick2('actions'));
+      /* §可点单元格(蓝链·规范"可点单元格=蓝链")：linkCols=[列下标] → 该列渲染成蓝色可点链接，点→跳转提示(原型mock)。
+         如订单号列→点击跳订单。2026-08-19 */
+      const curLinkCols     = computed(()=> pick2('linkCols') || []);
+      /* §按组合并首列(商品信息)：cfg.mergeCol=true 时，第一数据列(空cell=同组续行)跨行合并成一格。
+         用于"小计 + 各持有方明细"同一SKU只显一次商品卡。2026-07-27 */
+      function cellEmpty(c){ const s=L(c); return !s || String(s).replace(/<[^>]*>/g,'').trim()===''; }
+      function tblSpan({row,column,rowIndex,columnIndex}){
+        const c=cfg.value; if(!c||!c.mergeCol) return;
+        const selOff = c.selectable?1:0; if(columnIndex!==selOff) return;   // 只合并第一数据列
+        const rows=curRows.value||[];
+        if(cellEmpty(row[0])) return {rowspan:0,colspan:0};                 // 空=续行→并入上格
+        let span=1; for(let k=rowIndex+1;k<rows.length;k++){ if(cellEmpty(rows[k][0])) span++; else break; }
+        return {rowspan:span,colspan:1};
+      }
+      /* §5.3t 行内操作【可点但拦截】（用户定·2026-07-14）：
+         不隐藏按钮（隐藏了用户不知道有这规则），而是【点了给拦截提示】—— 规则才可见。
+         动作写：{label:'发票声明', opens:'manifest',
+                  blockIf:{ when:'Não Realizada', msg:'交易未完成是终态，不可再做发票声明' }}
+         → 该行任一单元格文本含 when 时，点击 = 弹警告，不执行。
+         blockIf 也可写数组，一个按钮挂多条规则(v3.13)。
+         真系统场景：巴西 Manifestação（依业务分析报告 §3.1.1.6，SEFAZ 官方 + 实测）：
+         · Ciência（知悉·210210）是【预备事件】，一旦做过任一结论性事件就不能再提交（拒 640）
+         · 三个【结论性事件】Confirmação / Desconhecimento / Não Realizada 之间【可以互相覆盖】，
+           以最后一个事件为准 —— 不是终态
+         · 同一事件不可重复提交（拒 573）
+         注：某真实业务系统 自己把 Não Realizada 当成不可更改的终态，与 SEFAZ 规则冲突（见报告 §3.2 偏差①）。
+         （2026-09-04：先前注释写「只有 Não Realizada 是终态」不准，改成「三个都是终态」更错，此为更正） */
+      function rowText(row){
+        /* 2026-08-19 修：i18n 单元格常写成 {zh,en,pt}（非 {t:{...}}），旧版把这类对象一律当空串→
+           发票类型等 i18n 列在 rowText 里丢失，导致按类型 showIf/hideIf/blockIf 匹配不到。补一路 c.zh/首值兜底。 */
+        return (row||[]).map(c=> (c&&typeof c==='object') ? (c.t ? String(c.t.zh||Object.values(c.t)[0]||'') : String(c.zh||c.text||Object.values(c)[0]||'')) : String(c==null?'':c)).join(' ');
+      }
+      function actBlocked(a,row){
+        const b = (a && typeof a==='object') ? a.blockIf : null;
+        if(!b) return null;
+        /* v3.13：blockIf 可写单对象或【数组】—— 一个按钮常有多条终态规则
+           （Manifestação 三个最终事件各有各的话术）。命中第一条即拦。 */
+        const list = Array.isArray(b) ? b : [b];
+        const txt = rowText(row);
+        for(const r of list){
+          if(!r || !r.when) continue;
+          if(txt.indexOf(L(r.when)) > -1) return L(r.msg) || T('blocked');
+        }
+        return null;
+      }
+      /* §行内操作按行隐藏：动作写 {hideIf:'回收单'} → 该行任一单元格(zh)含该标记时整条动作不渲染。
+         与 blockIf(显示但拦截) 区别：hideIf 是【压根不该出现】(如回收单不能再回收)。2026-07-26 实装。 */
+      function actHidden(a,row){
+        if(!a || typeof a!=='object') return false;
+        /* §showIf：动作写 {showIf:'待认领'} → 仅当该行(zh)含该标记才显示（如「认领」只对待认领行）。与 hideIf 相反。 */
+        if(a.showIf){ const s = isI18n(a.showIf) ? (a.showIf.zh||Object.values(a.showIf)[0]||'') : a.showIf; return s ? rowText(row).indexOf(String(s)) === -1 : false; }
+        const h = a.hideIf || null;
+        if(!h) return false;
+        const needle = isI18n(h) ? (h.zh||Object.values(h)[0]||'') : h;
+        return needle ? rowText(row).indexOf(String(needle)) > -1 : false;
+      }
+      /* §弹窗字段条件显示：field.showWhen={f:控制字段下标, eq:'值'} → 仅当 fields[f].value===eq 时显示 */
+      function fdShow(fields, fd){ const w=fd&&fd.showWhen; if(!w) return true; const c=fields&&fields[w.f]; return !!c && c.value===w.eq; }
+      const HINT_COLORS={red:'#d93026',orange:'#E6912B',blue:'#3363FF',green:'#3f8f2f',gray:'#909399'};
+      function hintColor(c){ return HINT_COLORS[c]||'#66778d'; }
+      /* 操作列宽度：按动作数量给（文字链接比图标占宽），否则多个动作会被挤掉 */
+      const curActionsWidth = computed(()=>{
+        /* §显式列宽(v1.6)：cfg.actionsWidth（或 byStatus 分支里的同名键）→ 直接用实测值，
+           不写才走下面的估算。用于「视觉与真实系统逐像素一致」的拷贝场景。 */
+        const fixed = pick2('actionsWidth'); if (fixed) return fixed;
+        const a = curActions.value; if(!a || !a.length) return 120;
+        /* showIf/hideIf 的动作是「按行互斥」的：同一行最多显示一部分，不该按全量算宽（否则操作列虚胖）。
+           取「可能同时出现的最大条数」= 无 showIf/hideIf 的常显项 + 各分支里最多的一支。近似：减去被 showIf 排他的条数。2026-08-19 */
+        const always = a.filter(x=>!(x&&(x.showIf||x.hideIf)));
+        const cond   = a.filter(x=> x&&(x.showIf||x.hideIf));
+        const eff = always.length + (cond.length? Math.ceil(cond.length/2) : 0);   // 互斥分支按半数估
+        const n = Math.max(1, eff);
+        const anyText = a.some(x=>!actIcon(x));
+        return anyText ? Math.max(110, 30 + n*56) : Math.max(84, 24 + n*34);
+      });
+      /* §AI 助手面板：点快捷问题/回车 → 显示该问题的预置回答（原型级 mock，演示"能问什么、答成什么样"）。
+         chips 写 {q:"问题",a:"回答HTML"}；没配 a 时给通用兜底，绝不出现点了没反应。 */
+      const aiQuery = ref('');
+      const aiAnswer = ref('');
+      /* 没问过时展示第一个快捷问题的答案（首屏就有内容，不留白） */
+      const aiShown = computed(()=>{
+        if (aiAnswer.value) return aiAnswer.value;
+        const c = cfg.value.aiPanel;
+        return (c && c.chips && c.chips[0] && c.chips[0].a) || '';
+      });
+      function askAI(chip){
+        const c = cfg.value.aiPanel || {};
+        if (chip && chip.q) { aiQuery.value = L(chip.q); aiAnswer.value = chip.a || c.fallback || T('aiFallback'); return; }
+        const q = (aiQuery.value || '').trim();
+        if (!q) { msg(T('aiEmpty')); return; }
+        const hit = (c.chips || []).find(x => x && x.q && L(x.q) === q);
+        aiAnswer.value = (hit && hit.a) || c.fallback || T('aiFallback');
+      }
+      /* §消息中心/系统公告：双页签切换 + 未读计数 */
+      const noticeTab = ref('');
+      const curNotice = computed(()=>{
+        const tabs = (cfg.value.notices && cfg.value.notices.tabs) || [];
+        if (!tabs.length) return {};
+        const k = noticeTab.value || K(tabs[0].key);
+        return tabs.find(t=>K(t.key)===k) || tabs[0];
+      });
+      const unreadOf = tb => ((tb && tb.items) || []).filter(x=>x && x.unread).length;
+      /* §卡片式表格：cardMeta 与 rows 按下标对齐；缺项返回空对象，少写一条也不会崩 */
+      const curCardMeta = computed(()=> pick2('cardMeta'));
+      const cardMetaOf  = ri => (curCardMeta.value && curCardMeta.value[ri]) || {};
+      const cardSel = reactive({});
+      const curSelActions   = computed(()=> pick2('selectActions') || []);
+      const curStatusTabs   = computed(()=> pick2('statusTabs'));
+      const curListTitle    = computed(()=> pick2('listTitle'));
+      /* ⚠️ 行数据也必须走 pick2（页签 > 左面板 > 顶层），否则切页签只换了操作、数据还是旧的
+         （2026-07-14 实测逮到：切「已处理」后行内变成了查看，但还是显示 6 行待确认的票） */
+      const __filterKw = ref([]);
+      function rowPlainText(r){ try{ return (Array.isArray(r)?r:[r]).map(v=>{
+          if(v==null) return '';
+          if(typeof v==='object'){ const s=(v.zh!=null?v.zh:(v.t!=null?(v.t.zh||v.t):(v.text!=null?(v.text.zh||v.text):(v.value!=null?v.value:'')))); return String(s||''); }
+          return String(v); }).join(' ').replace(/<[^>]+>/g,' ').toLowerCase(); }catch(e){ return ''; } }
+      const curRowsRaw = computed(()=>{
+        const r = pick2('rows');
+        if(r) return r;
+        const m = cfg.value.rowsByStatus;                       // 旧写法兼容：只换数据
+        if(m && curPanel.value && m[curPanel.value]) return m[curPanel.value];
+        return cfg.value.rows || [];
+      });
+      /* v1.9：查询过滤套在 curRows 外层——一处生效，表格/导出/计数全跟着走 */
+      const curRows = computed(()=>{
+        const rows = curRowsRaw.value || [];
+        const kw = __filterKw.value || [];
+        if(!kw.length) return rows;
+        return rows.filter(r=>{ const t=rowPlainText(r); return kw.every(w=>t.includes(String(w).toLowerCase())); });
+      });
+      /* §报错+给出路：失败行后合成一条通栏「提示带」行(__band)。失败信息走【平行数组 fails】(与 rows 同下标·
+         JSON 安全·不污染 row 数组→导出/计数不受影响)。fails[i]={title,detail,level?,way:{label,act|opens}} 或 null。
+         level:'warn' → 橙(该干活了·还没造成既成事实)；缺省或 'risk' → 红(已经出事了)。
+         只在该状态有失败项时才交织；其它页原样返回(零影响)。curRows 仍是真实数据行。 */
+      const curFails = computed(()=> pick2('fails') || null);
+      function countLeaves(nodes){ let n=0; for(const g of (nodes||[])){ if(g && g.group && Array.isArray(g.children)) n+=countLeaves(g.children); else n++; } return n; }
+      /* §提示带按行对象绑定(v3.5)：fails 是与【原始 rows】同下标的平行数组，
+         但 curRows 会被查询/快捷筛选过滤 → 用过滤后的下标去取 fails 必然错位（2026-09-01 用户逮到：
+         筛「开票失败」后一条提示带都不显示）。改为先按原始顺序建 行对象→提示带 的 Map，
+         渲染时按行对象取，与下标无关，过滤/排序/分页都不会错。 */
+      const failMap = computed(()=>{
+        const m = new Map(); const fs = curFails.value;
+        if(!fs || !fs.some(Boolean)) return m;
+        const raw = curRowsRaw.value || [];          /* ★ 必须用未过滤的原始行来对齐下标 */
+        raw.forEach((r,i)=>{ if(fs[i]) m.set(r, fs[i]); });
+        return m;
+      });
+      const renderRows = computed(()=>{
+        const src = curRows.value||[]; const m = failMap.value;
+        if(!m.size) return src;
+        const out=[]; src.forEach(r=>{ out.push(r); const f=m.get(r); if(f) out.push({__band:f, __row:r}); }); return out;
+      });
+      function rowSelectable(row){ return !(row && row.__band); }
+      /* §提示带分级(v3.6)：level:'warn' → 橙(该干活了)；缺省/'risk' → 红(已经出事了) */
+      const bandLv = b => (b && b.level === 'warn') ? 'lv-warn' : '';
+      function rowClass(ctx){ const row=ctx&&ctx.row; if(!(row && row.__band)) return ''; return ('is-failband '+bandLv(row.__band)).trim(); }
+      /* §提示带底色走内联(v3.10)：底色由数据里的 level 直接决定，不绕 class→CSS 这一层。
+         CSS 里 .is-failband>td 那两条 background 保留（兜底：打印/导出/无 JS 场景）。
+         ⚠️ 归因更正(2026-09-02)：加这条的起因是"切页签后读到前几条 td 背景是 rgba(0,0,0,0)"，
+         我当时判成 Chrome 跳过重算的 bug —— 是误判。真相：那几行在视口外(top 1685~2269，视口高 900)，
+         浏览器不给视口外元素算样式，getComputedStyle 读到的是初始值；改成内联后内联值也照样读不到，
+         但 DOM 上 style 属性明明白白写着。用户要看必须滚过去，滚过去样式就算好了 —— 显示一直是正常的。
+         教训：量视口外元素的 computed style 不可信，要么先滚进视口，要么读 DOM 属性。 */
+      const BAND_BG = { warn:'#fdf6ec', risk:'#fef0f0' };
+      function bandCellStyle(ctx){ const row=ctx&&ctx.row; if(!(row&&row.__band)) return {};
+        const bg = BAND_BG[(row.__band.level==='warn')?'warn':'risk'];
+        return { background: bg, borderBottom: '1px solid ' + ((row.__band.level==='warn')?'#faecd8':'#fde2e2') }; }
+      function rowSpan(ctx){
+        const row=ctx.row, columnIndex=ctx.columnIndex;
+        if(row && row.__band){
+          const selOff = cfg.value.selectable?1:0;
+          if(columnIndex<selOff) return {rowspan:1,colspan:1};
+          if(columnIndex===selOff){ const actOff=curActions.value?1:0; return {rowspan:1,colspan:countLeaves(colTree.value)+actOff}; }
+          return {rowspan:0,colspan:0};
+        }
+        if(cfg.value && cfg.value.mergeCol) return tblSpan(ctx);
+      }
+      const curTotal = computed(()=>{
+        const m = cfg.value.totalByStatus;
+        if(m && curPanel.value && m[curPanel.value]!=null) return Number(m[curPanel.value]);
+        return Number(cfg.value.total) || curRows.value.length;
+      });
+      /* ═══ 缺口 A-D 扩展（2026-07-11 接管·状态页签 statusTabs / 编辑弹窗 formDialog / 详情双态 detailView / 通用弹窗 dialogs）═══ */
+      const PC = reactive(PAGECFG);            // 让 formDialog/detailView 里的字段可 v-model 编辑（原型级·不必真提交）
+      /* §下拉自愈（彻底根治「填了对不上选项的值 → 泄漏 matriz 这种内部码」这一整类问题·2026-07-11）
+         挂载时把每个 select 字段的 value 归一到「真实存在的选项键」：作者写精确选项 or default序号 or 写错，
+         都自动纠正——对不上就取 default 索引、再兜底首项，绝不把原始码泄漏给用户。结构上让 mismatch 无害。 */
+      function _normSelect(fd){ if(!fd||fd.type!=='select') return; const opts=fd.options||[]; if(!opts.length) return;
+        /* 值先过 K()：多语原型作者常把 value 写成 {zh:…,en:…} 对象，与选项键(zh)不全等 →
+           以前直接落到首项、把作者指定的默认值悄悄吞掉（2026-08-06 实测逮到，与 _normRadio 同源）。 */
+        const keys=opts.map(o=>K(o)); const cur=K(fd.value);
+        if(cur!=null&&keys.includes(cur)){ fd.value=cur; return; }                                        // 已是有效选项(含 i18n 对象写法)
+        if(typeof fd.default==='number'&&opts[fd.default]!=null){ fd.value=keys[fd.default]; return; }      // 指定序号
+        fd.value = fd.optional ? undefined : keys[0]; }                                                     // 兜底首项/占位，绝不泄漏原码
+      /* §radio 自愈(2026-08-06·与 _normSelect 同源思路)：radio 的 :value 走 K(选项)=稳定 zh 键，
+         但作者常把 fd.value 写成 i18n 对象 {zh:…,en:…} → 与选项键不全等 → 【一个都不选中】(实测逮到)。
+         挂载时统一归一：i18n 对象取 K()、对不上取首项。结构上让"选不中"不可能发生。 */
+      function _normRadio(fd){ if(!fd||fd.type!=='radio') return; const opts=fd.options||[]; if(!opts.length) return;
+        const keys=opts.map(o=>K((o&&o.label)||o)); const cur=K(fd.value);
+        fd.value = (cur!=null && keys.includes(cur)) ? cur : keys[0]; }
+      (function _walk(n){ if(!n||typeof n!=='object') return; if(Array.isArray(n)){ n.forEach(_walk); return; }
+        if(n.type==='select'&&n.options) _normSelect(n);
+        if(n.type==='radio'&&n.options) _normRadio(n);
+        for(const k in n){ if(k!=='options') _walk(n[k]); } })(PAGECFG);
+      const activeStatus = ref('');            // 状态页签当前选中 key
+      const formVisible = ref(false);          // 编辑弹窗开关
+      const activeFormTab = ref('');           // 编辑弹窗当前 tab
+      const detailData = ref(null);            // 详情/编辑整页数据（非空=进入详情态）
+      const detailFP = ref(null);              // 整页向导态 {steps,i}（生成采购单/开退票走整页·非弹窗）
+      const dlgRow = ref(null);                // §UX① 打开弹窗时记录的当前行（供状态机按行禁用选项）
+      /* §声明状态机：按当前行(dlgRow)状态，返回某选项的禁用原因（空串=可选）。数据配 field.optionRules。*/
+      /* §v-html 内元素可点：单元格里 <span data-act="弹窗名"> 被点 → 打开该弹窗（Key下「退货历史」用） */
+      function onCellAct(e){ const el=e.target&&e.target.closest&&e.target.closest('[data-act],[data-go],[data-detail],[data-nav]'); if(!el) return;
+        if(el.getAttribute('data-nav')!=null){ const v=(el.textContent||'').trim(); const zh=/^zh/.test((document.documentElement.lang||'zh')); msg((zh?'跳转到订单 ':'Go to order ')+v); return; }   /* §蓝链单元格(如订单号)点击→跳转提示(原型mock) */
+        const goId=el.getAttribute('data-go'); if(goId){ dialogName.value=''; go(goId); return; }   /* §单元格 <span data-go="页id"> 点击→关弹窗+跳该页(如买断申请单号→买断申请) */
+        const dt=el.getAttribute('data-detail'); if(dt){ const dp=cfg.value&&cfg.value.detailPages; if(dp&&dp[dt]){ dialogName.value=''; detailData.value=JSON.parse(JSON.stringify(dp[dt])); activeAnchor.value=''; window.scrollTo(0,0); } return; }   /* §单元格 <span data-detail="键"> 点击→关弹窗+打开 cfg.detailPages[键] 详情页(如买断申请单号→买断申请详情) */
+        const act=el.getAttribute('data-act'); const c=cfg.value; if(c.dialogs&&c.dialogs[act]){ dlgRow.value=null; dialogName.value=act; } }
+      function optDisabledReason(fd, o){
+        const rules = fd && fd.optionRules; if(!rules || !dlgRow.value) return '';
+        const txt = rowText(dlgRow.value);
+        /* disable 项可写字符串（用规则级 reason），也可写 {opt,reason} 给该项自己的短原因(v3.12)
+           —— 一条规则禁用多项时共用一句话往往对不上（对「知悉」说"也无需重复确认"不通）。 */
+        const optOf = dd => (dd && typeof dd==='object') ? dd.opt : dd;
+        for(const r of rules){
+          if(!r.whenRowHas || txt.indexOf(L(r.whenRowHas))<0) continue;
+          const dd = (r.disable||[]).find(x => L(optOf(x))===L(o));
+          if(!dd) continue;
+          return L((dd && typeof dd==='object' && dd.reason) || r.reason || '');
+        }
+        return '';
+      }
+      const dialogName = ref('');              // 当前打开的通用弹窗名
+      const activeAnchor = ref('');            // 详情整页左侧锚点当前选中
+      const selCount = ref(0);                 // 表格多选已选数（cfg.selectable 页）
+      const btnLabel = b => (b && typeof b==='object' && 'label' in b) ? L(b.label) : L(b);   // 按钮文案：支持 字符串/{zh,en,pt}/{label,opens}
+      const btnOpens = b => (b && typeof b==='object') ? b.opens : null;                       // 按钮触发的弹窗/详情
+      /* §菜单格式自愈（2026-07-12 实测逮到）：顶层菜单项允许两种写法 —— {id,label} 对象 或 [id,label] 数组。
+         老数据大量用数组形式（如 nav.home=[["home-main",{...}]]），若不归一化 it.id/it.label 全是 undefined
+         → 菜单渲染成空白项、点了没反应、页签名也丢。这里在源头统一成对象，下游(nav/metaG/navOf)全部受益。 */
+      Object.keys(NAV).forEach(sk=>{
+        NAV[sk] = (NAV[sk]||[]).map(it => Array.isArray(it)
+          ? { id: it[0], label: it[1], badge: (it[2] && it[2].badge) || undefined }
+          : it);
+      });
+      const nav = computed(()=> NAV[currentSystem.value]||[]);
+      const cfg = computed(()=> PC[currentPage.value] || { building:'建设中' });
+      const flowTip = computed(()=>{ const s=SYSTEMS.find(x=>x.key===currentSystem.value); return s? (T('current')+'：'+L(s.label)) : ''; });
+      /* 递归查任意层级菜单树，取页签标签（嵌套组 分销>库存分配>分配单 也能取到；2026-07-27 修：旧版只查2层→深层页签回退成"页面"）*/
+      function metaG(id){ const find=items=>{ for(const it of (items||[])){ if(!it)continue; if(Array.isArray(it)){ if(it[0]===id)return[L(it[1])]; } else if(it.id){ if(it.id===id)return[L(it.label)]; if(it.items){const r=find(it.items);if(r)return r;} } else if(it.group&&it.items){ const r=find(it.items); if(r)return r; } } return null; }; for(const sk of Object.keys(NAV)){ const r=find(NAV[sk]); if(r)return r; } return[T('page')]; }
+      const metaOf = (id)=> metaG(id);
+      const ak = (op)=> currentPage.value+'.'+op;
+      function go(id){ if(!id)return; detailData.value=null; detailFP.value=null; activeAnchor.value=''; dialogName.value=''; formVisible.value=false; activeStatus.value=''; /* 换页重置状态页签,避免旧tab key残留致新页无高亮(2026-08-02) */ currentPage.value=id; if(!openTabs.value.includes(id))openTabs.value.push(id); window.__VIEW__={sys:currentSystem.value,page:id}; window.__annoSetView&&window.__annoSetView(currentSystem.value,id); }
+      function setSys(s){ if(currentSystem.value===s)return; currentSystem.value=s; homePage.value=HOME[s]; openTabs.value=[homePage.value]; go(homePage.value); }
+      /* §顶部导航大菜单：navOf(系统key)=该系统的菜单树；goSys=先切系统再进页（真系统悬停顶级模块→点子项直达） */
+      const navOf = sk => NAV[sk]||[];
+      function goSys(sk,id){ if(currentSystem.value!==sk){ currentSystem.value=sk; homePage.value=HOME[sk]; openTabs.value=[homePage.value]; } go(id); }
+      /* §一级菜单横向顶部导航（2026-07-26）：把当前系统的顶层菜单项渲成横排模块；组项点击进其首个叶子页，页在该组内则高亮 */
+      function firstLeafOf(it){ if(!it) return null; if(Array.isArray(it)) return it[0]; if(it.id) return it.id; if(it.group && Array.isArray(it.items)){ for(const s of it.items){ const f=firstLeafOf(s); if(f) return f; } } return null; }
+      function pageIn(it,pid){ if(!it) return false; if(Array.isArray(it)) return it[0]===pid; if(it.id) return it.id===pid; if(it.group && Array.isArray(it.items)) return it.items.some(s=>pageIn(s,pid)); return false; }
+      function goTopItem(it){ const id=firstLeafOf(it); if(id) go(id); }
+      function closeTab(t){ const i=openTabs.value.indexOf(t); if(i>=0){ openTabs.value.splice(i,1); if(currentPage.value===t)go(openTabs.value[openTabs.value.length-1]||homePage.value); } }
+      /* §5.3q 加载态（真系统实测：白色半透遮罩 rgba(255,255,255,.9) + 主色 #3363FF 转圈·无文案）
+         查询 / 重置 / 切换左侧状态 都会短暂 loading —— 不许"点了瞬间就变"，那不像真系统。 */
+      const loading = ref(false);
+      function withLoading(ms){ loading.value=true; setTimeout(()=>{ loading.value=false; }, ms||600); }
+      /* §查询真过滤(v1.9)：把筛选框里**已填**的值当关键词，对当前页签的行做整行文本包含匹配。
+         原来只转个圈弹「已应用筛选」，数据一行没少，用户以为坏了。__filterKw 为空 = 不过滤。 */
+      function doSearch(){
+        const kw = Object.values(filterModel).map(v=>(v==null?'':String(v)).trim()).filter(v=>v && !/^全部/.test(v));
+        __filterKw.value = kw;
+        withLoading(700);
+        setTimeout(()=>{ msg(kw.length ? (T('filterApplied')+'（'+kw.join(' + ')+'）') : T('filterApplied')); },700);
+      }
+      function resetFilter(){ Object.keys(filterModel).forEach(k=>filterModel[k]=''); __filterKw.value=[]; withLoading(500); }
+      /* 切左侧状态项 → 也走 loading（真系统换一批数据会转圈） */
+      function goPanel(k){ if(activePanel.value===k) return; activePanel.value=k; activeStatus.value=''; selRows.value=[]; selCount.value=0; withLoading(600); }
+      /* 切顶部状态页签 → 同样换数据/操作 + 转圈 + 清空勾选（页签能覆盖 rows/actions/columns，见 §5.3i3） */
+      function goTab(k){ if(activeStatus.value===k) return; activeStatus.value=k; selRows.value=[]; selCount.value=0;
+        qfOn.value=0; __filterKw.value=[];   /* v2.2：换主页签时清掉快捷筛选，否则会出现"明明有数据却空表" */
+        if(tblRef.value && tblRef.value.clearSelection) tblRef.value.clearSelection(); withLoading(500); }
+      function msg(t){ ElementPlus.ElMessage({message:t,type:'success'}); }
+      /* needSel(b)：该工具栏按钮是否依赖"勾选了行"。
+         默认 true（真·批量操作：删除/批量启用…）；写 {needSel:false} 的是新增类动作，任何时候都能点。 */
+      function needSel(b){ return !(b && typeof b==='object' && b.needSel===false); }
+      /* ═══ §5.3l 增删改必须真能操作（2026-07-12 用户铁律：所有新增/编辑/删除都要可操作）═══
+         选中的行（批量删除要用） */
+      const selRows = ref([]);
+      const tblRef = ref(null);
+      function onSelChange(s){ selRows.value = s; selCount.value = s.length; }
+      /* 是否"删除"动作：显式 act:'delete' / opens:'delete'，或标签是 删除/Delete/Excluir/Eliminar */
+      function isDelBtn(b){
+        if(b && typeof b==='object' && (b.act==='delete' || b.opens==='delete')) return true;
+        /* ⚠️ 按钮有三种写法，都要认（2026-07-12 实测逮到：批量删除写成裸三语对象时判不出来）：
+           ① 纯字符串 "删除"  ② {label:"删除"} / {label:{zh,en,pt}}  ③ **裸三语对象 {zh:'删除',en:'Delete'}** */
+        let raw = b;
+        if(b && typeof b==='object' && 'label' in b) raw = b.label;
+        const zh = (raw && typeof raw==='object') ? (raw.zh || Object.values(raw)[0] || '') : raw;
+        const s = String(zh||'').trim();
+        return /^(删除|移除)$/.test(s) || /^(delete|remove|excluir|eliminar)$/i.test(s);
+      }
+      /* 真删行：从「当前这批数据」里移掉（rowsByStatus 时删的是那一批） */
+      function rowsBucket(){
+        const c=cfg.value;
+        if(c.rowsByStatus){ const k=activePanel.value||Object.keys(c.rowsByStatus)[0]; if(c.rowsByStatus[k]) return c.rowsByStatus[k]; }
+        return c.rows;
+      }
+      /* §行状态迁移(v1.9)：让「取消发票 / 重新开票 / 刷新」这类动作**真的改数据**，不再只弹提示。
+         写法：{label:'取消发票', act:'transition', confirm:'…', transition:{
+                 set:{ "6":{t:'已取消',c:'red',dot:true} },   // 列下标 → 新单元格值
+                 moveTo:'processing',                          // 可选：搬到哪个 statusTab（计数自动同步）
+                 done:'…' }}
+         没写 moveTo 就只改单元格、留在原页签（真系统「取消发票」就是状态列变红、不换页签）。 */
+      function tabRowsOf(key){ const ts=curStatusTabs.value||[]; const t=ts.find(x=>K(x.key)===K(key)); return t?(t.rows=t.rows||[]):null; }
+      function curTabObj(){ const ts=curStatusTabs.value||[]; return ts.find(x=>K(x.key)===K(activeStatus.value)) || ts[0] || null; }
+      function syncTabCounts(){ (curStatusTabs.value||[]).forEach(t=>{ if(Array.isArray(t.rows)) t.count=t.rows.length; }); }
+      /* §跨页跳转(v2.0)：写 goto:'acct' 或 goto:{sys:'INV',page:'acct'} → 关掉弹窗/整页后真的跳过去。
+         跨系统时先切 currentSystem 再切页。目标页不存在就提示而不是静默失败（防写错 id 变哑按钮）。 */
+      /* §复制到剪贴板(v2.1)：按钮写 copy:'文本' → 真写入剪贴板并提示。
+         用途：排查类弹窗把「系统码 + 自动诊断结果 + 单号」一次性带走，用户自助或转交顾问都不用再回来抄。 */
+      function doCopy(txt){
+        const s = L(txt) || '';
+        const done = () => msg((/^zh/.test(lang.value||'zh') ? '已复制到剪贴板' : 'Copied'));
+        try{
+          if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(s).then(done).catch(()=>fallback()); return; }
+        }catch(e){}
+        fallback();
+        function fallback(){ try{
+          const ta=document.createElement('textarea'); ta.value=s; ta.style.position='fixed'; ta.style.opacity='0';
+          document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); done();
+        }catch(e){ msg('复制失败，请手动选中'); } }
+      }
+      function doGoto(g){
+        const spec = (typeof g === 'string') ? {page:g} : (g||{});
+        const page = spec.page || spec.id; if(!page) return false;
+        if(!(PAGECFG && PAGECFG[page])){ msg('目标页不存在：'+page); return false; }
+        dialogName.value=''; formVisible.value=false; detailData.value=null; detailFP.value=null;
+        if(spec.sys && spec.sys!==currentSystem.value && SYSTEMS.find(s=>s.key===spec.sys)){
+          currentSystem.value = spec.sys; homePage.value = HOME[spec.sys]; openTabs.value=[HOME[spec.sys]];
+        }
+        go(page); return true;
+      }
+      function doTransition(b,row){
+        const tr = (b&&b.transition)||{};
+        const targets = row ? [row] : (selRows.value||[]).slice();
+        if(!targets.length){ msg(T('pickFirst')||'请先勾选'); return; }
+        const apply = () => {
+          targets.forEach(r=>{
+            if(tr.set) Object.keys(tr.set).forEach(i=>{ const idx=parseInt(i,10); if(!isNaN(idx)&&idx<r.length) r[idx]=JSON.parse(JSON.stringify(tr.set[i])); });
+            if(tr.moveTo){
+              const from = (curTabObj()&&Array.isArray(curTabObj().rows))?curTabObj().rows:null;
+              const to = tabRowsOf(tr.moveTo);
+              if(from&&to){ const j=from.indexOf(r); if(j>-1){ from.splice(j,1); to.push(r); } }
+            }
+          });
+          syncTabCounts();
+          selRows.value=[]; selCount.value=0;
+          if(tblRef.value&&tblRef.value.clearSelection) tblRef.value.clearSelection();
+          withLoading(500);
+          setTimeout(()=>msg(b.done?L(b.done):(L(b.label)+T('executed'))),500);
+        };
+        if(b&&b.confirm){ const isZh=/^zh/.test(document.documentElement.lang||'zh');
+          ElementPlus.ElMessageBox.confirm(L(b.confirm), L(b.confirmTitle||b.label||''), {type:'warning', confirmButtonText:isZh?'确定':'OK', cancelButtonText:isZh?'取消':'Cancel'}).then(apply).catch(()=>{}); return; }
+        apply();
+      }
+      function doDelete(row){
+        const bucket = rowsBucket();
+        if(!Array.isArray(bucket)) return;
+        const targets = row ? [row] : selRows.value.slice();
+        if(!targets.length) return;
+        ElementPlus.ElMessageBox.confirm(
+          T('delConfirm').replace('{n}', targets.length), T('delTitle'),
+          { type:'warning', confirmButtonText:T('confirm'), cancelButtonText:T('cancel') }
+        ).then(()=>{
+          targets.forEach(t=>{ const i=bucket.indexOf(t); if(i>-1) bucket.splice(i,1); });
+          if(tblRef.value && tblRef.value.clearSelection) tblRef.value.clearSelection();
+          selRows.value=[]; selCount.value=0;
+          msg(T('deleted'));
+        }).catch(()=>{});
+      }
+      /* 按钮标签的中文原文（用于内置动作识别·三种写法都认） */
+      function btnZh(b){ let raw=b; if(b&&typeof b==='object'&&'label' in b) raw=b.label;
+        const zh=(raw&&typeof raw==='object')?(raw.zh||Object.values(raw)[0]||''):raw; return String(zh||'').trim(); }
+      /* §5.3l 内置动作：让「凡是有按钮的都能操作」不用逐个配数据（2026-07-12 用户铁律）
+         导入 → 弹上传框（选文件+确定）；导出 → 给出可见反馈。其余走 opens/提示。 */
+      const importOpen = ref(false);
+      const importFile = ref('');
+      function isImportBtn(b){ const s=btnZh(b); return /^(导入|批量导入)$/.test(s)||/^(import)$/i.test(s); }
+      function isExportBtn(b){ const s=btnZh(b); return /^(导出|批量导出)$/.test(s)||/^(export)$/i.test(s); }
+      /* §同步类动作（真系统「同步发票」= 直接从 SEFAZ 拉近 90 天的票，**不弹窗、不让用户选范围**）：
+         点了 → 转圈 → 结果提示。数据可写 {label:'同步发票', act:'sync', syncHint:'已同步近 90 天采购发票'} */
+      /* 纪律C(共享件纯净)：不写死任何项目业务词。用【前缀】通用匹配——「同步XXX」「刷新XXX」都算同步类动作
+         （同步发票/同步订单/同步库存…全覆盖）；更精确的可在数据里写 act:'sync'。 */
+      function isSyncBtn(b){ return (b && typeof b==='object' && b.act==='sync') || /^(同步|刷新)/.test(btnZh(b)); }
+      function doSync(b){ withLoading(1200);
+        const hint = (b && typeof b==='object' && b.syncHint) ? L(b.syncHint) : T('synced');
+        setTimeout(()=>msg(hint), 1200); }
+      /* §真实导出：把当前表格(展开分组表头 + 全部行·去HTML)导成 CSV 下载。2026-07-27 */
+      function csvCell(v){ let s='';
+        if(v==null) s='';
+        else if(typeof v==='object'){ s = isI18n(v) ? String(v.zh||Object.values(v)[0]||'') : (v.t!=null ? String((v.t&&v.t.zh)||v.t||'') : (v.zh!=null?String(v.zh):'')); }
+        else s=String(v);
+        s=s.replace(/<[^>]*>/g,' ').replace(/&nbsp;/g,' ').replace(/No photo|暂无图片|Sem foto/g,'').replace(/\s+/g,' ').trim();
+        return '"'+s.replace(/"/g,'""')+'"'; }
+      /* §报表导出增强(reportExport=true)：首列「商品信息」卡片拆成 SKU编号/商品名称/商品条码 三列，
+         并对合并行(空卡)向下填充，使每行自成一条可筛选记录。2026-07-31 */
+      function cardRaw(v){ let s=''; if(v==null)s=''; else if(typeof v==='object'){ s=isI18n(v)?String(v.zh||''):(v.zh!=null?String(v.zh):''); } else s=String(v); return s.replace(/<[^>]*>/g,' ').replace(/&nbsp;/g,' ').replace(/No photo|暂无图片|Sem foto/g,'').replace(/\s+/g,' ').trim(); }
+      function parseCard(v){ const t=cardRaw(v);
+        const sku=((t.match(/编号[：:]\s*([^\s]+)/)||t.match(/(SKU[-\w]*\d+)/)||['',''])[1])||'';
+        const name=((t.match(/名称[：:]\s*(.+?)\s*(?:条码|条形码|参考|$)/)||['',''])[1])||'';
+        const bc=((t.match(/(?:条码|条形码)[：:]\s*([0-9]+)/)||['',''])[1])||'';
+        return {sku,name,bc,raw:t}; }
+      function doExport(){ const c=cfg.value||{}; const cols=(curColumns.value&&curColumns.value.length)?curColumns.value:(c.columns||[]); const rows=curRows.value||[]; const rep=!!c.reportExport; /* 2026-08-02：用当前页签列(curColumns),多页签报表导出才与显示一致 */
+        const head=[]; cols.forEach((col,ci)=>{ if(rep&&ci===0){ head.push(csvCell('SKU编号'),csvCell('商品名称'),csvCell('商品条码')); return; } if(col.group&&Array.isArray(col.children)) col.children.forEach(ch=>{ if(ch&&ch.group&&Array.isArray(ch.children)) ch.children.forEach(lf=>head.push(csvCell((L(col.group))+'·'+(L(ch.group))+'·'+(L(lf.label||lf))))); else head.push(csvCell((L(col.group))+'·'+(L(ch.label||ch)))); }); else head.push(csvCell(L(col.label||col))); });
+        const lines=[head.join(',')]; let last={sku:'',name:'',bc:''};
+        rows.forEach(r=>{ const line=[]; for(let i=0;i<r.length;i++){ if(rep&&i===0){ const p=parseCard(r[0]); let sku,name,bc; if(!p.raw){ sku=last.sku;name=last.name;bc=last.bc; } else if(p.sku){ last=p; sku=p.sku;name=p.name;bc=p.bc; } else { sku='';name=p.name||p.raw;bc=''; } line.push(csvCell(sku),csvCell(name),csvCell(bc)); continue; } line.push(csvCell(r[i])); } lines.push(line.join(',')); });
+        const csv='﻿'+lines.join('\r\n');
+        try{ const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob); const a=document.createElement('a');
+          a.href=url; a.download=String(L(c.listTitle)||'导出').replace(/[\\/:*?"<>|·（）()]/g,'').slice(0,40)+'.csv';
+          document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(()=>URL.revokeObjectURL(url),2000);
+        }catch(e){}
+        msg(T('exported').replace('{n}', rows.length)); }
+      function pickImportFile(e){ const f=e&&e.target&&e.target.files&&e.target.files[0]; importFile.value = f? f.name : ''; }
+      function confirmImport(){ importOpen.value=false; msg(importFile.value? T('imported').replace('{f}', importFile.value) : T('imported').replace('{f}','')); importFile.value=''; }
+      /* 按钮/操作触发：删除→真删(带二次确认)；导入→上传框；导出→反馈；
+         opens='formDialog'→开编辑弹窗；'detailView'→进详情整页；其它匹配 dialogs[名]→开通用弹窗；
+         都不匹配→提示已执行（**保证任何按钮点了都有可见反馈，不许静默**）。row 为行内操作时的当前行。 */
+      function fireBtn(b,row){ const op=btnOpens(b); const c=cfg.value;
+        /* §5.3t 可点但拦截：规则不符 → 弹警告、不执行（拦截话术让规则可见） */
+        const blocked = actBlocked(b,row);
+        if(blocked){ ElementPlus.ElMessage({message:blocked, type:'warning'}); return; }
+        if(b && b.copy){ doCopy(b.copy); return; }
+        if(b && b.goto){ doGoto(b.goto); return; }
+        if(b && (b.act==='transition' || b.transition)){ doTransition(b,row); return; }
+        if(b && b.download){ const n=doDownload(b.download); msg(n?((b.done?L(b.done):'已导出 ')+n):'导出失败'); return; }
+        if(isDelBtn(b)){ doDelete(row); return; }
+        /* §跨页复用整页向导(v3.7)：opensFP:{page,name} → 打开【别的页面】定义的整页，但停在当前页(不切模块)。
+           用于"同一个开票页、多个入口"：退货发票模块点开退票要先选单据；采购退货单行上点，
+           单据已确定，就地打开同一页即可。找不到不静默——按铁律给可见反馈。 */
+        if(b && b.opensFP){ const r=b.opensFP, tp=PAGECFG[r.page], fp=tp&&tp.fullPages&&tp.fullPages[r.name];
+          if(fp){ openFullPage(fp, row, r); } else { msg('整页不存在：'+r.page+'/'+r.name); } return; }
+        if(op && c.fullPages && c.fullPages[op]){ openFullPage(c.fullPages[op], row); return; }   // §命名整页向导（真系统「生成采购单/开退票」是整页不是弹窗）
+        if(op && c.dialogs && c.dialogs[op]){ dlgRow.value=row||null; dialogName.value=op; return; }   // 显式配的弹窗优先（记录行·供状态机）
+        if(isSyncBtn(b)){ doSync(b); return; }                                 // 同步类=直接动作，不弹窗
+        if(isImportBtn(b)){ importFile.value=''; importOpen.value=true; return; }
+        if(isExportBtn(b)){ doExport(); return; }
+        if(op==='formDialog' && c.formDialog){ activeFormTab.value=(c.formDialog.tabs&&c.formDialog.tabs.length)?K(c.formDialog.tabs[0].key):''; formVisible.value=true; }
+        else if(op==='detailView' && (c.detailViews || c.detailView)){
+          /* §详情按状态选变体（2026-07-16 用户要求）：detailViews:[{when:'已确认 (Confirmação)', ...}, ...]
+             → 用该行文本匹配 when（与 blockIf 同一套 rowText 机制），点哪种状态的行就看哪种状态的详情；
+             匹配不到 → 无 when 的兜底项 → 再兜老的 c.detailView（向后兼容） */
+          let dv=null;
+          if(Array.isArray(c.detailViews)){
+            const txt=rowText(row);
+            dv=c.detailViews.find(d=>d.when && txt.indexOf(L(d.when))>-1) || c.detailViews.find(d=>!d.when);
+          }
+          dv=dv||c.detailView;
+          if(dv){ detailData.value=dv; window.scrollTo(0,0); }
+        }
+        /* §通用动作确认+提示（2026-08-19）：动作写 {act,confirm:'二次确认文案',done:'完成提示'} →
+           先弹确认(可选)，确认后出 done 提示；只写 done 则直接出该提示。用于「重新开票(需确认)/验证XML/刷新」等 mock 动作，
+           不必给每个 act 硬编码逻辑，保持骨架通用。 */
+        else if(b && b.confirm){ const zh=/^zh/.test(document.documentElement.lang||'zh');
+          ElementPlus.ElMessageBox.confirm(L(b.confirm), L(b.confirmTitle||b.label||''), {type:'warning', confirmButtonText: zh?'确定':'OK', cancelButtonText: zh?'取消':'Cancel'})
+            .then(()=>{ msg(b.done?L(b.done):btnLabel(b)+T('executed')); }).catch(()=>{}); }
+        else { msg(b&&b.done ? L(b.done) : btnLabel(b)+T('executed')); }
+      }
+      function closeDetail(){ detailData.value=null; detailFP.value=null; activeAnchor.value=''; }
+      /* §标准新增/编辑整页 主操作：mock 保存→提示(已保存/已提交，随 okText)→回列表。okText='提交'(配置类)时提示已提交 */
+      function detailSave(){ const d=detailData.value; msg(T(d&&d.okText?'submitted':'saved')); closeDetail(); }
+      /* §整页向导：cfg.fullPages[名]={steps:[整页1,整页2]}；整页结构同 detailView；
+         footerBtns:[{label,type,act}] act= close/next/back/submit */
+      function openFullPage(fp,row,ov){ if(!fp) return; dialogName.value=''; /* 从弹窗内「选择」打开整页时关掉弹窗，避免遮罩盖在整页上(2026-08-22) */ const steps=JSON.parse(JSON.stringify(fp.steps||[fp]));
+        /* §编辑回显：字段标 editFrom=列索引 时，从点击行数据回填 value（真系统「编辑」带数据回显） */
+        if(row){ const cell=v=>{ if(v==null)return ''; if(typeof v!=='object')return v; const t=L(v); if(t&&typeof t!=='object')return t; return v.zh||(v.t&&(v.t.zh||L(v.t)))||v.text||''; };
+          steps.forEach(st=>(st.sections||[]).forEach(sec=>{ (sec.fields||[]).forEach(f=>{ if(f.editFrom!=null && row[f.editFrom]!=null) f.value=cell(row[f.editFrom]); }); if(sec.table&&sec.table.editRows)sec.table.rows=JSON.parse(JSON.stringify(sec.table.editRows)); })); }
+        /* §跨页复用时改页头(v3.8)：整页只存一份、多个入口共用，标题必须说清"你是从哪儿进来的"。
+           {c<列下标>} 用点击行那一列的真值替换；不传 ov.title 就保持原标题。 */
+        if(ov && ov.title && steps[0]){
+          const pick = i => { const v=row&&row[i]; if(v==null) return '';
+            const s = (typeof v==='object') ? (L(v) || v.zh || (v.t&&(v.t.zh||L(v.t))) || v.text || '') : String(v);
+            return String(s).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(); };
+          const fill = s => String(s).replace(/\{c(\d+)\}/g, (_,i)=>pick(Number(i)));
+          const t = ov.title;
+          steps[0].title = (typeof t==='object') ? Object.fromEntries(Object.keys(t).map(kk=>[kk, fill(t[kk])])) : fill(t);
+        }
+        detailFP.value={steps:steps,i:0}; detailData.value=steps[0]; activeAnchor.value=''; dvSearch.value=''; window.scrollTo(0,0); }
+      /* §整页表格：右上搜索(按首列文本过滤) + 列头批量编辑 + 退货概览「计算」重算 (2026-08-22) */
+      /* §提示带出路可点判定(v3.4)：凡是能触发动作的写法都算 —— act / opens / goto / download / transition。
+         此前只认 act|opens，导致 v2.0 加的 goto 出路被判成"无出路"，渲染成灰色且点不动（2026-09-01 用户逮到）。 */
+      /* §可触发判定(v3.9·唯一真理源)：一个配置对象能不能点出动作，只看这里。
+         新增触发键 → 只往 FIRE_KEYS 里加，不要再在模板或别处手写逐键判定。
+         踩坑记录：v3.4 漏 goto、v3.7 漏 opensFP(link 模板)，都是判定被复制了多份导致的。 */
+      const FIRE_KEYS = ['act','opens','opensFP','goto','download','transition','copy'];
+      const canFire = x => !!x && FIRE_KEYS.some(kk => x[kk]);
+      function bandWayOk(w){ return canFire(w); }
+      const dvSearch = ref('');
+      const dvSearchField = ref('');   /* v2.9：表格右上搜索的字段下拉 */
+      /* §表头全选(v2.9)：统计该表首个 ctrl:'checkbox' 单元格的勾选情况 → none/part/all */
+      function dvCbCells(tb){ const out=[]; ((tb&&tb.rows)||[]).forEach(r=>{ for(let i=0;i<r.length;i++){ if(r[i]&&r[i].ctrl==='checkbox'){ out.push(r[i]); break; } } }); return out; }
+      function dvHeadState(tb){ const c=dvCbCells(tb); if(!c.length) return 'none';
+        const on=c.filter(x=>!!x.value).length; return on===0?'none':(on===c.length?'all':'part'); }
+      function dvHeadToggle(tb,v){ dvCbCells(tb).forEach(x=>{ x.value=!!v; }); }
+      /* §弹窗多表 + 单选(v1.5)：dlgTables 把 table / table2 归一成数组，模板只写一份单元格渲染。 */
+      /* §多选下拉面板(v2.5) 状态：msOpen 开合 / msKw 搜索词 / msDraft 面板内草稿。
+         已保存的选中值仍落在 filterModel[i]（数组），这样 doSearch 的过滤逻辑不用改。 */
+      const msOpen = Vue.reactive({}), msKw = Vue.reactive({}), msDraft = Vue.reactive({});
+      /* pfx 区分调用方：'f'=列表筛选(filterModel) / 'd'=弹窗字段(dlgFilterModel)，同一套逻辑两处复用 */
+      function msKey(i,pfx){ return (pfx||'f')+i; }
+      function msOpts(f){ return (f && f.options) || []; }
+      function msVisible(f,i,pfx){ const kw=String(msKw[msKey(i,pfx)]||'').trim().toLowerCase();
+        const all=msOpts(f); if(!kw) return all;
+        return all.filter(o=>String(L(o)||'').toLowerCase().includes(kw)); }
+      function msToggle(f,i,pfx,model){ const key=msKey(i,pfx); const m=model||filterModel;
+        if(msOpen[key]){ msOpen[key]=false; return; }
+        const cur=m[i]; msDraft[key] = Array.isArray(cur) ? cur.slice() : [];   /* 打开时把已保存值复制成草稿 */
+        msOpen[key]=true; }
+      function msPick(f,i,val,on,pfx){ const key=msKey(i,pfx); const arr=(msDraft[key]||[]).slice();
+        const j=arr.indexOf(val); if(on && j<0) arr.push(val); if(!on && j>-1) arr.splice(j,1);
+        msDraft[key]=arr; }
+      function msAllChecked(f,i,pfx){ const arr=msDraft[msKey(i,pfx)]||[]; const all=msOpts(f); return all.length>0 && arr.length===all.length; }
+      function msSetAll(f,i,on,pfx){ msDraft[msKey(i,pfx)] = on ? msOpts(f).map(o=>K(o)) : []; }
+      function msSave(f,i,pfx,model){ const key=msKey(i,pfx); (model||filterModel)[i]=(msDraft[key]||[]).slice(); msOpen[key]=false; }
+      function msCancel(f,i,pfx){ msOpen[msKey(i,pfx)]=false; }
+      function msSummary(f,i,pfx,model){ const arr=(model||filterModel)[i]; if(!Array.isArray(arr)||!arr.length) return '';
+        const all=msOpts(f); if(arr.length===all.length) return L(f.allLabel||'全部');
+        if(arr.length===1){ const hit=all.find(o=>K(o)===arr[0]); return hit?L(hit):arr[0]; }
+        return L(f.label||'')+' · '+arr.length; }
+      const dlgFilterModel = Vue.reactive({});   /* v2.3：弹窗筛选与列表筛选各用各的 model，互不串 */
+      const dlgRadio = ref('');
+      function dlgTables(dg){ if(!dg) return []; return [dg.table, dg.table2].filter(Boolean); }
+      /* §区块内页签(v1.3)：sec.tabs 存在 → 该区块渲染成 el-tabs，每个 tab 一个 pane（pane 结构同 section：table 或 fields）。
+         不存在 → panes=[sec]，容器退化为 div，与旧版完全一致。secTab 记每个区块当前页签。 */
+      const secTab = ref({});
+      function secIsTabs(sec){ return !!(sec && Array.isArray(sec.tabs) && sec.tabs.length); }
+      function secPanes(sec){ return secIsTabs(sec) ? sec.tabs : [sec]; }
+      function secTabsBind(sec,si){ if(!secIsTabs(sec)) return {};
+        const key=String(si); if(secTab.value[key]==null) secTab.value[key]='0';
+        return { modelValue: secTab.value[key], 'onUpdate:modelValue': v=>{ secTab.value = Object.assign({}, secTab.value, {[key]: String(v)}); } }; }
+      function secPaneBind(sec,pn,pi){ return secIsTabs(sec) ? { label: L((pn&&pn.label)||''), name: String(pi) } : {}; }
+      function dvVisRows(tb){ if(!tb) return []; const q=(dvSearch.value||'').trim().toLowerCase(); if(!q||!tb.search) return tb.rows||[]; return (tb.rows||[]).filter(r=>{ const c0=r&&r[0]; const txt=(c0&&typeof c0==='object'&&c0.text!=null)?L(c0.text):cardRaw(c0); return String(txt).toLowerCase().indexOf(q)>-1; }); }
+      function bulkEdit(tb,ci){ if(!tb||!Array.isArray(tb.rows))return; const zh=/^zh/.test(document.documentElement.lang||'zh');
+        ElementPlus.ElMessageBox.prompt(zh?'输入一个值，套用到本列所有行：':'Set this value to all rows:', T('bulkEdit'), {confirmButtonText:zh?'确定':'OK', cancelButtonText:zh?'取消':'Cancel'})
+          .then(({value})=>{ (tb.rows||[]).forEach(r=>{ const c=r[ci]; if(c&&typeof c==='object'&&'value' in c) c.value=value; }); msg(zh?'已批量设置':'Applied'); }).catch(()=>{}); }
+      /* §自动重算(v3.1)：数量/勾选一变就静默刷新概览。表写 autoCalc:false 可退回「手动点计算」。
+         不弹提示——否则每敲一个字符弹一次。手动点【计算】走 recalcReturn()，仍有提示。 */
+      /* §确认清单取数(v3.2)：与 recalcReturn 同一套口径 —— 找整页第一个带 rows 的表，取已勾选行。 */
+      function reviewTable(){ const secs=(detailData.value&&detailData.value.sections)||[];
+        return (secs.find(s=>s.table&&Array.isArray(s.table.rows))||{}).table || null; }
+      function reviewCheckedRows(){ const tb=reviewTable(); if(!tb) return [];
+        return (tb.rows||[]).filter(r=>{ for(let i=0;i<r.length;i++){ if(r[i]&&r[i].ctrl==='checkbox') return !!r[i].value; } return true; }); }
+      function rvText(c){ if(c==null) return ''; if(typeof c==='string') return c.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+        if(typeof c==='object'){ if(c.zh!=null) return String(c.zh).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+          if(c.text!=null) return L(c.text); if(c.value!=null) return String(c.value); } return String(c); }
+      function rvQty(r,qtyCol){ if(qtyCol!=null && r[qtyCol]) return parseFloat(String(r[qtyCol].value!=null?r[qtyCol].value:rvText(r[qtyCol])).replace(',','.'))||0;
+        for(let i=0;i<r.length;i++){ if(r[i]&&r[i].ctrl==='number') return parseFloat(String(r[i].value||'0').replace(',','.'))||0; } return 0; }
+      function rvPrice(r){ for(let i=0;i<r.length;i++){ const m=String(rvText(r[i])).match(/R\$\s*([\d.]+,\d{2})/); if(m) return parseFloat(m[1].replace(/\./g,'').replace(',','.'))||0; } return 0; }
+      function reviewItems(fd){ const nc=(fd&&fd.nameCol!=null)?fd.nameCol:1;
+        return reviewCheckedRows().map(r=>({ name: rvText(r[nc]), qty: rvQty(r, fd&&fd.qtyCol) })); }
+      function reviewTotal(fd){ let q=0, amt=0;
+        reviewCheckedRows().forEach(r=>{ const n=rvQty(r, fd&&fd.qtyCol); q+=n; amt+=n*rvPrice(r); });
+        return { qty:q, amount:amt, amountText:'R$ '+amt.toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d),)/g,'.') }; }
+      /* §「已选择 {n}」(v3.2)：table.label 里的 {n} 替换成当前勾选数 */
+      function tbLabel(tb){ const s=L((tb&&tb.label)||''); if(!s) return '';
+        const n=(tb&&tb.rows||[]).filter(r=>{ for(let i=0;i<r.length;i++){ if(r[i]&&r[i].ctrl==='checkbox') return !!r[i].value; } return true; }).length;
+        return s.replace(/\{n\}/g, String(n)); }
+      let __recalcTimer = null;
+      function autoRecalc(tb){ if(tb && tb.autoCalc===false) return;
+        clearTimeout(__recalcTimer);
+        __recalcTimer = setTimeout(()=>{ try{ recalcReturn(true); }catch(e){} }, 220); }
+      function recalcReturn(silent){ const secs=(detailData.value&&detailData.value.sections)||[]; const tsec=secs.find(s=>s.table&&Array.isArray(s.table.rows)); if(!tsec)return;
+        let kinds=0, qty=0, amount=0;
+        (tsec.table.rows||[]).forEach(r=>{ const chk=(r[0]&&r[0].ctrl==='checkbox')?!!r[0].value:true; if(!chk)return; kinds++;
+          let q=0; for(let k=0;k<r.length;k++){ if(r[k]&&r[k].ctrl==='number'){ q=parseFloat(String(r[k].value||'0').replace(',','.'))||0; break; } }
+          let price=0; for(let k=0;k<r.length;k++){ const m=String(cardRaw(r[k])).match(/R\$\s*([\d.]+,\d{2})/); if(m){ price=parseFloat(m[1].replace(/\./g,'').replace(',','.'))||0; break; } }
+          qty+=q; amount+=q*price; });
+        const fmt=n=>'R$ '+n.toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d),)/g,'.');
+        const ov=secs.find(s=>s.fields&&s.fields.some(f=>/SKU品类|SKU kinds|Tipos/.test(L(f.label||''))));
+        if(ov){ ov.fields.forEach(f=>{ const lb=L(f.label||''); if(/SKU品类|SKU kinds|Tipos/.test(lb))f.value=String(kinds); else if(/退货总数|Total qty|Qtd\. total/.test(lb))f.value=String(qty); else if(/退货产品金额|Return amount|Valor/.test(lb))f.value=fmt(amount); }); }
+        if(!silent) msg(/^zh/.test(document.documentElement.lang||'zh')?'已按当前勾选与数量重新计算':'Recalculated'); }
+      /* §通用弹窗「确定」：okOpens→开下一个弹窗；否则关弹窗(可选 okThenCloseDetail 连带关整页)+ done 提示。用于开票复核弹窗。2026-08-22 */
+      /* §真下载(v1.8)：写 download:{filename, mime?, content} → 真的生成文件让浏览器落盘，
+         不再只弹「已导出」提示。content 支持多语言对象，会先经 L() 取当前语言。 */
+      function doDownload(dl){
+        try{
+          const name=(dl&&dl.filename)?L(dl.filename):'download.txt';
+          const mime=(dl&&dl.mime)||'text/plain;charset=utf-8';
+          let body=L((dl&&dl.content)||'');
+          if(typeof body!=='string') body=JSON.stringify(body,null,2);
+          const blob=new Blob([body],{type:mime});
+          const url=URL.createObjectURL(blob);
+          const a=document.createElement('a'); a.href=url; a.download=name; a.style.display='none';
+          document.body.appendChild(a); a.click();
+          setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },1500);
+          return name;
+        }catch(e){ return null; }
+      }
+      function dlgOk(){ const d=(cfg.value.dialogs||{})[dialogName.value]; if(!d){ dialogName.value=''; return; }
+        if(d.okOpens && cfg.value.dialogs[d.okOpens]){ dialogName.value=d.okOpens; return; }
+        if(d.download){ const n=doDownload(d.download); dialogName.value=''; msg(n?(L(d.done)||(T('exported')||'已导出')+' '+n):'导出失败'); return; }
+        const done=d.done?L(d.done):T('confirm'); dialogName.value=''; if(d.okThenCloseDetail) closeDetail(); msg(done); }
+      function detailAct(b){ const act=(b&&(b.act||b.action))||''; const fp=detailFP.value;
+        /* §整页底部按钮可开弹窗(如「开票」→复核弹窗)：footerBtn 写 {opens:'弹窗名'} → 打开 cfg.dialogs[名]（弹窗盖在整页上复核）2026-08-22 */
+        const op=b&&b.opens; if(op&&cfg.value.dialogs&&cfg.value.dialogs[op]){ dlgRow.value=null; dialogName.value=op; return; }
+        if(act==='close'){ closeDetail(); return; }
+        if(act==='next'){ if(fp&&fp.steps[fp.i+1]){ fp.i++; detailData.value=JSON.parse(JSON.stringify(fp.steps[fp.i])); activeAnchor.value=''; window.scrollTo(0,0); } return; }
+        if(act==='back'){ if(fp&&fp.i>0){ fp.i--; detailData.value=JSON.parse(JSON.stringify(fp.steps[fp.i])); activeAnchor.value=''; window.scrollTo(0,0); } else { closeDetail(); } return; }
+        /* §整页底部按钮(如「开票」)可带二次确认：footerBtn 写 {act:'submit',confirm:'确认文案',confirmTitle?,done?} → 先弹确认再提交(2026-08-22) */
+        const done=()=>{ msg(b.done?L(b.done):(L(b.label)+T('executed'))); closeDetail(); };
+        if(b&&b.confirm){ const zh=/^zh/.test(document.documentElement.lang||'zh'); ElementPlus.ElMessageBox.confirm(L(b.confirm), L(b.confirmTitle||b.label||''), {type:'warning', confirmButtonText:zh?'确定':'OK', cancelButtonText:zh?'取消':'Cancel'}).then(done).catch(()=>{}); return; }
+        done(); }
+      /* §「添加XX」真能加行（真系统点了会新增一行·不能只弹提示）：
+         优先用 table.addRow 模板行；没有就克隆末行并清空可编辑单元格的值。深拷贝，避免多行共享同一对象。 */
+      function addTableRow(tb){
+        if(!tb || !Array.isArray(tb.rows)) return;
+        let tpl = tb.addRow;
+        if(!tpl && tb.rows.length){
+          tpl = JSON.parse(JSON.stringify(tb.rows[tb.rows.length-1]));
+          tpl = tpl.map(c => {
+            if(c && typeof c==='object' && 'ctrl' in c){
+              if(c.ctrl==='checkbox') c.value=false;
+              else if(c.ctrl!=='del') c.value='';
+              return c;
+            }
+            if(c && typeof c==='object' && 't' in c) return { ...c, t:'--' };
+            return '--';
+          });
+        }
+        if(!tpl) return;
+        tb.rows.push(JSON.parse(JSON.stringify(tpl)));
+        msg(T('rowAdded'));
+      }
+      function gotoAnchor(k){ activeAnchor.value=k; const el=document.getElementById('da-'+k); if(el)el.scrollIntoView({behavior:'smooth',block:'start'}); }
+      const dlgOpen = computed({ get:()=>!!dialogName.value, set:v=>{ if(!v)dialogName.value=''; } });   // 通用弹窗 v-model(dialogName 空/非空)
+      /* 🏛 圈选/PRD 一律以中文为准（2026-07-10 用户拍板）
+         标注层采集的是【DOM 上当前显示的文字】。若在葡语下圈选，fp_name 会变成 "Lista de NF"，
+         葡语功能名混进中文 PRD，同一功能还会因语言不同被圈成两个。故：
+           ① 开启标注 → 自动切回中文（提示用户，不静默）
+           ② 标注开启期间 → 锁定语言，禁止切走
+         只在骨架实现，不动标注层（不必 bump 层版本、不必重注入存量原型）。 */
+      const ZH_OK = locales.includes('zh');
+      function onAnnoToggle(v){
+        if(v && ZH_OK && lang.value!=='zh'){ setLang('zh'); msg(T('annoZhForced')); }
+        document.body.classList.toggle('annotations-hidden',!v);
+        if(window.__anno){window.__anno.toggleShow(v);window.__anno.toggleMode(v);}
+        msg(v?T('annoOn'):T('annoOff'));
+      }
+      function uiSetLang(lc){ if(annoOn.value){ msg(T('langLocked')); return; } setLang(lc); }
+      function genPRD(){ if(window.__anno&&window.__anno.openScopedList){window.__anno.openScopedList();}else{msg(T('layerLoading'));} }
+      function annoShare(){ if(window.__anno&&window.__anno.exportShare){window.__anno.exportShare();}else{msg(T('layerLoading'));} }
+      function annoClear(){ if(window.__anno&&window.__anno.clearPins){window.__anno.clearPins();}else{msg(T('layerLoading'));} }
+      function annoRestore(){ if(window.__anno&&window.__anno.restoreCleared){window.__anno.restoreCleared();}else{msg(T('layerLoading'));} }
+      function annoDevkit(){ if(window.__anno&&window.__anno.exportDevkit){window.__anno.exportDevkit();}else{msg(T('layerLoading'));} }   /* 导出对接料·喂AI(A) */
+      function annoGenCode(){ if(window.__anno&&window.__anno.generateCode){window.__anno.generateCode();}else{msg(T('layerLoading'));} } /* 一键生成代码(B·弹选栈) */
+      window.__VIEW__={sys:currentSystem.value,page:currentPage.value};
+      window.__PRD_DATA__=@@PRD_DATA@@;   /* 装配器注入字面量(含 "system_name":"..." 供 anno-server 匹配回写) */
+      return { cell,isCtrl,actIcon,colLabel,colWidth,navOf,goSys,menuMode,setMenuMode,userName,notifCount,activePanel,panelOpen,curPanel,curRows,curTotal,curCardMeta,cardMetaOf,cardSel,aiQuery,aiAnswer,aiShown,askAI,noticeTab,curNotice,unreadOf,L,K,T,lang,locales,localeName,setLang:uiSetLang,epLocale,systems:SYSTEMS,currentSystem,homePage,currentPage,openTabs,annoOn,pageSize,pageNo,filterModel,detailRadio,nav,cfg,flowTip,metaOf,ak,go,closeTab,setSys,resetFilter,msg,onAnnoToggle,genPRD,annoShare,annoDevkit,annoGenCode,annoClear,annoRestore,
+        activeStatus,formVisible,activeFormTab,detailData,detailFP,detailAct,openFullPage,dialogName,activeAnchor,selCount,dlgOpen,btnLabel,fireBtn,needSel,closeDetail,detailSave,gotoAnchor,addTableRow,
+        selRows,tblRef,onSelChange,importOpen,importFile,pickImportFile,confirmImport,doSync,
+        doCopy,reviewItems,reviewTotal,tbLabel,autoRecalc,failMap,bandLv,bandCellStyle,canFire,bandWayOk,doGoto,doDownload,doTransition,dvSearchField,dvHeadState,dvHeadToggle,msOpen,msKw,msDraft,msVisible,msToggle,msPick,msAllChecked,msSetAll,msSave,msCancel,msSummary,dlgFilterModel,dlgRadio,dlgTables,secTab,secIsTabs,secPanes,secTabsBind,secPaneBind,curQuickFilters,qfOn,qfPick,curListTotals,curColumns,colTree,b64page,goTopItem,pageIn,curActions,curLinkCols,curSelActions,curStatusTabs,curListTitle,curFilters,curAlert,curAlertTitle,
+        dvSearch,dvVisRows,bulkEdit,recalcReturn,dlgOk,
+        actHidden,curActionsWidth,fdShow,hintColor,optDisabledReason,onCellAct,loading,doSearch,goPanel,goTab,tblSpan,renderRows,rowSpan,rowSelectable,rowClass,curFails };
+    }
+  }).use(ElementPlus).mount('#app');
+})();
+</script>
+</body>
+</html>

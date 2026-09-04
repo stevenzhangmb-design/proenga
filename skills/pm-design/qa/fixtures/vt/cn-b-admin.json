@@ -1,0 +1,31 @@
+{
+  "_note": "视觉事实快照闸 fixture · CN 单语 B端。改这里必然改 golden，需人工确认。",
+  "title": "VT-CN",
+  "systemName": "VT-CN",
+  "locales": ["zh"],
+  "defaultLocale": "zh",
+  "region": "CN",
+  "currency": "CNY",
+  "systems": [{ "key": "OMS", "label": "订单系统" }],
+  "home": { "OMS": "OMS-list" },
+  "nav": { "OMS": [{ "group": "订单管理", "items": [["OMS-list", "订单列表"]] }] },
+  "pagecfg": {
+    "OMS-list": {
+      "stats": [["本月订单额", "¥ 128,400.00", "", "up"]],
+      "filters": [
+        { "label": "下单日期", "ph": "请选择" },
+        { "label": "状态", "type": "select", "options": ["已完成", "待付款"] }
+      ],
+      "toolbar": ["导出"],
+      "listTitle": "订单列表",
+      "primaryBtn": "新建订单",
+      "columns": ["订单号", "下单日期", "金额", "状态"],
+      "rows": [
+        ["SO-000128", "2026-07-09", "¥ 12,400.00", { "t": "已完成", "c": "green" }],
+        ["SO-000129", "2026-07-10", "¥ 3,980.00", { "t": "待付款", "c": "orange" }]
+      ],
+      "actions": ["查看"],
+      "total": 24
+    }
+  }
+}

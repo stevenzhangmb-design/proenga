@@ -1,0 +1,3101 @@
+<!-- ╔══════════════════════════════════════════════════════════════════════╗
+     标注层标准组件  ·  annotation-layer  ·  v1.1  （2026-06-22 · 独立实例解耦）
+     ────────────────────────────────────────────────────────────────────────
+     【通用引擎 · 产品形态无关】适用 APP / 小程序 / 网站 / 所有 B 端后台系统。
+     业务内容一律来自 window.__PRD_DATA__（prd-data.json 单一真理源）；
+     本组件只负责：标注识别 + 渲染 + 内联编辑 + 框选 + 持久化。
+     组件内禁止出现任何具体业务词/租户名（充值/审核/账户余额/CNY/WMS 等）。
+
+     ★★ v1.1 解耦（B方案根治"标注层崩→业务页整页白屏"）★★
+        标注层挂【独立 Vue 实例】到 #anno-app，与业务 #app 物理隔离。
+        - 引擎主体（③-A/B/C）字节级不变，仅外壳从"合并进宿主 setup"改为"自带 createApp"。
+        - app.config.errorHandler 隔离：标注层内部抛错只崩自己，Element Plus 业务页照常。
+        - 宿主与标注层通过 window.__anno（开关/生成PRD）+ window.__annoSetView（视图标识）桥接，
+          不再共享同一个 Vue 响应式实例。
+        ▸ 验证 demo：archive/EP解耦验证-2026-06-22.html（崩标注层后业务表格/查询/分页照常）。
+
+     ┌─ 注入方式（生成任何新原型时，整段原样复制，禁止重写）─────────────┐
+     │ ① <style> 段        → 复制进原型 <head> 的 <style> 内              │
+     │ ② HTML(#anno-app) 段 → 复制进原型 <body> 内，业务 #app 结束标签【之后】│
+     │ ③ setup() JS 段     → 复制到业务脚本【之后】（自带 createApp，勿并入宿主 setup）│
+     │ ④ return            → 已内置于 ③ 的独立实例，宿主【无需合并】       │
+     │ ⑤ SSE 自动刷新段    → 复制到原型 </body> 前（强制，不可省略）       │
+     │ ⑥ 宿主三件事         → 见 ④ 注释：放 #anno-app、桥接视图、按钮改调 window.__anno │
+     └────────────────────────────────────────────────────────────────────┘
+     ★ 打开【已有原型】时：grep initSSEAutoRefresh，不存在则立即补注 ⑤ 段。
+     ★ 卡片标题选择器必须用通配规律（_CARD_TITLE_SEL），禁止只枚举具体类名。
+     ★【杜绝"功能区"铁律】引擎三层自动修复：①DOM elementFromPoint ②文本关键词匹配
+       prd-data ③旧存储文本兜底。但正确做法仍是生成原型时精确绑定 data-annotation。
+       凡是可被框选/点选的功能容器，必须全部绑定：
+       → 状态Tab栏/页签栏：:data-annotation="ak('模块名','查询')"（页签用动态表达式）
+       → 筛选区 filter-wrap：:data-annotation="ak('模块名','查询')"
+       → 工具栏 table-toolbar：:data-annotation="ak('模块名','主操作')"
+       → 分页栏 pg-bar：:data-annotation="ak('模块名','查询')"
+       → 表格容器 table.pt：data-annotation="模块-视图.列表"
+       → 表单区 form-sec：:data-annotation="ak('模块名','充值/新增/编辑')"
+       → 底部按钮 form-footer：:data-annotation="ak('模块名','操作名')"
+       → 详情状态卡 status-card：:data-annotation="ak('模块名','查看')"
+       → 弹窗 el-dialog：data-annotation="模块-视图.操作名"
+       → 统计卡片块 acct-block/stat-card 区域：data-annotation="模块-视图.查看"
+
+     ┌─ 宿主依赖（原型需提供，否则走兜底）─────────────────────────────────┐
+     │ • window.__PRD_DATA__  : prd-data.json 内联数据（可选，无则走通用模板）│
+     │ • window.__USER_ANNOTATIONS__ : 已嵌入的标注（可选，回退 localStorage）│
+     │ • window.__ANNO_READONLY__    : true=只读分享版（可选）             │
+     │ • setup 中已有 ref：sys / page（当前系统/页面标识，用于 pageKey 隔离）│
+     │ • Element Plus（el-button / el-drawer 等）                          │
+     └────────────────────────────────────────────────────────────────────┘
+     ╚══════════════════════════════════════════════════════════════════════╝ -->
+
+
+<!-- ╔═══════════════════ ① CSS（复制进 <style>）═══════════════════╗ -->
+<style>
+    /* ════════ 标注栏 / 旧式标注弹窗基础 ════════ */
+    .anno-bar { display:flex; align-items:center; flex-wrap:wrap; gap:8px;
+      background:#EEF2FF; border:1px solid #C7D2FE; border-radius:6px; padding:8px 12px; margin-bottom:12px; }
+    .anno-bar-label { font-size:12px; color:var(--primary); font-weight:600; margin-right:4px; }
+    .anno-chip { display:inline-flex; align-items:center; gap:5px; background:#fff; border:1px solid #C7D2FE;
+      border-radius:14px; padding:3px 10px 3px 6px; font-size:12px; color:var(--text-1); cursor:pointer; transition:all .15s; }
+    .anno-chip:hover { border-color:var(--primary); color:var(--primary); }
+    .annotation-icon { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px;
+      border-radius:50%; background:var(--primary); color:#fff; font-size:11px; font-style:normal; font-weight:700;
+      line-height:1; cursor:pointer; flex:none; margin-left:5px; vertical-align:middle; transition:transform .12s; }
+    .annotation-icon:hover { transform:scale(1.15); }
+    .annotation-icon { display:none !important; }
+    body.annotations-hidden .annotation-icon { display:none !important; }
+    .anno-dialog .el-dialog__header { cursor:move; }
+    .anno-dialog .el-dialog__body { max-height:70vh; overflow-y:auto; padding-top:8px; }
+    .anno-meta { font-size:12px; color:var(--text-3); margin-bottom:10px; }
+    .anno-meta b { color:var(--text-1); }
+    .anno-sec-title { font-size:13px; font-weight:700; color:var(--text-1); margin:14px 0 8px; padding-left:8px; border-left:3px solid var(--primary); }
+    .anno-group-title { font-size:13px; font-weight:600; color:var(--text-1); margin:10px 0 6px; }
+    .anno-tbl { width:100%; border-collapse:collapse; font-size:12px; margin-bottom:8px; }
+    .anno-tbl th { background:#F5F7FA; color:var(--text-2); font-weight:500; padding:7px 8px; text-align:left; border:1px solid var(--border); white-space:nowrap; }
+    .anno-tbl td { padding:7px 8px; border:1px solid var(--border); color:var(--text-1); vertical-align:top; }
+    .anno-uc { margin-bottom:12px; }
+    .anno-uc-h { font-size:13px; font-weight:600; color:var(--text-1); margin-bottom:4px; }
+    .anno-step { font-size:12px; color:var(--text-1); line-height:1.7; padding-left:2px; }
+    .anno-step-num { color:var(--primary); font-weight:600; margin-right:4px; display:inline-block; min-width:1.6em; }
+    .anno-msg-blk { background:#F7F9FC; border:1px solid var(--border); border-radius:5px; padding:8px 10px; margin-bottom:6px; font-size:12px; line-height:1.7; }
+    .anno-msg-blk .k { color:var(--text-3); }
+    .anno-plain { font-size:12px; color:var(--text-2); }
+
+    /* ════════ 用户自标注栏 / 标注列表 ════════ */
+    .u-anno-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+      background:#FFF8E1; border:1px solid #FFD54F; border-radius:6px;
+      padding:8px 14px; margin-bottom:12px; font-size:13px; }
+    .u-anno-bar-lbl { color:#E65100; font-weight:600; flex:none; display:flex; align-items:center; gap:5px; }
+    .u-anno-zone-chip { display:inline-flex; align-items:center; gap:4px; background:#fff;
+      border:1.5px solid #FFD54F; border-radius:14px; padding:4px 12px;
+      cursor:pointer; transition:all .15s; font-size:12px; color:var(--text-1); user-select:none; }
+    .u-anno-zone-chip:hover { border-color:#F57C00; color:#E65100; background:#FFF3E0; }
+    .u-anno-zone-chip.has-anno { border-color:#FF8F00; background:#FFF3E0; color:#E65100; font-weight:600; }
+    .u-anno-dot { width:7px; height:7px; border-radius:50%; background:#FF8F00; display:inline-block; }
+    .u-anno-badge { display:inline-flex; align-items:center; justify-content:center;
+      width:16px; height:16px; border-radius:50%; background:#FF8F00; color:#fff;
+      font-size:11px; font-weight:700; cursor:pointer; margin-left:5px;
+      vertical-align:middle; flex:none; transition:transform .12s; }
+    .u-anno-badge:hover { transform:scale(1.15); }
+    .u-anno-list-item { padding:12px 0; border-bottom:1px solid var(--border); }
+    .u-anno-list-item:last-child { border-bottom:none; }
+    .u-anno-item-zone { font-size:12px; color:var(--text-3); margin-bottom:3px; }
+    .u-anno-item-title { font-size:14px; font-weight:600; color:var(--text-1); }
+    .u-anno-item-content { font-size:13px; color:var(--text-2); margin-top:5px;
+      white-space:pre-wrap; line-height:1.6; }
+    .u-anno-item-meta { font-size:12px; color:var(--text-3); margin-top:6px;
+      display:flex; justify-content:space-between; align-items:center; }
+    .u-anno-type-tag { background:#FFF3E0; color:#E65100; padding:1px 8px;
+      border-radius:10px; font-size:11px; }
+
+    /* ── 画布标注：hover 铅笔浮动按钮 ── */
+    .fld-anno-btn { position:fixed; z-index:10000; width:22px; height:22px;
+      border-radius:50%; border:2px solid #FF8F00; background:#fff; color:#FF8F00;
+      cursor:pointer; font-size:13px; display:none; align-items:center;
+      justify-content:center; padding:0; line-height:1; transition:background .12s,color .12s;
+      box-shadow:0 2px 6px rgba(0,0,0,.18); pointer-events:auto; }
+    .fld-anno-btn:hover, .fld-anno-btn.has-anno { background:#FF8F00; color:#fff; }
+    /* 标注统一右键触发：hover 不显示"可标注"虚线框/crosshair，保持业务原貌 */
+    /* 右键画框时强制全局 crosshair（覆盖子元素 pointer 等样式）*/
+    body.anno-drawing, body.anno-drawing * { cursor: crosshair !important; }
+    /* ── 研发参考版（dev mode）：隐藏所有 PM 工具 ── */
+    .dev-mode-on .u-anno-bar,
+    .dev-mode-on .annotation-icon,
+    .dev-mode-on #fld-anno-btn,
+    .dev-mode-on .u-anno-panel,
+    .dev-mode-on .nav-anno-toggle { display: none !important; }
+    .dev-mode-on .canvas-anno-on .el-button:hover,
+    .dev-mode-on .canvas-anno-on table.pt thead th:hover,
+    .dev-mode-on .canvas-anno-on .stab:hover { outline: none !important; cursor: default !important; }
+    .dev-mode-banner { display:flex; align-items:center; gap:8px; padding:6px 16px;
+      background:#E8F5E9; border-bottom:1px solid #A5D6A7; font-size:12px; color:#2E7D32; }
+    .dev-mode-banner a { color:#1565C0; cursor:pointer; text-decoration:underline; }
+
+    /* 标注模式下 hover 保持业务原貌（pointer），不显示虚线框/crosshair/「右键标注」tooltip。标注靠右键。 */
+
+    /* ── 功能点 PRD 确认气泡 ── */
+    .anno-confirm-bubble {
+      position: fixed; z-index: 9300;
+      background: #fff; border-radius: 10px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.16), 0 0 0 1px rgba(59,125,255,.18);
+      padding: 12px 14px 10px; min-width: 210px;
+      animation: anno-trigger-in .18s ease-out;
+    }
+    .acb-title { font-size: 12px; color: #888; margin-bottom: 3px; }
+    .acb-name  { font-size: 14px; font-weight: 700; color: #1a1a1a; margin-bottom: 10px; }
+    .acb-btns  { display: flex; gap: 8px; justify-content: flex-end; }
+    .acb-cancel { font-size: 12px; color: #666; background: #F5F5F5; border: none;
+      border-radius: 6px; padding: 5px 14px; cursor: pointer; }
+    .acb-cancel:hover { background: #EBEBEB; }
+    .acb-ok { font-size: 12px; color: #fff; background: #3B7DFF; border: none;
+      border-radius: 6px; padding: 5px 16px; cursor: pointer; font-weight: 600; }
+    .acb-ok:hover { background: #2563EB; }
+    @keyframes anno-trigger-in {
+      from { opacity:0; transform:translateY(6px) scale(.96); }
+      to   { opacity:1; transform:translateY(0) scale(1); }
+    }
+
+    /* ══════════ 图钉标注系统（Pin Annotation System）══════════ */
+    .pin-layer { position:fixed; top:0; left:0; width:100vw; height:100vh;
+      pointer-events:none; z-index:9500; overflow:visible; }
+    .anno-pin { position:absolute; transform:translate(-50%,-50%); pointer-events:auto;
+      cursor:pointer; user-select:none; }
+    .anno-pin-badge {
+      width:24px; height:24px; border-radius:6px; background:#3B7DFF;
+      color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center;
+      justify-content:center; border:2px solid rgba(255,255,255,.9);
+      box-shadow:0 2px 6px rgba(59,125,255,.45); transition:transform .14s,box-shadow .14s;
+      position:relative; }
+    .anno-pin-badge::after { content:''; position:absolute; bottom:-6px; left:4px;
+      border:4px solid transparent; border-top-color:#3B7DFF; border-bottom:none; }
+    .anno-pin:hover .anno-pin-badge { transform:scale(1.18); box-shadow:0 3px 12px rgba(59,125,255,.55); }
+    .anno-pin.is-dragging .anno-pin-badge { transform:scale(1.28); box-shadow:0 4px 16px rgba(59,125,255,.65); }
+    .anno-pin.is-selected .anno-pin-badge { background:#1D4ED8; box-shadow:0 0 0 3px rgba(59,125,255,.35); }
+    .anno-pin.is-new .anno-pin-badge { box-shadow:0 0 0 3px rgba(59,125,255,.5), 0 0 12px rgba(59,125,255,.4); animation:pin-new-pulse 1s ease-in-out 3; }
+    .anno-pin.is-new::after { content:'NEW'; position:absolute; top:-10px; right:-10px; background:#FF6B35; color:#fff; font-size:9px; font-weight:700; padding:1px 4px; border-radius:3px; pointer-events:none; line-height:14px; }
+    @keyframes pin-new-pulse { 0%,100%{box-shadow:0 0 0 3px rgba(59,125,255,.5)} 50%{box-shadow:0 0 0 5px rgba(59,125,255,.8),0 0 16px rgba(59,125,255,.5)} }
+    /* 标注弹窗 */
+    .pin-modal-overlay { position:fixed; z-index:9690; inset:0; background:rgba(0,0,0,.35); }
+    .anno-rename-top { z-index: 12000 !important; }
+    .anno-panel-top.el-overlay, .anno-panel-top { z-index: 9600 !important; }  /* 已圈定功能清单面板压在 pin 徽标(9500)之上，杜绝徽标穿透 */
+    .th-tip-wide.el-popper { max-width: 460px !important; white-space: normal !important; line-height: 1.6; word-break: break-all; }
+    .pin-modal {
+      position:fixed; z-index:9700;
+      top:50%; left:50%; transform:translate(-50%,-50%);
+      background:#fff; border-radius:12px;
+      box-shadow:0 16px 48px rgba(0,0,0,.22);
+      width:780px; max-width:92vw;
+      max-height:84vh; display:flex; flex-direction:column;
+    }
+    .pin-modal-hd { display:flex; align-items:flex-start; gap:12px;
+      padding:20px 24px 14px; border-bottom:1px solid #EEF0F4; flex-shrink:0; }
+    .pin-modal-num { width:30px; height:30px; background:#3B7DFF; color:#fff;
+      font-size:13px; font-weight:700; border-radius:7px;
+      display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px; }
+    .pin-modal-meta { flex:1; min-width:0; }
+    .pin-modal-title { font-size:16px; font-weight:600; color:#1a1a1a; line-height:1.4; }
+    .pin-modal-crumb { font-size:12px; color:#999; margin-top:4px; line-height:1.6; }
+    .pin-modal-crumb b { color:#3B7DFF; font-weight:600; }
+    .pin-modal-close { cursor:pointer; color:#bbb; font-size:24px; line-height:1;
+      margin-left:8px; flex-shrink:0; padding:0 2px; transition:color .15s; }
+    .pin-modal-close:hover { color:#555; }
+    .pin-modal-tabs { display:flex; border-bottom:1px solid #EEF0F4; padding:0 24px; flex-shrink:0; }
+    .pin-modal-tab { padding:11px 18px; font-size:13px; color:#888; cursor:pointer;
+      border-bottom:2px solid transparent; margin-bottom:-1px; transition:all .15s; }
+    .pin-modal-tab.active { color:#3B7DFF; border-bottom-color:#3B7DFF; font-weight:600; }
+    .pin-modal-tab:hover:not(.active) { color:#555; }
+    .pin-modal-body { flex:1; overflow-y:auto; padding:16px 24px 8px; }
+    /* 用例规则 结构化渲染 */
+    .uc-section { margin-bottom:14px; }
+    .uc-heading { font-size:13px; font-weight:700; color:#1a1a1a; margin-bottom:7px;
+      display:flex; align-items:center; gap:6px; }
+    .uc-heading::before { content:'•'; color:#3B7DFF; font-size:18px; line-height:0.8; }
+    .uc-list { list-style:none; padding:0; margin:0; }
+    .uc-list li { display:flex; gap:8px; padding:3px 0; font-size:13px; color:#444; line-height:1.65; }
+    .uc-num { color:#3B7DFF; font-weight:600; flex-shrink:0; min-width:18px; }
+    .pm-table { width:100%; border-collapse:collapse; margin-top:6px; font-size:12px; }
+    .pm-table th { background:#F5F7FA; color:#666; font-weight:600;
+      padding:7px 12px; border:1px solid #E4E9F2; text-align:left; }
+    .pm-table td { padding:7px 12px; border:1px solid #E4E9F2; color:#444; }
+    /* 字段规范 列表 */
+    .fs-item { display:flex; gap:8px; padding:5px 0; font-size:13px; color:#444; line-height:1.65;
+      border-bottom:1px solid #F5F7FA; }
+    .fs-item:last-child { border-bottom:none; }
+    .fs-dot { color:#3B7DFF; flex-shrink:0; font-weight:700; }
+    .pin-modal-edit textarea {
+      width:100%; box-sizing:border-box; font-size:13px; line-height:1.8;
+      border:1px solid #E0E0E0; border-radius:7px; padding:10px 12px;
+      resize:vertical; min-height:260px; color:#333; font-family:inherit; outline:none;
+    }
+    .pin-modal-edit textarea:focus { border-color:#3B7DFF; }
+    /* ── 内联编辑组件 ── */
+    .cel-input { width:100%; border:none; outline:none; background:transparent; font-size:12px; color:#444; padding:2px 0; font-family:inherit; box-sizing:border-box; }
+    .cel-input:focus { background:#EEF3FF; border-radius:3px; padding:2px 4px; }
+    .cel-select { border:none; outline:none; background:transparent; font-size:12px; color:#444; width:100%; cursor:pointer; }
+    .cel-select:focus { background:#EEF3FF; border-radius:3px; }
+    .fs-group-lbl { font-size:12px; font-weight:700; color:#3B7DFF; padding:8px 0 4px; border-bottom:1px solid #DBEAFE; margin-bottom:6px; }
+    .fs-group-lbl input { border:none; outline:none; font-size:12px; font-weight:700; color:#3B7DFF; background:transparent; width:100%; }
+    .fs-add-btn { font-size:12px; color:#3B7DFF; background:none; border:1px dashed #93C5FD; border-radius:4px; padding:2px 10px; cursor:pointer; margin:6px 0; }
+    .fs-del-btn { font-size:14px; color:#F87171; background:none; border:none; cursor:pointer; padding:0 4px; line-height:1; }
+    .uc-sec-block { margin-bottom:10px; }
+    .uc-sec-lbl { font-size:12px; font-weight:700; color:#3B7DFF; padding:0 0 4px; margin-bottom:4px; }
+    .uc-sec-ta { width:100%; border:1px solid #E8ECF0; border-radius:5px; padding:7px 10px; font-size:12px; color:#444; line-height:1.75; resize:vertical; box-sizing:border-box; font-family:inherit; }
+    .uc-sec-ta:focus { border-color:#3B7DFF; outline:none; }
+    .uc-sec-view { font-size:12px; color:#444; line-height:1.8; white-space:pre-wrap; padding:6px 10px; background:#F8F9FB; border-radius:5px; border:1px solid #EEF0F4; }
+    /* 底栏 */
+    .pin-modal-ft { display:flex; gap:8px; align-items:center;
+      padding:12px 24px 16px; border-top:1px solid #EEF0F4; flex-shrink:0; }
+    .pin-modal-del { color:#F44336; font-size:13px; cursor:pointer; background:none;
+      border:none; padding:4px 8px; border-radius:5px; }
+    .pin-modal-del:hover { background:#FFF0EE; }
+    /* AI 命令栏（底部居中）*/
+    .ai-pin-bar { position:fixed; top:58px; right:16px;
+      z-index:9400; display:flex; gap:8px; align-items:center; background:#fff;
+      border-radius:28px; box-shadow:0 4px 24px rgba(0,0,0,.14); border:1px solid #E0E0E0;
+      padding:8px 14px; min-width:420px; }
+    .ai-pin-bar input { border:none; outline:none; flex:1; font-size:13px; background:transparent; }
+    .ai-pin-bar input::placeholder { color:#bbb; }
+    .ai-pin-bar .ai-bar-label { font-size:12px; color:#FF6B35; font-weight:600;
+      white-space:nowrap; display:flex; align-items:center; gap:4px; }
+    .pin-count-badge { display:inline-flex; align-items:center; justify-content:center;
+      min-width:18px; height:18px; border-radius:9px; background:#FF6B35; color:#fff;
+      font-size:11px; font-weight:700; padding:0 4px; margin-left:4px; }
+    /* 字段编辑模式：可编辑单元格 */
+    .anno-tbl td.editable { background:#FFFDE7; cursor:text; }
+    .anno-tbl td.editable:hover { background:#FFF9C4; }
+    .anno-tbl td input.field-edit-input { width:100%; border:1px solid #FFD54F; border-radius:3px;
+      padding:2px 5px; font-size:12px; background:#FFFDE7; outline:none; font-family:inherit; }
+    .anno-tbl td input.field-edit-input:focus { border-color:#FF8F00; background:#fff; }
+    /* ── 预览模式：编辑输入框只读灰显 ── */
+    body.anno-preview-mode .cel-input,
+    body.anno-preview-mode .cel-select,
+    body.anno-preview-mode .uc-sec-ta,
+    body.anno-preview-mode .fs-group-lbl input {
+      pointer-events: none !important; background: #f7f8fa !important;
+      color: #888 !important; cursor: default !important;
+    }
+    body.anno-preview-mode .pin-field-add-row,
+    body.anno-preview-mode .uc-add-row,
+    body.anno-preview-mode .pm-add-row,
+    body.anno-preview-mode .ol-add-row { display: none !important; }
+        /* 只读/分享版：宿主标注创作控件(复制已圈功能/标注模式等)统一隐藏；标注【显示】开关不打此类=保留 */
+    body.anno-preview-mode .anno-author-only { display: none !important; }
+    /* ── 字段类型快速插入 ── */
+    .ft-chips { display:flex; flex-wrap:wrap; gap:5px; padding:6px 0 10px; border-bottom:1px solid #EEF0F3; margin-bottom:10px; align-items:center; }
+    .ft-chip { font-size:11px; padding:2px 9px; border:1px solid #D1D5DB; border-radius:12px; cursor:pointer; color:#555; background:#F8F9FA; white-space:nowrap; transition:all .15s; }
+    .ft-chip:hover { border-color:#3B7DFF; color:#3B7DFF; background:#EEF3FF; }
+    /* ── 遗漏扫描面板 ── */
+    .scan-panel { position:fixed; right:16px; top:68px; width:292px; background:#fff; border:1px solid #E8ECF0; border-radius:10px; box-shadow:0 4px 20px rgba(0,0,0,.13); z-index:9998; padding:14px; max-height:380px; overflow-y:auto; }
+    .scan-panel-hd { display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:600; color:#1a1a1a; margin-bottom:10px; }
+    .scan-item { display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px solid #F3F4F6; font-size:12px; color:#444; gap:8px; }
+    .scan-item:last-child { border-bottom:none; }
+    .scan-add-btn { font-size:11px; padding:2px 8px; border:1px solid #3B7DFF; border-radius:10px; color:#3B7DFF; cursor:pointer; white-space:nowrap; flex-shrink:0; background:#fff; }
+    .scan-add-btn:hover { background:#EEF3FF; }
+</style>
+<!-- ╚═══════════════════ ① CSS 结束 ═══════════════════╝ -->
+
+
+<!-- ╔═══════════════════ ② HTML 模板（复制进 <body> 内，#app 之后，作为独立标注层根）═══════════════════╗ -->
+<!-- 核心 pin 标注系统：pin 覆盖层 + 标注弹窗（查看/编辑双态）+ AI 命令栏。
+     全部字段由数据源驱动，无任何业务硬编码。
+     ★ v1.1 解耦：整段包在 <div id="anno-app"> 内，挂【独立 Vue 实例】，
+       与业务 #app 物理隔离——标注层崩只崩自己，业务页照常（见 ③ 的 mountAnnotationLayer）。
+       注入位置：放在业务 #app 结束标签【之后】，不要再塞进 #app 内部。 -->
+<div id="anno-app">
+
+  <!-- ════════ 标注号覆盖层（蓝湖/Zeplin 风格方形标注号）════════ -->
+  <div v-if="showPins && annoPins.length" class="pin-layer">
+    <div v-for="pin in annoPins.filter(p => !p.pageKey || p.pageKey === sys + '-' + page)" :key="pin.id"
+      class="anno-pin"
+      :class="{ 'is-dragging': pin.isDragging, 'is-selected': activePinId===pin.id, 'is-new': pin._isNew }"
+      :style="{ left: (pin.docX!=null ? pin.docX - pinScrollX : pin.x) + 'px', top: (pin.docY!=null ? pin.docY - pinScrollY : pin.y) + 'px' }"
+      @mousedown="startPinDrag(pin,$event)"
+      @click.stop="openPinPop(pin,$event)">
+      <div class="anno-pin-badge">{{ pin.number }}</div>
+    </div>
+  </div>
+
+  <!-- 功能点标注弹窗遮罩 -->
+  <div v-if="activePinData" class="pin-modal-overlay" @click="activePinId=null"></div>
+  <!-- 功能点标注弹窗（两 Tab：字段规范 / 用例规则）-->
+  <div v-if="activePinData" class="pin-modal" @mousedown.stop @click.stop>
+    <!-- 标题栏 -->
+    <div class="pin-modal-hd">
+      <div class="pin-modal-num">{{ activePinData.number }}</div>
+      <div class="pin-modal-meta">
+        <div class="pin-modal-title" style="display:flex;align-items:center;gap:6px">
+          功能点标注 ·
+          <b class="fn-edit-name" style="flex:1;font-size:14px;font-weight:600;color:#1a1a1a;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ activePinData.title.replace('功能点：','') }}</b>
+          <el-button link type="primary" class="fn-edit-btn" @click="openRename(activePinData)"><el-icon><edit-pen></edit-pen></el-icon></el-button>
+        </div>
+        <div class="pin-modal-crumb" v-if="activePinData.menuPath || activePinData.prdSection">
+          <span v-if="activePinData.menuPath">菜单：<b>{{ activePinData.menuPath }}</b></span>
+          <span v-if="activePinData.menuPath && activePinData.prdSection">　｜　</span>
+          <span v-if="activePinData.prdSection">功能点：<b>{{ activePinData.title.replace('功能点：','') }}</b>　｜　PRD：<b>{{ activePinData.prdSection }}</b></span>
+        </div>
+      </div>
+      <span class="pin-modal-close" @click="activePinId=null">×</span>
+    </div>
+    <!-- 两 Tab -->
+    <div class="pin-modal-tabs">
+      <span class="pin-modal-tab" :class="{ active: pinEditTab==='fields' }" @click="pinEditTab='fields'">字段规范</span>
+      <span class="pin-modal-tab" :class="{ active: pinEditTab==='cases' }"  @click="pinEditTab='cases'">用例规则</span>
+    </div>
+    <!-- 内容区 -->
+    <div class="pin-modal-body">
+
+      <!-- ══ 查看模式 ══ -->
+      <template v-if="pinEditMode === 'view'">
+        <!-- 字段规范：只读表格 -->
+        <template v-if="pinEditTab==='fields'">
+          <div v-if="!fieldGroups.length || !fieldGroups[0].fields.length"
+            style="color:#999;font-size:13px;padding:24px 0;text-align:center">无</div>
+          <template v-else v-for="(grp, gi) in fieldGroups" :key="gi">
+            <div class="fs-group-lbl" v-if="grp.name" style="cursor:default"><span>{{ grp.name }}</span></div>
+            <table class="pm-table" style="width:100%;margin-bottom:4px">
+              <thead><tr><th style="width:24%">字段名称</th><th style="width:14%">属性</th><th style="width:18%">类型/控件</th><th style="width:16%">默认值</th><th>规则/约束</th></tr></thead>
+              <tbody>
+                <tr v-for="(f, fi) in grp.fields" :key="fi">
+                  <td style="color:#222">{{ f.name }}</td>
+                  <td>{{ f.required }}</td>
+                  <td>{{ f.type }}</td>
+                  <td>{{ f.default }}</td>
+                  <td style="color:#444">{{ f.constraint }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </template>
+        </template>
+
+        <!-- 用例规则：只读文本块（★ v-for 与 v-if 必须分元素，否则 v-if 拿不到 key 永不渲染）-->
+        <template v-if="pinEditTab==='cases'">
+          <template v-for="key in ['前置条件','操作流程','后置条件','校验规则']" :key="key">
+            <div class="uc-sec-block" v-if="ucSections[key] && ucSections[key].trim()">
+              <div class="uc-sec-lbl">{{ key }}</div>
+              <div class="uc-sec-view">{{ ucSections[key] }}</div>
+            </div>
+          </template>
+          <!-- 提示消息：有行才显示 -->
+          <div class="uc-sec-block" v-if="pmRows.length">
+            <div class="uc-sec-lbl">提示消息</div>
+            <table class="pm-table" style="width:100%">
+              <thead><tr><th style="width:28%">字段名称</th><th style="width:33%">未填/未选提示</th><th>输入错误提示</th></tr></thead>
+              <tbody>
+                <tr v-for="(row, ri) in pmRows" :key="ri">
+                  <td>{{ row[0] }}</td><td>{{ row[1] }}</td><td>{{ row[2] }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- 消息通知 -->
+          <div class="uc-sec-block" v-if="notifRows.length || (ucSections['消息通知'] && ucSections['消息通知'].trim() && ucSections['消息通知'] !== '（无）')">
+            <div class="uc-sec-lbl">消息通知</div>
+            <template v-if="notifRows.length">
+              <table class="pm-table" style="width:100%;margin-top:4px">
+                <thead><tr><th style="width:18%">通知场景</th><th style="width:28%">通知标题</th><th style="width:32%">通知内容</th><th>接收方</th></tr></thead>
+                <tbody>
+                  <tr v-for="(row, ri) in notifRows" :key="ri">
+                    <td>{{ row[0] }}</td><td>{{ row[1] }}</td><td>{{ row[2] }}</td><td>{{ row[3] }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </template>
+            <div v-else class="uc-sec-view">{{ ucSections['消息通知'] }}</div>
+          </div>
+          <!-- 操作日志 -->
+          <div class="uc-sec-block" v-if="opLogIntro || opLogRows.length">
+            <div class="uc-sec-lbl">操作日志</div>
+            <div class="uc-sec-view" v-if="opLogIntro">{{ opLogIntro }}</div>
+            <table v-if="opLogRows.length" class="pm-table" style="width:100%;margin-top:4px">
+              <thead><tr><th style="width:22%">字段</th><th style="width:32%">字段说明</th><th>规则/示例</th></tr></thead>
+              <tbody>
+                <tr v-for="(row, ri) in opLogRows" :key="ri">
+                  <td>{{ row[0] }}</td><td>{{ row[1] }}</td><td>{{ row[2] }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+      </template>
+
+      <!-- ══ 编辑模式 ══ -->
+      <template v-if="pinEditMode === 'edit'">
+        <!-- 字段规范：可编辑表格 -->
+        <template v-if="pinEditTab==='fields'">
+          <!-- 字段类型快速插入 -->
+          <div class="ft-chips">
+            <span style="font-size:11px;color:#999;flex-shrink:0">快速插入：</span>
+            <button v-for="t in FT_CHIP_NAMES" :key="t" class="ft-chip" @click="applyFieldType(t)">{{ t }}</button>
+          </div>
+          <template v-for="(grp, gi) in fieldGroups" :key="gi">
+            <div class="fs-group-lbl" v-if="grp.name !== undefined">
+              <input :value="grp.name" @input="grp.name=$event.target.value;savePinFields()" placeholder="分组名称（选填）" />
+            </div>
+            <table class="pm-table" style="width:100%;margin-bottom:4px">
+              <thead><tr><th style="width:24%">字段名称</th><th style="width:14%">属性</th><th style="width:18%">类型/控件</th><th style="width:16%">默认值</th><th>规则/约束</th><th style="width:28px"></th></tr></thead>
+              <tbody>
+                <tr v-for="(f, fi) in grp.fields" :key="fi">
+                  <td><input class="cel-input" :value="f.name" @input="f.name=$event.target.value;savePinFields()" /></td>
+                  <td>
+                    <select class="cel-select" :value="f.required" @change="f.required=$event.target.value;savePinFields()">
+                      <option>必填</option><option>选填</option><option>只读</option><option>驳回时必填</option>
+                    </select>
+                  </td>
+                  <td><input class="cel-input" :value="f.type" @input="f.type=$event.target.value;savePinFields()" /></td>
+                  <td><input class="cel-input" :value="f.default" @input="f.default=$event.target.value;savePinFields()" /></td>
+                  <td><input class="cel-input" :value="f.constraint" @input="f.constraint=$event.target.value;savePinFields()" /></td>
+                  <td><button class="fs-del-btn" @click="removeFieldRow(gi,fi)">×</button></td>
+                </tr>
+              </tbody>
+            </table>
+            <button class="fs-add-btn" @click="addFieldRow(gi)">+ 添加字段</button>
+          </template>
+          <div style="margin-top:10px">
+            <button class="fs-add-btn" style="border-color:#D1D5DB;color:#6B7280" @click="addFieldGroup()">+ 添加分组</button>
+          </div>
+        </template>
+
+        <!-- 用例规则：分节可编辑 -->
+        <template v-if="pinEditTab==='cases'">
+          <div v-for="key in ['前置条件','操作流程','后置条件','校验规则']" :key="key" class="uc-sec-block">
+            <div class="uc-sec-lbl">{{ key }}</div>
+            <textarea class="uc-sec-ta" :value="ucSections[key]"
+              @input="ucSections[key]=$event.target.value;saveUcSections()"
+              :rows="key==='操作流程'?5:3"
+              :placeholder="'请填写' + key + '（每条用 1、2、3 分条）'"></textarea>
+          </div>
+          <div class="uc-sec-block">
+            <div class="uc-sec-lbl">提示消息</div>
+            <table class="pm-table" style="width:100%;margin-bottom:4px">
+              <thead><tr><th style="width:28%">字段名称</th><th style="width:30%">未填写/未选择提示</th><th>输入错误提示</th><th style="width:28px"></th></tr></thead>
+              <tbody>
+                <tr v-for="(row, ri) in pmRows" :key="ri">
+                  <td><input class="cel-input" :value="row[0]||''" @input="pmRows[ri][0]=$event.target.value;saveUcSections()" /></td>
+                  <td><input class="cel-input" :value="row[1]||''" @input="pmRows[ri][1]=$event.target.value;saveUcSections()" /></td>
+                  <td><input class="cel-input" :value="row[2]||''" @input="pmRows[ri][2]=$event.target.value;saveUcSections()" /></td>
+                  <td><button class="fs-del-btn" @click="pmRows.splice(ri,1);saveUcSections()">×</button></td>
+                </tr>
+              </tbody>
+            </table>
+            <button class="fs-add-btn" @click="pmRows.push(['','—','']);saveUcSections()">+ 添加行</button>
+          </div>
+          <div class="uc-sec-block">
+            <div class="uc-sec-lbl">消息通知</div>
+            <textarea class="uc-sec-ta" :value="ucSections['消息通知']"
+              @input="ucSections['消息通知']=$event.target.value;saveUcSections()"
+              rows="2" placeholder="（无）或 消息类型 + 场景|标题|内容|接收方"></textarea>
+          </div>
+          <div class="uc-sec-block">
+            <div class="uc-sec-lbl">操作日志</div>
+            <textarea class="uc-sec-ta" style="margin-bottom:6px" :value="opLogIntro"
+              @input="opLogIntro=$event.target.value;saveUcSections()"
+              rows="2" placeholder="展示类填：查询/查看不输出操作日志。"></textarea>
+            <table v-if="opLogRows.length" class="pm-table" style="width:100%">
+              <thead><tr><th style="width:22%">字段</th><th style="width:32%">字段说明</th><th>规则/示例</th></tr></thead>
+              <tbody>
+                <tr v-for="(row, ri) in opLogRows" :key="ri">
+                  <td><input class="cel-input" :value="row[0]||''" @input="opLogRows[ri][0]=$event.target.value;saveUcSections()" /></td>
+                  <td><input class="cel-input" :value="row[1]||''" @input="opLogRows[ri][1]=$event.target.value;saveUcSections()" /></td>
+                  <td><input class="cel-input" :value="row[2]||''" @input="opLogRows[ri][2]=$event.target.value;saveUcSections()" /></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+      </template>
+    </div>
+    <!-- 底栏 -->
+    <div class="pin-modal-ft">
+      <button v-if="!isPreviewMode" class="pin-modal-del" @click="deletePin(activePinData.id)">🗑 删除</button>
+      <!-- 查看模式 -->
+      <template v-if="pinEditMode === 'view'">
+        <el-button v-if="!isPreviewMode" size="small" type="primary" plain @click="copyScoped(activePinData)" style="margin-left:auto" title="只复制当前这一个功能到 AI 对话框生成 PRD">📋 复制已圈功能</el-button>
+        <el-button v-if="!isPreviewMode" size="small" plain @click="scanMissing" style="margin-left:6px" title="扫描原型中未标注的功能元素">🔍 扫描遗漏</el-button>
+        <el-button v-if="!isPreviewMode" size="small" type="primary" plain @click="enterEdit" style="margin-left:6px">编辑</el-button>
+        <span v-if="isPreviewMode" style="margin-left:auto;font-size:11px;color:#999">只读</span>
+      </template>
+      <!-- 编辑模式（预览模式下不显示）：手动保存——输入只改草稿，点「保存」才写入本地+同步本地PRD -->
+      <template v-if="pinEditMode === 'edit' && !isPreviewMode">
+        <el-button size="small" type="primary" @click="commitEdit" style="margin-left:auto">保存</el-button>
+        <el-button size="small" plain @click="cancelEdit" style="margin-left:8px">取消</el-button>
+        <el-button size="small" type="primary" plain @click="copyScoped(activePinData)" style="margin-left:8px">📋 复制已圈功能</el-button>
+      </template>
+    </div>
+  </div>
+
+  <!-- ★【标注控件放置铁律 · 见 SKILL.md】标注控件(「标注」开关 + 复制已圈功能/导出分享版/清空)由【宿主头部】内联渲染，
+       不在本组件、不做浮层。放置规则：①有视图栏→放视图栏右侧 ②无视图栏且菜单少→菜单栏右侧 ③菜单多放不下→菜单栏顶部右侧。
+       共性：永远顶部右侧·不遮挡「标注」开关·不挤业务菜单；开关常显，其余 v-if="annoOn" 开标注才显示；整组包淡色胶囊+细分隔线区分。
+       宿主按钮 @click 调 window.__anno.openScopedList() / exportShare() / clearPins()（本组件 #anno-app 只提供函数+桥）。
+       下面这条浮层【已弃用 v-if=false】，仅留作回退参考，勿启用(曾因浮层盖住开关致反人类)。-->
+  <div v-if="false" class="ai-pin-bar" @click.stop>
+    <span class="ai-bar-label">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FF6B35" stroke-width="2.2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      标注
+    </span>
+    <el-button size="small" type="primary" plain @click="openScopedList" style="border-radius:16px;padding:0 12px;flex-shrink:0" title="把右键圈定的功能复制给 AI 对话框生成 PRD">📋 复制已圈功能</el-button>
+    <el-button size="small" type="primary" plain @click="exportShareVersion" style="border-radius:16px;padding:0 12px;flex-shrink:0" title="生成只读分享版(原型只读副本·可含标注)，可发给别人看或上传托管">📤 导出分享版</el-button>
+    <el-button size="small" plain @click="clearPins" :disabled="!pinCount" style="border-radius:16px;padding:0 12px;flex-shrink:0">🗑 清空</el-button>
+    <el-button size="small" type="success" plain @click="restoreCleared" v-if="hasUndo || !pinCount" style="border-radius:16px;padding:0 12px;flex-shrink:0" title="误清空可恢复：先还原刚清空的，没有则从已生成PRD重建标注">↩ 恢复标注</el-button>
+  </div>
+
+  <!-- 遗漏扫描结果面板 -->
+  <div v-if="showScanPanel" class="scan-panel" @click.stop>
+    <div class="scan-panel-hd">
+      <span>🔍 发现 {{ scanItems.length }} 个需 AI 优化的元素</span>
+      <button class="fs-del-btn" @click="showScanPanel=false">×</button>
+    </div>
+    <div v-if="!scanItems.length" style="font-size:12px;color:#52C41A;padding:8px 0">✅ 所有可见功能点已标注</div>
+    <div v-for="item in scanItems" :key="item.text" class="scan-item">
+      <span>{{ item.text }}</span>
+      <button class="scan-add-btn" @click="quickAddFromScan(item)">+ 添加</button>
+    </div>
+  </div>
+
+  <!-- 已圈定功能清单（B方案：复制功能 → 粘到 AI 对话框生成 PRD）-->
+  <el-dialog v-model="scopedListOpen" title="已圈定功能清单" width="760px" append-to-body modal-class="anno-panel-top">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <span style="font-size:13px;color:#888">共 {{ scopedFunctions.length }} 个（按 1、2、3 排序）。复制后粘到 AI 对话框生成 PRD。</span>
+      <span style="display:flex;gap:6px">
+        <el-button type="primary" size="small" :disabled="!scopedFunctions.length" @click="copyScoped()">批量复制全部</el-button>
+        <el-button size="small" @click="copyUngenerated()">复制未生成的</el-button>
+        <el-button size="small" :disabled="!scopedSelection.length" @click="copySelected()">复制选中</el-button>
+      </span>
+    </div>
+    <el-table :data="scopedFunctions" border stripe size="small" max-height="440" style="width:100%" @selection-change="onScopedSelect">
+      <el-table-column type="selection" width="42"></el-table-column>
+      <el-table-column type="index" label="#" width="48" align="center"></el-table-column>
+      <el-table-column prop="view" label="归属目录" min-width="200" show-overflow-tooltip></el-table-column>
+      <el-table-column prop="name" label="功能名" min-width="180" show-overflow-tooltip></el-table-column>
+      <el-table-column label="" width="46" align="center">
+        <template #default="s">
+          <el-button link type="primary" size="small" class="fn-edit-btn" @click="openRename(s.row._pin)" title="编辑功能名"><el-icon><edit-pen></edit-pen></el-icon></el-button>
+        </template>
+      </el-table-column>
+      <el-table-column label="状态" width="90" align="center">
+        <template #default="s">
+          <el-tag :type="s.row.status==='已生成'?'success':'info'" effect="light" size="small">{{ s.row.status }}</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="118" align="center">
+        <template #default="s">
+          <el-button link type="primary" @click="copyScoped(s.row)">复制</el-button>
+          <el-button link type="danger" @click="deleteScopedFunction(s.row)">删除</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+    <div v-if="!scopedFunctions.length" style="text-align:center;color:#999;font-size:13px;padding:18px 0">当前页暂无已圈定功能。先在原型上点选 / 框选圈定功能范围。</div>
+  </el-dialog>
+
+  <!-- 编辑功能名小弹窗（v-model 绕开内联 :value+@input 打断输入法的问题）-->
+  <el-dialog v-model="renameDlg.open" title="编辑功能名" width="420px" append-to-body modal-class="anno-rename-top">
+    <el-input v-model="renameDlg.value" placeholder="请输入功能名" maxlength="40" show-word-limit clearable @keyup.enter="confirmRename"></el-input>
+    <template #footer>
+      <el-button @click="cancelRename">取消</el-button>
+      <el-button type="primary" @click="confirmRename">保存</el-button>
+    </template>
+  </el-dialog>
+
+</div>
+<!-- ╚═══════════════════ ② HTML 结束（#anno-app 独立标注层根）═══════════════════╝ -->
+
+
+<!-- ╔═══════════════════ ③ setup() JS（独立标注层实例，整段复制到业务脚本之后）═══════════════════╗ -->
+<!-- 本段 = 这几天反复调试通的「交互引擎」，字节级固定，整段复制禁止重写。
+     组织为三块：A 顶层定义 / B onMounted 初始化 / C 内容生成层（适配指引）。
+     ★ v1.1 解耦：引擎主体【完全不变】，仅外壳改为【自带独立 createApp】挂到 #anno-app。
+       - 不再合并进宿主 setup；不再依赖宿主 return（④ 已内置于本实例）。
+       - 宿主依赖通过桥接获得：sys/page 由 window.__VIEW__ 初始化、window.__annoSetView(s,p) 更新；
+         ElMessage/ElMessageBox/PRD 在本 setup 内自取（ElementPlus 全局 + window.__PRD_DATA__）。
+       - app.config.errorHandler 隔离：标注层内部抛错只崩自己，业务 #app 不受影响。
+       - 宿主「标注开关 / 生成PRD」按钮通过 window.__anno 桥接调用（见底部 return 后的 bridge）。 -->
+<script>
+(function mountAnnotationLayer() {
+  /* ★ 版本戳（闸②）：每次改动本组件引擎/渲染逻辑必 bump。AI 打开旧原型时 grep 此常量与
+     标准件当前版本比对，不一致 = 标注层过期 → 提示重新注入 + 重跑 qa/regression-check.js。*/
+  window.__ANNO_LAYER_VERSION__ = '1.9.9';  /* 2026-07-09 导出分享版「另存为」彻底根治(红线二.3④一直是坏的)：showSaveFilePicker 必须在【用户手势有效期内】调用；旧写法「先 await fetch 拿内容 → 再弹框」，await 后手势已过期 → 框根本弹不出来、抛 AbortError → 被误判成"用户取消" → 永远提示「已取消保存」，另存功能实际从未工作(headless 下走下载兜底，㉚闸判绿·又一次虚假安全感)。修：拆成 _pickSaveHandle(先弹框拿 handle) + _writeOut(后写入)，exportShareVersion 改为「①先弹框 → ②再 fetch 内容 → ③最后写入」。 —— 2026-07-06 默认标注开关态按版本区分根治：showPins 曾一刀切 ref(true)(为满足二.3③分享版默认显示标注)→同时破坏二.1(普通原型默认标注不开启·普通版也默认显示标注)。改 showPins=ref(window.__ANNO_READONLY__===true)：普通版默认【关】·只读分享版默认【开】，二者可手动开关。㉛真实交付冒烟闸(直接开真装配版文件验)逮到·fixture闸没抓到。 —— 1.9.7 原型内🗑删除同步本地PRD根治：deletePin 原来只 _savePins→/anno-persist(烤pin回HTML)，annoChangelog 记了delete却从不flush→从pin弹窗🗑删只消失标注、本地PRD功能点还留着(违反铁律三.2删除同步)。修：把「有fpKey即POST /anno-update删prd-data并重生PRD」收进 deletePin 单一源(pin弹窗🗑 与「已圈定功能清单」删除都经此·去掉后者重复POST)。 —— 1.9.6 恢复标注提示自相矛盾根治：原「已恢复16个」(restoreFromPRD数功能点)与「更新2个/14个跳过」(_annoInjectPins数锚定结果)两条打架。改：恢复时给 _annoInjectPins 传 opts.silent 静默其内部两条提示、并返回{anchored,unanchored}，由 restoreFromPRD 统一报一句连贯的(「恢复N个已锚定；另M个需先圈选」)。 —— 1.9.5 导出分享版规则(按用户4条)：①无标注也可导出(去掉"没标注不让导"限制·导出=原型只读副本·标注可选) ②有标注也导 ④弹原生框可另存任意目录(_saveWithPicker) ③分享版打开【标注默认开启显示】(showPins 默认 true·含只读版)、只读无编辑功能(__ANNO_READONLY__ + anno-preview-mode 隐藏 anno-author-only)。导出按钮不再因无标注禁用。 —— 2026-07-01 已圈定功能清单「归属目录」显示业务中文名而非技术代号：系统走 __PRD_DATA__.system_labels(admin→管理端·重组版)、菜单走 page_menus(a_dashboard→运营仪表盘)；根治"复制给 AI 的清单是 admin›a_dashboard 代号→AI 归错系统/写错 PRD"(直接改善 PRD 质量+系统归属)。1.9.3 localStorage 按 system_name 命名空间隔离：根治"新原型已圈定功能清单里冒出别项目(OMS/WMS recharge-list 等)旧标注"——全局单 key `anno-pins-v2` 致同浏览器多原型共用一份存储、跨项目污染；改 `anno-pins-v2::<system_name>` 各存各的。1.9.2 三方同步 fpKey 根治：框选跨多卡/普通区域时 fpKey 原会落空→pin 只剩 zoneId→复制给 AI 的身份id 注入锚不回来。修：框选区域覆盖任意真实 [data-annotation] 就兜底取第一个真实 fpKey(DOM序·主导)绝不落 zoneId(只在原为空时补·不动精确单卡路径·零回归)。CDP 实测:注入「【】」7节 PRD→pin 锚定不堆叠+完整回填渲染。1.9.1 导出分享版改【弹框选保存位置】：新增通用助手 _saveWithPicker(showSaveFilePicker 让用户选文件夹+文件名·localhost支持/file://常被禁则退回下载到「下载」文件夹)，导出分享版/以后导出研发版都复用；服务端 /anno-embed 加 returnContent 模式把分享版内容返给浏览器保存(不落 archive)；1.9.0 标注编辑改【手动保存】：编辑态输入只改草稿，点「保存」(commitEdit)才写入pin+落localStorage+同步本地PRD并锁isAIDraft=false(杜绝手抖误改本地PRD/改名标记被冲掉)；「取消」丢弃草稿原样还原；底栏「自动保存」字样换成「保存」按钮；1.8.9 标注弹窗字段规范解析器认 **N、xxx** 分块(查询「1、查询条件」+「2、列表字段」等)→按分块切段各自解析+保留分块名,不再压平两表+把第二表头当垃圾字段；1.8.8 注入填充优先·绝不乱放：锚不到又无已圈选pin的功能点不再新建堆叠pin(改为跳过+提示先圈选)+按原型原生data-annotation找锚点(操作类自动贴位)→彻底治堆叠；1.8.7 无fpKey圈选pin按同名+同页匹配回填fpKey+去重；1.8.6 对话框删除/清空实时同步；1.8.5 用户改名设isAIDraft=false放行⑲；1.8.4 恢复标注；1.8.3 禁问+每功能必截图；1.8.2 系统归属/功能名铁律；1.8.1 回填 */
+  if (!window.Vue || !window.ElementPlus) { console.warn('[标注层] 缺少 Vue / ElementPlus，跳过挂载'); return; }
+  const { createApp, ref, computed, reactive, onMounted, nextTick, watch } = Vue;
+
+  const _annoApp = createApp({
+    setup() {
+/* ═══════ ③-A  setup 顶层定义（pin 系统 / 内联编辑 / 持久化）═══════ */
+/* 全部纯引擎，无业务词。整段放进 setup() 顶层（与 sys/page 同级）。 */
+
+    /* ── 宿主桥接：sys/page 视图标识 + PRD 数据源 + ElMessage（解耦后本实例自取）── */
+    /* 初始化视图：优先读业务实时视图 __annoGetView()（避免默认 app/main 致 PIN 渲染过滤全不匹配、标记看不到），回退 __VIEW__ */
+    const _gv0 = (typeof window.__annoGetView === 'function' && window.__annoGetView()) || '';
+    const _gvDi = _gv0.indexOf('-');
+    const _v0 = (window.__VIEW__ || {});
+    const sys  = ref(_gvDi > 0 ? _gv0.slice(0, _gvDi)   : (_v0.sys  != null ? _v0.sys  : 'app'));
+    const page = ref(_gvDi > 0 ? _gv0.slice(_gvDi + 1) : (_v0.page != null ? _v0.page : 'main'));
+    window.__annoSetView = (s, p) => { if (s != null) sys.value = s; if (p != null) page.value = p; };
+    const PRD = (typeof window.__PRD_DATA__ !== 'undefined' && window.__PRD_DATA__) || { function_points: {}, menus: {} };
+    const { ElMessage, ElMessageBox } = ElementPlus;
+    window.ElMessage = ElMessage;   /* ⑤ SSE 段依赖 window.ElMessage */
+
+    /* ── pin 系统状态 ── */
+    const annoPins   = ref([]);
+    const pinCounter = ref(0);
+    const activePinId  = ref(null);
+    const pinPopPos    = ref({ x:0, y:0 });
+    const pinEditText  = ref('');
+    const pinModeOn    = ref(false);
+    const aiPinCmd     = ref('');
+    const aiPinLoading = ref(false);
+    const showPins     = ref(window.__ANNO_READONLY__ === true);   /* 默认显示态【按版本区分】：普通原型(非只读)默认【关】(二.1 默认标注不开启)；只读分享版默认【开】(二.3③ 分享版打开即看到标注)。二者可用「标注」开关手动关/开。曾一刀切 ref(true) 破坏了二.1 默认关，㉛真实交付冒烟闸逮到。 */
+    const pinScrollX   = ref(0);
+    const pinScrollY   = ref(0);
+    const activePinData  = Vue.computed(() => annoPins.value.find(p => p.id === activePinId.value) || null);
+    const pinCount       = Vue.computed(() => annoPins.value.length);
+    const annoChangelog  = ref([]);
+    // 预览模式：URL 加 ?preview=1 分享给客户时隐藏所有编辑/生成功能
+    const isPreviewMode  = new URLSearchParams(location.search).get('preview') === '1' || window.__ANNO_READONLY__ === true;
+    if (isPreviewMode) document.body.classList.add('anno-preview-mode');
+    const pinEditTab     = ref('cases'); // 'fields' | 'cases'
+    const pinEditMode    = ref('view');  // 'view' | 'edit'
+    const fieldGroups    = ref([]);      // 字段规范：结构化分组
+    const ucSections     = ref({});      // 用例规则：各节文本
+    const pmRows         = ref([]);      // 提示消息：表格行
+    const notifRows      = ref([]);      // 消息通知：表格行（通知场景/标题/内容/接收方）
+    const opLogRows      = ref([]);      // 操作日志：表格行
+    const opLogIntro     = ref('');      // 操作日志：固定说明语
+
+    /* 生成元素简化选择器（刷新后重新锚定 pin 位置）*/
+    const _elSelector = (el) => {
+      if (!el || !el.parentElement) return '';
+      const seg = (e) => {
+        const tag = e.tagName.toLowerCase();
+        const cls = e.className && typeof e.className === 'string'
+          ? e.className.trim().split(/\s+/).filter(c => /^[a-z_-]/i.test(c)).slice(0,2).map(c=>`.${c}`).join('')
+          : '';
+        const par = e.parentElement;
+        const idx = par ? Array.from(par.children).indexOf(e) + 1 : 1;
+        return `${tag}${cls}:nth-child(${idx})`;
+      };
+      /* ★含父级路径（向上至多 5 级），大幅提高选择器唯一性，避免 pin 漂移到页面靠前的同类元素 */
+      const path = [];
+      let cur = el, depth = 0;
+      while (cur && cur.parentElement && depth < 5) {
+        if (cur.id) { path.unshift('#' + cur.id); break; }
+        path.unshift(seg(cur));
+        cur = cur.parentElement;
+        depth++;
+      }
+      return path.join(' > ');
+    };
+
+    const createPin = (x, y, title, content, type = '业务规则', anchorEl = null, fieldSpecs = '', useCaseRules = '', menuPath = '', prdSection = '', zoneContext = {}, isAIDraft = false) => {
+      pinCounter.value++;
+      const selectorPath = anchorEl ? _elSelector(anchorEl) : '';
+      const pin = {
+        id: `pin-${Date.now()}-${pinCounter.value}`,
+        x, y,
+        docX: x + window.scrollX, docY: y + window.scrollY,
+        vx: x / window.innerWidth, vy: y / window.innerHeight,
+        number: pinCounter.value,
+        title: title || '功能标注', content: content || '',
+        fieldSpecs: fieldSpecs || '', useCaseRules: useCaseRules || '',
+        menuPath: menuPath || '', prdSection: prdSection || '',
+        type, selectorPath,
+        pageKey: (window.__annoGetView && window.__annoGetView()) || `${sys.value}-${page.value}`,
+        injectedAt: new Date().toISOString(),
+        /* 真实上下文（点/框采集），供 AI 读取后按北极星规范重新生成高质量 PRD */
+        zoneContext: zoneContext || {}, // { zoneId, zoneLabel, zoneTexts, zoneGroups, zoneHTML }
+        isAIDraft: isAIDraft,           /* true = AI草稿（未经用户确认），随代码更新自动刷新 */
+      };
+      annoPins.value.push(pin);
+      _savePins();
+      annoChangelog.value.push({ action: 'add', pin: { ...pin } });
+      return pin;
+    };
+
+    const deletePin = (id) => {
+      const pin = annoPins.value.find(p => p.id === id);
+      if (pin) annoChangelog.value.push({ action: 'delete', pin: { ...pin } });
+      annoPins.value = annoPins.value.filter(p => p.id !== id);
+      annoPins.value.forEach((p, i) => { p.number = i + 1; });
+      pinCounter.value = annoPins.value.length;
+      activePinId.value = null;
+      _savePins();
+      /* ★ 删除同步本地 PRD 的【单一入口】：pin 弹窗🗑 与「已圈定功能清单」删除都经此。
+         有 fpKey 的功能点 → 通知 anno-server 从 prd-data 删该功能点并重生 PRD。
+         （历史缺口：deletePin 原来只 _savePins→/anno-persist 烤回 HTML，annoChangelog 从不 flush，
+          从 pin 弹窗🗑 删只消失标注、本地 PRD 功能点还留着 → 违反铁律三.2「删除同步本地 PRD」。） */
+      const _fk = pin && ((pin.zoneContext && pin.zoneContext.fpKey) || pin.boundFp || '');
+      if (pin && _fk && window.__ANNO_READONLY__ !== true) {
+        try {
+          fetch('http://localhost:3799/anno-update', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ changes: [{ action: 'delete', pin: { ...pin, boundFp: _fk } }], deleteFp: _fk, systemName: (window.__PRD_DATA__ && window.__PRD_DATA__.system_name) || '' }),
+          }).catch(() => {});
+        } catch (e) {}
+      }
+    };
+
+    /* ═══ 场景①→② 双向同步：AI 对话框注入 PIN 到当前原型 ═══ */
+    window._annoInjectPins = (pins, opts = {}) => {
+      if (!pins || !pins.length) return;
+      let added = 0, updated = 0;
+      const unanchored = [];   /* 既无已圈选 pin、又锚不到真实元素的功能点 → 不新建堆叠 pin，收集后提示用户先圈选 */
+      /* 去前缀归一标题：圈选 zone pin 的 title 多带「功能点：/功能区：」前缀，去掉再比 */
+      const _injNT = s => String(s || '').replace(/^\s*(功能[点区]|按钮|标签页|页签|状态|区域)\s*[：:]\s*/, '').replace(/\s+/g, '').trim();
+      for (const p of pins) {
+        const fpKey = p.fpKey || '';
+        const pT = _injNT(p.title);
+        /* 候选匹配：①按 fpKey；②【无 fpKey 的圈选 pin】按同名 + 同页(pageKey) ——
+           治"圈选首页 widget/状态页签时 pin 没写 fpKey → 注入按 fpKey 匹配不上 → 新建重复且堆默认位"。 */
+        const cands = annoPins.value.filter(pin =>
+          (pin.zoneContext && pin.zoneContext.fpKey) === fpKey || pin.boundFp === fpKey ||
+          (pT && _injNT(pin.title) === pT && (p.pageKey ? pin.pageKey === p.pageKey : true)
+              && !((pin.zoneContext && pin.zoneContext.fpKey) || pin.boundFp))
+        );
+        if (cands.length) {
+          /* 主 pin = 最早创建(最低 number)的那个，即用户原始圈选 pin（已锚定在正确位置）；其余为注入新建的堆叠重复 */
+          const primary = cands.reduce((a, b) => ((a.number || 1e9) <= (b.number || 1e9) ? a : b));
+          if (p.fieldSpecs   !== undefined) primary.fieldSpecs   = p.fieldSpecs;   /* 空字符串也覆写→对话框清空内容能实时同步到已开着的原型(非仅"加和改") */
+          if (p.useCaseRules !== undefined) primary.useCaseRules = p.useCaseRules;
+          if (p.title)        primary.title        = p.title;
+          primary.isAIDraft = p.isAIDraft !== false;
+          primary.boundFp = fpKey;                                                  /* 回填 fpKey 到原始圈选 pin，往后注入直接按 fpKey 命中 */
+          if (primary.zoneContext) primary.zoneContext.fpKey = fpKey; else primary.zoneContext = { fpKey };
+          if (cands.length > 1) annoPins.value = annoPins.value.filter(pin => pin === primary || !cands.includes(pin)); /* 去重：移除堆叠的重复 pin */
+          annoChangelog.value.push({ action: 'edit', pin: { ...primary } });
+          updated++; continue;
+        }
+        /* 锚点查找：①data-fp-key ②data-annotation-key ③原型原生 data-annotation(本原型用此·ak()运行时解析出真实fpKey) */
+        let anchorEl = null;
+        if (fpKey) {
+          anchorEl = document.querySelector(`[data-fp-key="${fpKey}"]`)
+                  || document.querySelector(`[data-annotation-key="${fpKey}"]`)
+                  || document.querySelector(`[data-annotation="${fpKey}"]`);
+        }
+        if (!anchorEl && p.title) {
+          const fnName = p.title.replace(/^(按钮|功能区|标签页|状态)：/, '').trim();
+          const sel = '.el-button,.el-menu-item,.el-tabs__item,.stab,.el-form-item__label,th,td,.page-title,h2,h3';
+          for (const el of document.querySelectorAll(sel)) {
+            if (el.textContent.trim().replace(/[*:：]/g,'').trim() === fnName) { anchorEl = el; break; }
+          }
+        }
+        /* 彻底治堆叠：既无已圈选 pin、又锚不到真实元素 → 【不新建堆叠 pin】，收集后统一提示用户先圈选。
+           注入只负责"往已圈选/可锚定处填充内容"，绝不在默认位置乱放 pin（圈选定位置，注入填内容——架构铁律）。 */
+        if (!anchorEl) { unanchored.push(p.title || fpKey); continue; }
+        const r = anchorEl.getBoundingClientRect();
+        const x = r.left + r.width, y = r.top - 2 + window.scrollY;
+        const zc = { fpKey, zoneLabel: p.title || fpKey, zoneId: `inject-${fpKey.replace(/[^a-z0-9]/gi,'-')}`, zoneTexts: [], zoneGroups: [], zoneHTML: anchorEl.outerHTML.slice(0,400) };
+        createPin(x, y, p.title || fpKey, '', '业务规则', anchorEl, p.fieldSpecs || '', p.useCaseRules || '', p.menuPath || '', '', zc, p.isAIDraft !== false);
+        added++;
+      }
+      _savePins();
+      showPins.value = true;
+      document.body.classList.add('anno-mode-on');
+      const msg = [added && `新增 ${added} 个`, updated && `更新 ${updated} 个`].filter(Boolean).join('、');
+      if (!opts.silent) {   /* 恢复标注等场景传 silent=true：由调用方统一报一句，避免"恢复16个"与"14个跳过"两条自相矛盾 */
+        if (msg && window.ElMessage) ElMessage.success(`AI 已同步标注到原型：${msg}`);
+        if (unanchored.length && window.ElMessage) ElMessage.warning(`${unanchored.length} 个功能点尚未圈选、无法定位，已跳过（不堆叠）：${unanchored.slice(0,6).join('、')}${unanchored.length>6?' 等':''}。请先在原型右键圈选这些区域后再生成。`);
+      }
+      return { added, updated, anchored: added + updated, unanchored: unanchored.slice() };
+    };
+
+    /* 对话框删功能 → 让【已打开的原型】实时移除对应标注 PIN（配合 anno-server 的 pin-deleted 广播，无需刷新）*/
+    window._annoRemovePins = (fpKeys) => {
+      if (!fpKeys || !fpKeys.length) return;
+      const set = new Set(fpKeys);
+      const before = annoPins.value.length;
+      annoPins.value = annoPins.value.filter(pin => !set.has((pin.zoneContext && pin.zoneContext.fpKey) || pin.boundFp || ''));
+      const removed = before - annoPins.value.length;
+      if (removed > 0) {
+        if (activePinId.value && !annoPins.value.find(p => p.id === activePinId.value)) activePinId.value = null;
+        _savePins();
+        if (window.ElMessage) ElMessage.success(`AI 已从原型移除 ${removed} 个标注`);
+      }
+    };
+
+    const openPinPop = (pin) => {
+      if (activePinId.value === pin.id) { activePinId.value = null; return; }
+      /* ── 自动修复旧 PIN 的 fpKey（无需删除重框）── */
+      if (!pin.boundFp) {
+        const cx = (pin.docX != null ? pin.docX : pin.x) + (pin.docX != null ? 0 : window.scrollX);
+        const cy = (pin.docY != null ? pin.docY : pin.y) + (pin.docY != null ? 0 : window.scrollY);
+        const hitEl = document.elementFromPoint(cx - window.scrollX, cy - window.scrollY);
+        const annoEl = hitEl && hitEl.closest('[data-annotation]');
+        if (annoEl) {
+          const repairFp = annoEl.getAttribute('data-annotation');
+          if (repairFp) {
+            pin.boundFp = repairFp;
+            const fpData = (PRD.function_points || {})[repairFp];
+            if (fpData) {
+              pin.menuPath   = (PRD.menus ? Object.values(PRD.menus).flatMap(m => Object.values(m.children || {})).find(c => c.menu_key === fpData.menu_key) : null)?.menu_path || pin.menuPath || '';
+              pin.prdSection = fpData.prd_section || '';
+              if (!pin.fieldSpecs && fpData.field_specs)   pin.fieldSpecs   = JSON.stringify(fpData.field_specs);
+              if (!pin.useCaseRules && fpData.use_cases)   pin.useCaseRules = JSON.stringify(fpData.use_cases);
+            }
+            _savePins();
+          }
+        }
+      }
+      activePinId.value = pin.id;
+      pinEditTab.value  = 'cases';
+      pinEditMode.value = 'view';
+    };
+
+    /* ── 内联编辑：字段规范文本 ⇄ 结构化分组 ── */
+    /* 解析 5 列 markdown 表格字段规范（anno-server 的 _draft_fieldSpecs 格式）→ [{name,type,required,constraint}]。
+       表头：字段名称|类型|是否必填/必选|默认值|约束规则；忽略分隔行 |---|；默认值列暂不展示。 */
+    const _parseFieldsTable = (text) => {
+      if (!text || !text.includes('|')) return null;
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.startsWith('|'));
+      if (!lines.length) return null;
+      const cells = (l) => l.replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+      const header = cells(lines[0]);
+      // 必须是字段规范表头（含「字段名」+「约束」），否则交还给列表解析器
+      if (!header.some(h => /字段名/.test(h)) || !header.some(h => /约束|规则/.test(h))) return null;
+      const idxName = header.findIndex(h => /字段名/.test(h));
+      const idxType = header.findIndex(h => /类型|控件/.test(h));
+      const idxReq  = header.findIndex(h => /必填|必选|属性/.test(h));
+      const idxDefault = header.findIndex(h => /默认/.test(h));
+      const idxCons = header.findIndex(h => /约束|规则/.test(h));
+      const fields = [];
+      lines.slice(1).forEach(l => {
+        if (/^\|[\s:\-－|]+\|?$/.test(l) || /^[\s|:\-－]+$/.test(l.replace(/\|/g, '|'))) return; // 分隔行
+        const c = cells(l);
+        if (!c.length || (idxName >= 0 && !c[idxName])) return;
+        if (c.every(x => /^[\-－:\s]*$/.test(x))) return;
+        const reqRaw = idxReq >= 0 ? (c[idxReq] || '') : '';
+        const required = /是|必填|必选/.test(reqRaw) ? '必填' : (/否|选填|可选/.test(reqRaw) ? '选填' : (reqRaw || '只读'));
+        fields.push({
+          name: idxName >= 0 ? c[idxName] : (c[0] || ''),
+          required,
+          type: idxType >= 0 ? (c[idxType] || '') : '',
+          default: idxDefault >= 0 ? (c[idxDefault] || '') : '',
+          constraint: idxCons >= 0 ? (c[idxCons] || '') : '',
+        });
+      });
+      return fields.length ? [{ name: '', fields }] : [];
+    };
+    const _parseFieldsText = (text) => {
+      if (!text || !text.trim() || /^无[。.]?$/.test(text.trim())) return [];
+      /* 分块：含 **N、xxx** 加粗分块标题(查询「1、查询条件」「2、列表字段」、§3.1.6基本信息/价格库存等)→按它切段、每段单独解析表格并保留分块名，避免两张表压平+第二张表头被当垃圾字段行 */
+      if (/\*\*\s*\d+\s*、/.test(text)) {
+        const segs = text.split(/\*\*\s*(\d+\s*、[^*\n]+?)\s*\*\*/);
+        const gs = [];
+        for (let i = 1; i < segs.length; i += 2) {
+          const t = _parseFieldsTable(segs[i + 1] || '');
+          if (t && t[0] && t[0].fields.length) gs.push({ name: segs[i].trim(), fields: t[0].fields });
+        }
+        if (gs.length) return gs;
+      }
+      /* 先尝试 5 列 markdown 表格（_draft_fieldSpecs）；命中则直接返回，否则走原 • 列表解析 */
+      const tbl = _parseFieldsTable(text);
+      if (tbl) return tbl;
+      const groups = [];
+      let curGroup = null;
+      text.split('\n').forEach(line => {
+        const t = line.trim();
+        if (!t) return;
+        if (!t.startsWith('•') && !t.startsWith('·') && (t.endsWith('：') || t.endsWith(':')) && t.length < 20) {
+          curGroup = { name: t.replace(/[：:]$/, ''), fields: [] };
+          groups.push(curGroup);
+        } else if (t.startsWith('•') || t.startsWith('·')) {
+          if (!curGroup) { curGroup = { name: '', fields: [] }; groups.push(curGroup); }
+          const clean = t.replace(/^[•·]\s*/, '');
+          const m = clean.match(/^(.+?)（(必填|选填|只读|驳回时必填)(?:[，,]([^）,，]*))?(?:[，,][^）]*)?）(?:[：:](.*))?$/);
+          if (m) {
+            curGroup.fields.push({ name: m[1].trim(), required: m[2]||'只读', type: m[3]||'', default: '', constraint: (m[4]||'').trim() });
+          } else {
+            curGroup.fields.push({ name: clean, required: '只读', type: '', default: '', constraint: '' });
+          }
+        }
+      });
+      return groups;
+    };
+    const _groupsToText = (groups) => {
+      const head = '| 字段名称 | 类型 | 是否必填/必选 | 默认值 | 约束规则 |\n|---|---|---|---|---|';
+      const rows = groups.flatMap(g => (g.fields||[]).map(f => `| ${f.name||''} | ${f.type||''} | ${f.required||''} | ${f.default||''} | ${f.constraint||''} |`));
+      return rows.length ? head + '\n' + rows.join('\n') : '';
+    };
+
+    /* ══════════════════════════════════════════
+       Feature A：字段类型库
+    ══════════════════════════════════════════ */
+    const FT_PRESETS = {
+      '手机号':         { name:'手机号',         type:'字符串',           constraint:'11位；以1开头；支持+86前缀；不含空格' },
+      '金额':           { name:'金额',           type:'Decimal',          constraint:'≥0.01；最多2位小数；上限999,999,999.99' },
+      '身份证号':       { name:'身份证号',        type:'字符串',           constraint:'18位；前17位数字末位可为X；校验码验证' },
+      '日期':           { name:'日期',           type:'Date',             constraint:'格式YYYY-MM-DD；不可选未来日期（如有限制须注明）' },
+      '日期范围':       { name:'日期范围',        type:'DateRange',        constraint:'开始日期≤结束日期；最大跨度90天（可配置）' },
+      '银行卡号':       { name:'银行卡号',        type:'字符串',           constraint:'16-19位纯数字；Luhn算法校验' },
+      '邮箱':           { name:'邮箱',           type:'字符串',           constraint:'含@和域名；最大254字符；符合RFC5322' },
+      '密码':           { name:'密码',           type:'字符串（加密存储）', constraint:'8-20位；须含大小写字母和数字；不存明文' },
+      '企业名称':       { name:'企业名称',        type:'字符串',           constraint:'2-100字符；不含<>&等特殊字符' },
+      '数量':           { name:'数量',           type:'Integer',          constraint:'正整数；最小值1；最大值（请填写上限）' },
+      '百分比':         { name:'百分比',          type:'Decimal',          constraint:'0-100；最多2位小数；单位%' },
+      '状态':           { name:'状态',           type:'枚举',             constraint:'可选值：（请填写）；不可为空；默认值：（请填写）' },
+      '备注':           { name:'备注',           type:'字符串',           constraint:'最大500字符；可为空；前端超长时截断并提示' },
+      '文件':           { name:'文件',           type:'File',             constraint:'格式：（请填写）；大小上限：（请填写）MB' },
+      '统一社会信用代码': { name:'统一社会信用代码', type:'字符串',           constraint:'18位；格式校验（数字+大写字母组合）' },
+      'IP地址':         { name:'IP地址',          type:'字符串',           constraint:'IPv4格式x.x.x.x；各段0-255' },
+    };
+    const FT_CHIP_NAMES = Object.keys(FT_PRESETS);
+
+    const applyFieldType = (typeName) => {
+      const preset = FT_PRESETS[typeName];
+      if (!preset) return;
+      if (!fieldGroups.value.length) fieldGroups.value.push({ name: '', fields: [] });
+      fieldGroups.value[0].fields.push({
+        name: preset.name, required: '必填', type: preset.type, constraint: preset.constraint,
+      });
+      savePinFields();
+      ElMessage({ message: `已插入「${typeName}」字段模板`, type: 'success', duration: 1200 });
+    };
+
+    /* ══════════════════════════════════════════
+       Feature B：AI 遗漏扫描
+    ══════════════════════════════════════════ */
+    const showScanPanel = ref(false);
+    const scanItems     = ref([]);
+
+    const scanMissing = async () => {
+      /* ── 综合扫描器：客户端扫描可标注元素 + 投递到 /anno-ai-queue ── */
+      const existingLabels = new Set(annoPins.value.map(p => (p.title || '').replace(/^功能[点区]：/, '')));
+
+      /* 1. 收集扫描目标元素 */
+      const targets = [];
+      /* a. 功能按钮（排除分页、标注系统内部按钮） */
+      document.querySelectorAll('.el-button').forEach(el => {
+        if (el.closest('.el-pagination,.anno-pin,.pin-modal,.scan-panel,.ai-pin-bar,.u-anno-bar')) return;
+        const txt = el.textContent.trim();
+        if (txt && txt.length > 1) targets.push({ el, hint: txt });
+      });
+      /* b. 显式标注区域 */
+      document.querySelectorAll('[data-anno-zone]').forEach(el => {
+        const txt = el.getAttribute('data-anno-zone') || el.textContent.trim().slice(0, 20);
+        targets.push({ el, hint: txt });
+      });
+      /* c. 筛选区 & 工具栏 */
+      document.querySelectorAll('.filter-wrap,.table-toolbar').forEach(el => {
+        const txt = el.className.includes('filter') ? '查询筛选区' : '工具操作栏';
+        targets.push({ el, hint: txt });
+      });
+      /* d. 表格列字段（每列 th） */
+      document.querySelectorAll('table thead th').forEach(el => {
+        if (el.closest('.anno-pin,.pin-modal,.scan-panel')) return;
+        const txt = el.textContent.trim();
+        if (txt && txt.length > 0 && !/操作|序号|^#$/.test(txt)) targets.push({ el, hint: `字段：${txt}` });
+      });
+
+      /* 2. 去重：排除已有标注的 + 文本重复 */
+      const seen = new Set();
+      const toScan = targets.filter(({ hint }) => {
+        const key = hint.replace(/^字段：/, '');
+        if (existingLabels.has(key) || seen.has(hint)) return false;
+        seen.add(hint);
+        return true;
+      });
+
+      /* 3. 对每个元素生成草稿，判断是否含【消息通知】（即是否已是新格式） */
+      const needOptimize = [];
+      let queueCount = 0;
+      for (const { el, hint } of toScan) {
+        let zoneId, zoneLabel;
+        if (typeof _detectZone === 'function') {
+          const zd = _detectZone(el);
+          zoneId   = (zd && zd.id)    || `scan-${hint.slice(0, 16).replace(/\s/g, '-')}`;
+          zoneLabel = (zd && zd.label) || hint;
+        } else {
+          zoneId   = `scan-${hint.slice(0, 16).replace(/\s/g, '-')}`;
+          zoneLabel = hint;
+        }
+        const outerHTML = el.outerHTML.slice(0, 2000);
+        let draft = null;
+        try { draft = genAnnoDraft(zoneId, zoneLabel, [], [], '', outerHTML); } catch {}
+        /* 已含【消息通知】= 新格式，跳过 */
+        if (draft && draft.useCaseRules && /【消息通知】/.test(draft.useCaseRules)) continue;
+        needOptimize.push({ text: hint, zoneId, zoneLabel });
+        /* 4. 投递到 /anno-ai-queue（静默失败）*/
+        fetch('http://localhost:3799/anno-ai-queue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item: { zoneId, zoneLabel, zoneHTML: outerHTML, reason: 'scan' } })
+        }).then(() => { queueCount++; }).catch(() => {});
+      }
+
+      scanItems.value = needOptimize;
+      showScanPanel.value = true;
+      if (!needOptimize.length) {
+        ElMessage({ message: '✅ 所有可见功能点已标注', type: 'success', duration: 2000 });
+      } else {
+        ElMessage({ message: `🔍 扫描到 ${toScan.length} 个元素，其中 ${needOptimize.length} 个需要 AI 优化，已入队`, type: 'info', duration: 3000 });
+      }
+    };
+
+    const quickAddFromScan = (item) => {
+      const el = [...document.querySelectorAll('button,a,[role="tab"],[class*="tab"]')]
+        .find(e => e.textContent.trim() === item.text && !e.closest('.anno-pin,.pin-modal,.scan-panel'));
+      const x = el ? (el.getBoundingClientRect().right + window.scrollX + 8) : 220;
+      const y = el ? (el.getBoundingClientRect().top  + window.scrollY)      : 220;
+      createPin(x, y, item.text, '', '业务规则', el || null, '', '', '', '', {}, true);
+      scanItems.value = scanItems.value.filter(s => s.text !== item.text);
+      if (!scanItems.value.length) showScanPanel.value = false;
+      _savePins();
+      ElMessage({ message: `已为「${item.text}」创建标注`, type: 'success', duration: 1500 });
+    };
+
+    /* ── 内联编辑：用例规则文本 ⇄ 各节 + 表格 ── */
+    const _parseUcText = (text) => {
+      const SECTIONS = ['前置条件','操作流程','后置条件','校验规则','提示消息','消息通知','操作日志'];
+      const sections = {};
+      SECTIONS.forEach(s => sections[s] = '');
+      let cur = null;
+      (text || '').split('\n').forEach(line => {
+        const m = line.match(/^【(.+?)】\s*$/);
+        /* 同时支持 anno-server 的 _draft_useCaseRules「• 章节名：内容」项目符号分节格式 */
+        const b = line.match(/^[•·]\s*(前置条件|操作流程|后置条件|校验规则|提示消息|消息通知|操作日志)\s*[：:](.*)$/);
+        if (m && SECTIONS.includes(m[1])) { cur = m[1]; }
+        else if (b) { cur = b[1]; const inline = (b[2] || '').trim(); if (inline) sections[cur] = inline; }
+        else if (cur) { sections[cur] = (sections[cur] ? sections[cur] + '\n' : '') + line.replace(/^[ \t　]+/, ''); }  /* 去每行行首缩进，杜绝 trim 只去首行致编号 1、与 2、3、4、缩进不一致 */
+      });
+      SECTIONS.forEach(s => { sections[s] = (sections[s] || '').trim(); });
+      const _pmRows = (sections['提示消息'] || '').split('\n')
+        .filter(l => l.includes('|') && !/^[\s|:－-]+$/.test(l.trim()) && !/字段名称/.test(l))
+        .map(l => l.split('|').map(c => c.trim()).filter(Boolean))
+        .filter(r => r.length >= 2);
+      const opLogText = sections['操作日志'] || '';
+      const introLine = opLogText.split('\n').find(l => !l.includes('|') && l.trim()) || '';
+      const _opLogRows = opLogText.split('\n')
+        .filter(l => l.includes('|') && !/^[\s|:－-]+$/.test(l.trim()) && !/字段说明/.test(l))
+        .map(l => l.split('|').map(c => c.trim()).filter(Boolean));
+      /* 消息通知：提取4列表格行（跳过表头和分隔行）*/
+      const _notifRows = (sections['消息通知'] || '').split('\n')
+        .filter(l => l.includes('|') && !/^[\s|:－-]+$/.test(l.trim()) && !/通知场景/.test(l))
+        .map(l => l.split('|').map(c => c.trim()).filter(Boolean))
+        .filter(r => r.length >= 2);
+      return { sections, pmRows: _pmRows, notifRows: _notifRows, opLogRows: _opLogRows, opLogIntro: introLine };
+    };
+    const _ucToText = () => {
+      const secs = ucSections.value, pm = pmRows.value, ol = opLogRows.value, intro = opLogIntro.value;
+      const parts = ['前置条件','操作流程','后置条件','校验规则'].map(k => `【${k}】\n${secs[k] || '（待填写）'}`);
+      const pmText = pm.length ? pm.map(r => r.join(' | ')).join('\n') : '（无）';
+      parts.push(`【提示消息】\n${pmText}`);
+      parts.push(`【消息通知】\n${secs['消息通知'] || '（无）'}`);
+      const olText = ol.length
+        ? (intro ? intro + '\n' : '') + ol.map(r => r.join(' | ')).join('\n')
+        : (secs['操作日志'] || '查询/查看不输出操作日志。');
+      parts.push(`【操作日志】\n${olText}`);
+      return parts.join('\n\n');
+    };
+
+    /* 保存即同步（B架构·2026-06-23）：编辑后的标注内容 POST 给 anno-server → 自动重写本地 PRD。
+       anno-server 没开 → 降级提示"PRD 未同步"，绝不报错/不阻塞。只同步已绑定(有fpKey)的功能。
+       注：浏览器安全机制不准网页直接写磁盘，故必须经 anno-server 写文件——这是该功能的前置依赖。 */
+    const _syncPinToServer = (pin) => {
+      if (!pin) return;
+      const fpKey = (pin.zoneContext && pin.zoneContext.fpKey) || pin.boundFp || '';
+      if (!fpKey) return;
+      const PRDD = (typeof window.__PRD_DATA__ !== 'undefined' && window.__PRD_DATA__) || {};
+      const pk = pin.pageKey || ''; const pageId = pk.includes('-') ? pk.slice(pk.indexOf('-') + 1) : pk;
+      const menuPath = pin.menuPath || ((PRDD.page_menus || {})[pageId]) || '';
+      try {
+        fetch('http://localhost:3799/anno-inject', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ systemName: PRDD.system_name || '', pins: [{
+            fpKey, title: (pin.title || '').replace('功能点：', '').trim(),
+            fieldSpecs: pin.fieldSpecs || '', useCaseRules: pin.useCaseRules || '',
+            menuPath, pageKey: pin.pageKey || '', isAIDraft: false, _fullEdit: true,
+          }] }),
+          signal: AbortSignal.timeout(3000),
+        }).then(r => { if (r.ok && window.ElMessage) ElMessage.success('已同步：本地 PRD 已更新'); })
+          .catch(() => { if (window.ElMessage) ElMessage.warning('已存本地；anno-server 未运行，本地 PRD 未同步'); });
+      } catch (e) { /* fetch 不可用静默 */ }
+    };
+    // 手动保存：输入时【只更新草稿(fieldGroups/ucSections)】，不写 pin、不同步本地 PRD。
+    // 点【保存】(commitEdit) 才把草稿写入 pin + 落 localStorage + 同步本地 PRD，并锁定"用户已改"。
+    // 点【取消】(cancelEdit) 则丢弃草稿、原样还原。—— 杜绝"手一抖就改了本地PRD/改名标记被冲掉"。
+    const savePinFields  = () => { /* no-op：草稿已由 @input 就地更新；持久化/同步推迟到 commitEdit */ };
+    const saveUcSections = () => { /* no-op：同上 */ };
+    const commitEdit = () => {
+      if (!activePinId.value) { pinEditMode.value = 'view'; return; }
+      const pin = annoPins.value.find(p => p.id === activePinId.value);
+      if (!pin) { pinEditMode.value = 'view'; return; }
+      pin.fieldSpecs   = _groupsToText(fieldGroups.value);
+      pin.useCaseRules = _ucToText();
+      pin.isAIDraft    = false;        // 用户【明确点保存】= 用户定的 → 锁"用户已改"，⑲改名标记不再被冲掉
+      _savePins();
+      _syncPinToServer(pin);           // 唯一同步本地 PRD 的入口
+      _editSnapshot = null;
+      pinEditMode.value = 'view';
+    };
+    const addFieldRow   = (gi) => { fieldGroups.value[gi].fields.push({ name:'', required:'只读', type:'', default:'', constraint:'' }); savePinFields(); };
+    const removeFieldRow = (gi, fi) => { fieldGroups.value[gi].fields.splice(fi, 1); savePinFields(); };
+    const addFieldGroup  = () => { fieldGroups.value.push({ name:'新分组', fields:[] }); };
+
+    /* 切换 pin → 重置查看模式 + 重新解析结构化数据 */
+    let _editSnapshot = null;
+    watch(activePinId, (newId) => {
+      pinEditMode.value = 'view';
+      _editSnapshot = null;
+      if (!newId) return;
+      const pin = annoPins.value.find(p => p.id === newId);
+      if (!pin) return;
+
+      /* ── 0. 自动刷新旧 AI 草稿（isAIDraft=true 且 useCaseRules 缺少【消息通知】段）── */
+      if (pin.isAIDraft && pin.zoneContext && !/【消息通知】/.test(pin.useCaseRules || '')) {
+        const zc = pin.zoneContext;
+        const freshDraft = _auditDraft(
+          genAnnoDraft(zc.zoneId || '', zc.zoneLabel || pin.title || '', zc.zoneTexts || [], zc.zoneGroups || [], zc.fpKey || pin.boundFp || '', zc.zoneHTML || ''),
+          zc.zoneId || ''
+        );
+        if (freshDraft && freshDraft.useCaseRules && /【消息通知】/.test(freshDraft.useCaseRules)) {
+          if (freshDraft.fieldSpecs)    pin.fieldSpecs    = freshDraft.fieldSpecs;
+          if (freshDraft.useCaseRules)  pin.useCaseRules  = freshDraft.useCaseRules;
+          _savePins();
+        }
+      }
+
+      /* ── 1a. DOM 检测：用 PIN 坐标找最近 [data-annotation] 祖先（5 方向探针）── */
+      // 解析顺序：① boundFp 有效且 fp_name 与标题一致(最精确) ② 标题精确匹配 fp_name(标题=用户命名，比可能绑错的 boundFp 可靠，杜绝"导出 pin 绑到充值 toolbar→显示充值内容") ③ 有效 boundFp ④ DOM ⑤ 关键词
+      const _pinNm = (pin.title || '').replace(/^功能[点区]：/, '').trim();
+      const _csys = typeof sys !== 'undefined' ? (sys.value || '') : '';
+      const _bfp = (pin.boundFp && (PRD.function_points || {})[pin.boundFp]) ? pin.boundFp : '';
+      let effectiveFp = '';
+      if (_bfp && (((PRD.function_points[_bfp] || {}).fp_name) || '').trim() === _pinNm) effectiveFp = _bfp;
+      if (!effectiveFp && _pinNm) {
+        const _ex = Object.entries(PRD.function_points || {}).filter(([k, v]) => ((v.fp_name) || '').trim() === _pinNm);
+        const _pk = _ex.find(([k]) => !_csys || k.includes('-' + _csys + '.')) || _ex[0];
+        if (_pk) { effectiveFp = _pk[0]; pin.boundFp = effectiveFp; }
+      }
+      if (!effectiveFp) effectiveFp = _bfp;
+      if (!effectiveFp) {
+        const cx = (pin.docX != null ? pin.docX : pin.x) - window.scrollX;
+        const cy = (pin.docY != null ? pin.docY : pin.y) - window.scrollY;
+        for (const [dx, dy] of [[0,0],[12,12],[-8,8],[20,4],[0,20]]) {
+          const hitEl = document.elementFromPoint(cx + dx, cy + dy);
+          const annoEl = hitEl && hitEl.closest('[data-annotation]');
+          if (annoEl) { const rk = annoEl.getAttribute('data-annotation'); if (rk) { effectiveFp = rk; break; } }
+        }
+        if (effectiveFp) {
+          pin.boundFp = effectiveFp;
+          const fpD = (PRD.function_points || {})[effectiveFp];
+          if (fpD) {
+            pin.prdSection = fpD.prd_section || '';
+            pin.title = `功能点：${fpD.fp_name || effectiveFp.split('.').pop()}`;
+          }
+          _savePins();
+        }
+      }
+
+      /* ── 1b. 文本兜底：用 title/areaName 关键词匹配 prd-data（通用，产品形态无关）── */
+      if (!effectiveFp) {
+        const rawText = (pin.title || '').replace(/^功能[点区]：/, '') + ' ' + (pin.areaName || '');
+        const keywords = [...new Set(rawText.match(/[一-龥]{2,8}/g) || [])];
+        const curSys = typeof sys !== 'undefined' ? (sys.value || '') : '';
+        const allFps = Object.entries(PRD.function_points || {});
+        const fpPriority = ['查询', '列表', '查看', '新增', '编辑', '导出', '审核'];
+        for (const kw of keywords) {
+          /* ① 精确 fp_name 匹配 */
+          let hit = allFps.find(([k, v]) => v.fp_name === kw && (!curSys || k.includes('-' + curSys + '.')));
+          if (!hit) hit = allFps.find(([k, v]) => v.fp_name === kw);
+          /* ② 菜单名匹配（取优先级最高的 fp）*/
+          if (!hit) {
+            const mhits = allFps.filter(([k]) => {
+              const mn = k.split('.')[0].replace(/-\w+$/g, '');
+              return mn === kw && (!curSys || k.includes('-' + curSys + '.'));
+            });
+            if (!mhits.length) mhits.push(...allFps.filter(([k]) =>
+              k.split('.')[0].replace(/-\w+$/g, '') === kw));
+            if (mhits.length) hit = fpPriority.reduce((f, p) =>
+              f || mhits.find(([, v]) => v.fp_name === p), null) || mhits[0];
+          }
+          if (hit) {
+            effectiveFp = hit[0];
+            pin.boundFp = effectiveFp;
+            const fpD2 = PRD.function_points[effectiveFp];
+            if (fpD2) { pin.prdSection = fpD2.prd_section || ''; pin.title = `功能点：${fpD2.fp_name || effectiveFp.split('.').pop()}`; }
+            _savePins();
+            break;
+          }
+        }
+      }
+
+      /* ── 2. 优先从 prd-data 渲染（始终反映最新 PRD，不依赖旧存储文本）── */
+      const fpData = effectiveFp ? (PRD.function_points || {})[effectiveFp] : null;
+      if (fpData && (fpData._draft_fieldSpecs || fpData._draft_useCaseRules)) {
+        /* ── 2a. anno-server 写入的草稿文本（_draft_fieldSpecs 5列表格 / _draft_useCaseRules • 7节）──
+           这是 anno-server 实际产物，字段名与旧 field_specs/use_cases 不同，必须走文本解析器渲染。 */
+        fieldGroups.value = _parseFieldsText(fpData._draft_fieldSpecs || '');
+        const secs = _parseUcText(fpData._draft_useCaseRules || '');
+        ucSections.value = secs.sections; pmRows.value = secs.pmRows;
+        notifRows.value = secs.notifRows; opLogRows.value = secs.opLogRows; opLogIntro.value = secs.opLogIntro;
+      } else if (fpData) {
+        fieldGroups.value = (fpData.field_specs?.groups || []).map(g => ({
+          name: g.group_name || '',
+          fields: (g.fields || []).map(f => ({ name: f.name, required: f.required === '-' ? '只读' : (f.required || '只读'), type: f.type || '', default: f.default || '', constraint: f.constraint || '' }))
+        }));
+        const uc = fpData.use_cases || {};
+        /* 文本节按 PRD 标准加 1. 2. 3. 编号（数据存无编号，渲染时统一加；幂等：先去掉已有前导序号）*/
+        const _num = (a) => (Array.isArray(a) ? a : (a ? [a] : [])).map((s, i) => `${i + 1}. ${String(s).replace(/^\s*\d+[.、]\s*/, '')}`).join('\n');
+        ucSections.value = {
+          '前置条件': _num(uc.preconditions), '操作流程': _num(uc.operation_flow),
+          '后置条件': _num(uc.postconditions),
+          '校验规则': _num(uc.validations),
+          '提示消息': '', '消息通知': typeof uc.message_notifications === 'string' ? uc.message_notifications
+            : ((uc.message_notifications?.items || []).map(i => `${i.scenario?'['+i.scenario+'] ':''}${i.title||''}：${i.content||''} → ${i.recipient||''}`).join('\n') || ''),
+          '操作日志': ''
+        };
+        const pm = uc.prompt_messages;
+        pmRows.value = Array.isArray(pm) ? pm.map(m => [m.field, m.empty_prompt||'-', m.error_prompt||'-']) : [];
+        const mn = uc.message_notifications;
+        /* 消息通知：兼容 {items} 结构 与 标准 Markdown 4 列表格字符串（§38 单一真理源）*/
+        const _mdNotifRows = (str) => (str || '').split('\n')
+          .filter(l => l.includes('|') && !/^[\s|:－-]+$/.test(l.trim()) && !/通知场景/.test(l))
+          .map(l => l.split('|').map(c => c.trim()).filter(Boolean))
+          .filter(cells => cells.length >= 2);
+        notifRows.value = (mn && mn.items && mn.items.length)
+          ? mn.items.map(i => [i.scenario || '-', i.title || '-', i.content || '-', i.recipient || '-'])
+          : (typeof mn === 'string' && mn.includes('|')) ? _mdNotifRows(mn) : [];
+        const ol = uc.operation_log;
+        if (typeof ol === 'string') { opLogIntro.value = ol; opLogRows.value = []; }
+        else if (ol && typeof ol === 'object') {
+          /* 操作日志：固定说明语 + 标准 6 行字段表（§4.7.1，行序锁定），而非单行 */
+          opLogIntro.value = ol.fixed_intro || '用户操作成功后，系统在操作日志模块记录：操作时间、操作账号、操作模块、操作功能、操作明细、IP地址。';
+          opLogRows.value = [
+            ['操作时间', '系统自动记录操作发生时间', '格式：YYYY-MM-DD HH:mm:ss'],
+            ['操作账号', '执行操作的登录账号', '示例：admin'],
+            ['操作模块', '操作所在模块', '示例：' + (fpData.menu_name || '')],
+            ['操作功能', '本次操作名称', '示例：' + (fpData.fp_name || '')],
+            ['操作明细', '操作对象唯一标识及变更内容', '示例：' + (ol.detail_example || '')],
+            ['IP地址', '操作终端 IP 地址', '示例：192.168.1.100'],
+          ];
+        }
+        else { opLogIntro.value = ''; opLogRows.value = []; }
+      } else {
+        /* 兜底：使用旧存储文本 */
+        fieldGroups.value = _parseFieldsText(pin.fieldSpecs || '');
+        const secs = _parseUcText(pin.useCaseRules || '');
+        ucSections.value = secs.sections; pmRows.value = secs.pmRows;
+        notifRows.value = secs.notifRows; opLogRows.value = secs.opLogRows; opLogIntro.value = secs.opLogIntro;
+      }
+      if (!fieldGroups.value.length) pinEditTab.value = 'cases';
+    });
+
+    /* 进入编辑：快照当前数据，取消时恢复 */
+    const enterEdit = () => {
+      const pin = annoPins.value.find(p => p.id === activePinId.value);
+      if (pin) _editSnapshot = { fieldSpecs: pin.fieldSpecs, useCaseRules: pin.useCaseRules };
+      pinEditMode.value = 'edit';
+    };
+    const cancelEdit = () => {
+      if (_editSnapshot) {
+        const pin = annoPins.value.find(p => p.id === activePinId.value);
+        if (pin) {
+          pin.fieldSpecs   = _editSnapshot.fieldSpecs;
+          pin.useCaseRules = _editSnapshot.useCaseRules;
+          fieldGroups.value = _parseFieldsText(pin.fieldSpecs || '');
+          const secs = _parseUcText(pin.useCaseRules || '');
+          ucSections.value = secs.sections; pmRows.value = secs.pmRows;
+          notifRows.value = secs.notifRows; opLogRows.value = secs.opLogRows; opLogIntro.value = secs.opLogIntro;
+        }
+        _editSnapshot = null;
+      }
+      pinEditMode.value = 'view';
+    };
+
+    /* ── AI 命令栏：按描述批量生成标注（关键词→选择器，通用）── */
+    const aiAutoPin = () => {
+      const cmd = aiPinCmd.value.trim();
+      if (!cmd) { ElMessage.warning('请先输入要标注的内容描述'); return; }
+      aiPinLoading.value = true;
+      const rules = [
+        { kw: /字段|表单|输入|填写|必填|form/i,   sel: '.el-dialog .el-form-item__label', anchor:'tr' },
+        { kw: /列|表头|col|header/i,              sel: 'table.pt thead th',               anchor:'tc' },
+        { kw: /按钮|button|操作/i,                sel: '.table-toolbar .el-button, .filter-actions .el-button', anchor:'tc' },
+        { kw: /状态|status/i,                     sel: '.stab',                            anchor:'tc' },
+        { kw: /筛选|查询|filter/i,                sel: '.filter-wrap .el-form-item__label',anchor:'tr' },
+      ];
+      let sel = null, anchor = 'tr';
+      for (const r of rules) { if (r.kw.test(cmd)) { sel = r.sel; anchor = r.anchor; break; } }
+      if (!sel) sel = '.el-form-item__label, table.pt thead th';
+      setTimeout(() => {
+        const els = Array.from(document.querySelectorAll(sel))
+          .filter(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; });
+        let added = 0;
+        els.forEach(el => {
+          const r = el.getBoundingClientRect();
+          const raw = el.textContent.trim().replace(/[*:：]/g,'').trim().slice(0,40);
+          if (!raw) return;
+          const draft = genAnnoDraft(`fld-${sys.value}-${page.value}-${raw}`, `字段：${raw}`);
+          createPin(r.right - 2, r.top - 2, draft.title || raw, draft.content || '', draft.type || '数据规则', el);
+          added++;
+        });
+        showPins.value = true; pinModeOn.value = false;
+        aiPinLoading.value = false; aiPinCmd.value = '';
+        if (added) ElMessage.success(`AI 已自动生成 ${added} 个标注号`);
+        else ElMessage.warning('未找到匹配元素，请换个描述');
+      }, 600);
+    };
+
+    /* ═══ 复制已圈定功能（B方案：原型只圈范围，复制功能清单粘到 AI 对话框生成 PRD）═══
+       含：状态(已生成/待生成) / 未绑定标红 / 批量·未生成·选中·单条复制 / 删除(已生成同步删本地PRD) */
+    const scopedListOpen  = ref(false);
+    const scopedSelection = ref([]);
+    /* 跨系统完整展示：不按当前视图过滤，列出所有系统/视图圈定的功能（带「系统/视图」列）*/
+    const scopedFunctions = Vue.computed(() => annoPins.value
+      .map(p => {
+        const fpKey = (p.zoneContext && p.zoneContext.fpKey) || p.boundFp || '';
+        const fp = fpKey ? ((PRD.function_points || {})[fpKey]) : null;
+        const _hasDraft = fp && ((fp._draft_useCaseRules && fp._draft_useCaseRules.trim()) || (fp._draft_fieldSpecs && fp._draft_fieldSpecs.trim() && !/^无[。.]?$/.test(fp._draft_fieldSpecs.trim())));
+        const generated = !!(_hasDraft || (fp && fp.field_specs && fp.field_specs.groups && fp.field_specs.groups.length) || (fp && fp.use_cases && Object.keys(fp.use_cases).length));  /* 状态看 prd-data 有内容：anno-server 写的 _draft_ 草稿键(主) 或 旧结构化键(兼容)；不看 PIN 草稿 */
+        return {
+          number: p.number,
+          name: (p.title || '').replace('功能点：', '').trim() || '（未命名）',
+          fpKey, bound: !!fpKey,
+          /* 归属 = 圈选所在页面的上级菜单（从 prd-data.page_menus 派生，通用·不写死层级）*/
+          view: (() => {
+            const pk = p.pageKey || ''; const di = pk.indexOf('-');
+            const _sys = di > 0 ? pk.slice(0, di) : '';
+            const _pg  = di > 0 ? pk.slice(di + 1) : pk;
+            const menu = (PRD.page_menus && PRD.page_menus[_pg]) || _pg || '—';
+            /* 归属目录显示【业务中文名】而非技术代号：系统走 __PRD_DATA__.system_labels(client→客户端系统/admin→管理端…)、
+               菜单走 page_menus；缺映射才退回代号。喂给 AR 对话框的清单是业务语义，AI 才不会归错系统(治⑱系统归属)。 */
+            const _sysL = (PRD.system_labels && PRD.system_labels[_sys]) || _sys;
+            return _sysL ? (_sysL + ' › ' + menu) : menu;
+          })(),
+          status: generated ? '已生成' : '待生成',
+          _pin: p,
+        };
+      }));
+    const openScopedList = () => { scopedListOpen.value = true; };
+    const onScopedSelect = (rows) => { scopedSelection.value = rows; };
+    const _copyFnList = (list, label) => {
+      if (!list || !list.length) { if (window.ElMessage) ElMessage.warning('没有可复制的功能'); return; }
+      /* ★ 复制 = 名字(标签) + 身份id + 原型真实内容(改名不变)；让 AI 认 id+内容、不认名字 */
+      const lines = list.map((f, i) => {
+        const zc = (f._pin && f._pin.zoneContext) || f.zoneContext || {};
+        const _id = f.fpKey || zc.fpKey || zc.zoneId || ('归属:' + (f.view || ''));
+        const _content = [...new Set([...(zc.zoneTexts || []), ...((zc.zoneGroups || []).flatMap(g => [g.title, ...(g.fields || [])]))])].filter(Boolean).join('、');
+        return `${i + 1}. ${f.name}\n   · 身份id（改名不变·AI据此认范围）：${_id}\n   · 原型真实内容（字段/状态/枚举·改名不变）：${_content || '（见原型该区域）'}`;
+      });
+      /* ★ 复制到 AI 对话框的文本 = 绑定 prd skill 全部铁律的指令头 + 功能清单。
+         设计：①提示词把 AI 绑去读规则原文(不靠记忆/清单) ②列铁律清单当提醒 ③强制跑 deliver-gate 不绿不交。
+         真正的保证是机器闸(⑧⑪⑫)，提示词是把 AI 引导到"读原文+跑闸"的路上。随标准件发 → 任何用户/任何新原型一致。*/
+      const RULE_HEADER =
+'请按 prd skill 铁律，为以下在原型上圈定的功能生成/优化 PRD（字段规范 + 用例规则），注入对应功能点并生成本地 PRD。\n' +
+'· 业务内容(字段/值/必填/校验/默认值/枚举/流程)一律以【原型】为准、禁臆造；格式一律按【prd 铁律】、不简化不自创。\n' +
+'· 名字仅显示标签(用户可改名/变长短)：一字照下方清单用作 fp_name、禁改名/缩写/合并，按【身份id + 原型真实内容】生成、绝不照名字猜；系统归属按原型真实菜单(OMS/WMS 等)，无"通用"。\n' +
+'· 生成前先问我：部署地区(CN/BR) 与 消息通知清单；其余信息缺失先问、禁臆测。\n' +
+'· 细则以 skills/prd 规则原文为准（不靠记忆）；生成后自动跑 node skills/pm-design/qa/deliver-gate.js，不绿不交、不让用户当 QA。\n\n' +
+'━━ 圈定功能清单 ━━\n';
+      const txt = RULE_HEADER + lines.join('\n');
+      navigator.clipboard.writeText(txt).then(() => { if (window.ElMessage) ElMessage.success('已复制 ' + list.length + ' 个功能（' + label + '）'); })
+        .catch(() => { if (window.ElMessage) ElMessage.warning('浏览器限制自动复制，请手动复制'); });
+    };
+    const _normFn = (o) => (o && o.name !== undefined) ? o
+      : { name: (o.title || '').replace('功能点：', '').trim() || '（未命名）', fpKey: (o.zoneContext && o.zoneContext.fpKey) || o.boundFp || '', zoneContext: o.zoneContext, _pin: o };
+    const copyScoped      = (item) => { const f = item ? _normFn(item) : null; _copyFnList(f ? [f] : scopedFunctions.value, f ? f.name : '全部'); };
+    const copyUngenerated = () => _copyFnList(scopedFunctions.value.filter(f => f.status === '待生成'), '待生成');
+    const copySelected    = () => _copyFnList(scopedSelection.value, '选中');
+    const deleteScopedFunction = (row) => {
+      const wasGenerated = row.status === '已生成';
+      deletePin(row._pin.id);   /* 删除同步本地 PRD 已收进 deletePin 单一源（有 fpKey 即 POST /anno-update），此处不再重复 POST */
+      if (window.ElMessage) ElMessage.success('已删除「' + row.name + '」' + (wasGenerated && row.fpKey ? '，本地 PRD 已同步删除' : ''));
+    };
+    /* 改功能名（面板内）：功能名单一来源 = pin.title；面板/标记/复制都读它，改完落本地存储 */
+    const renameScopedFn = (row, v) => {
+      const name = (v || '').trim();
+      if (!name || !row || !row._pin) return;
+      row._pin.title = name;
+      row._pin.isAIDraft = false;   /* 用户改名=用户接管该名字，标记非AI草稿(用户编辑优先)；改名闸⑲据此放行用户合法改名 */
+      _savePins(); _syncPinToServer(row._pin);
+    };
+    /* 编辑功能名弹窗（v-model 绕开内联输入法被打断）*/
+    const renameDlg = ref({ open:false, pin:null, value:'' });
+    const openRename = (pin) => { if(!pin) return; renameDlg.value = { open:true, pin, value:(pin.title||'').replace('功能点：','') }; };
+    const confirmRename = () => { const r=renameDlg.value; const name=(r.value||'').trim(); if(name && r.pin){ r.pin.title=name; r.pin.isAIDraft=false; _savePins(); _syncPinToServer(r.pin); } renameDlg.value.open=false; };
+    const cancelRename = () => { renameDlg.value.open=false; };
+
+
+    const hasUndo = ref(false);  /* 是否有"清空备份"可还原（清空后置 true，还原后置 false） */
+    const clearPins = () => {
+      if (!annoPins.value.length) return;
+      ElMessageBox.confirm(`确认清空全部 ${annoPins.value.length} 个标注号？清空后可点「↩ 还原」找回。`, '清空标注', {
+        confirmButtonText:'确认清空', cancelButtonText:'取消', type:'warning'
+      }).then(() => {
+        try { localStorage.setItem(_STORAGE_KEY + '-undo', JSON.stringify(annoPins.value)); hasUndo.value = true; } catch(e) {}  /* ★ 清空前备份当前标注，支持还原 */
+        annoPins.value = []; pinCounter.value = 0; activePinId.value = null; _savePins(); /* ★ 存盘+回写文件,让"清空"在带烤入标注的文件上也生效 */
+        if (window.ElMessage) ElMessage({ message: '已清空全部标注（误删可点「↩ 还原」找回）', type: 'success', duration: 5000 });
+      }).catch(()=>{});
+    };
+    /* ── 从已生成 PRD 重建标注（兜底恢复）：清空只清视觉 PIN、没动 __PRD_DATA__；只要 PRD 已生成就能把标注锚回各功能 ── */
+    const restoreFromPRD = () => {
+      const fps = (window.__PRD_DATA__ && window.__PRD_DATA__.function_points) || {};
+      const keys = Object.keys(fps);
+      if (!keys.length) { if (window.ElMessage) ElMessage.info('本地未生成 PRD，无可恢复的功能点标注'); return false; }
+      const pins = keys.map(k => ({ fpKey: k, title: fps[k].fp_name || k, fieldSpecs: fps[k]._draft_fieldSpecs || '', useCaseRules: fps[k]._draft_useCaseRules || '', menuPath: Array.isArray(fps[k].menu_path) ? fps[k].menu_path.join(' / ') : '', img: fps[k].img, isAIDraft: fps[k]._isUserEdited ? false : true }));
+      const res = (typeof window._annoInjectPins === 'function') ? (window._annoInjectPins(pins, { silent: true }) || {}) : {};
+      if (window.ElMessage) {
+        const anchored = res.anchored || 0, skipped = (res.unanchored || []).length;
+        if (anchored > 0 && skipped === 0) ElMessage.success(`已从 PRD 恢复 ${anchored} 个功能点标注（已锚回对应功能显示）`);
+        else if (anchored > 0) ElMessage.success(`已从 PRD 恢复：${anchored} 个已锚定显示；另 ${skipped} 个需先在原型右键圈选对应区域才会显示`);
+        else ElMessage.warning(`从 PRD 读到 ${keys.length} 个功能点，但都还没在原型圈选定位 —— 请先右键圈选对应区域，标注才会显示`);
+      }
+      return true;
+    };
+    /* ── 恢复标注（杜绝误清空丢数据·点击需二次确认）：①优先还原刚清空的备份(位置+内容精确) ②无备份则从已生成 PRD 重建 ── */
+    const restoreCleared = () => {
+      let raw = null; try { raw = localStorage.getItem(_STORAGE_KEY + '-undo'); } catch(e) {}
+      let n = 0, src = '';
+      if (raw) { try { n = (JSON.parse(raw) || []).length; } catch(e) {} src = '上次清空的备份'; }
+      else { n = Object.keys((window.__PRD_DATA__ && window.__PRD_DATA__.function_points) || {}).length; src = '已生成的 PRD'; }
+      if (!n) { if (window.ElMessage) ElMessage.info('没有可恢复的标注（无清空备份、本地也未生成 PRD）'); return; }
+      ElMessageBox.confirm(`确认恢复标注？将从【${src}】重建 ${n} 个功能点标注。`, '恢复标注', {
+        confirmButtonText:'确认恢复', cancelButtonText:'取消', type:'warning'
+      }).then(() => {
+        if (raw) {
+          try { const arr = JSON.parse(raw); if (Array.isArray(arr) && arr.length) { annoPins.value = arr; pinCounter.value = arr.reduce((m, p) => Math.max(m, p.number || 0), 0); _savePins(); } } catch(e) {}
+          try { localStorage.removeItem(_STORAGE_KEY + '-undo'); } catch(e) {}
+          hasUndo.value = false;
+          if (window.ElMessage) ElMessage.success('已还原 ' + annoPins.value.length + ' 个标注');
+        } else {
+          restoreFromPRD();
+        }
+      }).catch(()=>{});
+    };
+
+    const exportPins = () => {
+      if (!annoPins.value.length) { ElMessage.warning('暂无标注可导出'); return; }
+      const data = annoPins.value.map(p => ({ 序号:p.number, 标注标题:p.title, 类型:p.type, 内容:p.content }));
+      const prompt = `请将以下标注内容更新合并到 PRD 对应章节：\n\n${JSON.stringify(data,null,2)}\n\n规则：保留原有内容，按标题匹配功能点，将"内容"字段新增或修订到对应说明里。`;
+      navigator.clipboard.writeText(prompt)
+        .then(() => ElMessage.success(`已复制 ${data.length} 条标注的 PRD 更新指令`))
+        .catch(() => ElMessage.error('复制失败'));
+    };
+
+    /* ── 通用「选保存位置」助手（导出分享版 / 以后导出研发版 等都复用·不各搓各的）──
+       能弹原生选目录框(localhost·Chrome/Edge)→让用户选文件夹+文件名；file:// 常被浏览器禁→退回下载到「下载」文件夹。 */
+    /* ⚠️ 铁律（2026-07-09 真 bug 根治）：showSaveFilePicker 必须在【用户手势有效期内】调用。
+       旧写法是「先 await fetch 拿内容 → 再弹框」，await 之后手势已过期 → 弹不出框、直接抛 AbortError
+       → 被误判成"用户取消"，于是永远提示"已取消保存"、另存红线④实际是坏的。
+       正确做法：【先弹框拿 handle（手势最新鲜）→ 再去取内容 → 最后写入】。下面拆成两个助手强制这个顺序。 */
+    const _pickSaveHandle = async (suggestedName, mime) => {
+      if (!window.showSaveFilePicker) return { unsupported: true };
+      try {
+        const handle = await window.showSaveFilePicker({ suggestedName, types: [{ description: 'HTML', accept: { [(mime || 'text/html')]: ['.html'] } }] });
+        return { handle };
+      } catch (e) {
+        if (e && e.name === 'AbortError') return { aborted: true };   // 框弹出来了、用户真取消
+        return { unsupported: true, err: (e && e.name) || 'unknown' }; // 其它(file:// 被禁等) → 退回下载
+      }
+    };
+    const _writeOut = async (handle, suggestedName, content, mime) => {
+      const blob = new Blob([content], { type: (mime || 'text/html') + ';charset=utf-8' });
+      if (handle) {
+        const w = await handle.createWritable(); await w.write(blob); await w.close();
+        return { method: 'picker', name: handle.name };
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = suggestedName;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
+      return { method: 'download' };
+    };
+
+    /* ── 导出分享版：嵌入全量定位 pin + 烤只读 → 弹框让用户【选保存位置】(或下载)，发给别人只读看/上传静态托管 ── */
+    const exportShareVersion = async () => {
+      const pins = annoPins.value || [];   // ①②：0 个标注也照导——分享的是原型只读副本，标注只是可选附加
+      const sys = (window.__PRD_DATA__ && window.__PRD_DATA__.system_name) || '';
+      /* ① 先弹保存框（此刻用户手势最新鲜）。放到 await fetch 之后会弹不出来——见上方铁律。 */
+      const pick = await _pickSaveHandle((sys || '原型') + '-分享版.html', 'text/html');
+      if (pick.aborted) { ElMessage.info('已取消保存'); return; }   // 框真弹了、用户真取消
+      try {
+        /* ② 再取内容 */
+        const r = await fetch('http://localhost:3799/anno-embed', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pins, systemName: sys, returnContent: true })  // 让服务端把内容返回、由浏览器写入
+        });
+        const j = await r.json();
+        if (!j || !j.ok) { ElMessage.error('导出失败：' + ((j && j.error) || '未知')); return; }
+        const items = j.files || [];  // [{name, content}]
+        if (!items.length) { ElMessage.warning('没有匹配的原型可导出分享版'); return; }
+        /* ③ 最后写入：第一个写进用户选的位置；若还有多个(罕见)其余走下载 */
+        let method = '';
+        for (let i = 0; i < items.length; i++) {
+          const it = items[i];
+          const res = await _writeOut(i === 0 ? pick.handle : null, it.name, it.content, 'text/html');
+          method = res.method;
+        }
+        ElMessage({ message: method === 'picker'
+            ? '分享版已保存到你选择的位置（只读 + ' + j.count + ' 个标注）。把这个 .html 上传静态托管即可分享链接。'
+            : '分享版已下载到「下载」文件夹（只读 + ' + j.count + ' 个标注）。想每次自选位置：浏览器设置里开"下载前询问保存位置"；把 .html 上传静态托管即可分享链接。',
+          type: 'success', duration: 9000 });
+      } catch (e) {
+        ElMessage({ message: '导出失败：需先启动 anno-server（localhost:3799）', type: 'error', duration: 6000 });
+      }
+    };
+
+    /* ── localStorage 持久化 ── 按 system_name 命名空间隔离：同一浏览器/同一 origin 打开不同原型
+       时各存各的，绝不串项目（曾出现新原型「已圈定功能清单」里冒出别项目 OMS/WMS recharge-list 旧标注
+       —— 全局单 key 致跨原型污染）。缺 system_name 退回 default。 */
+    const _STORAGE_KEY = 'anno-pins-v2::' + ((typeof window!=='undefined' && window.__PRD_DATA__ && window.__PRD_DATA__.system_name) || 'default');
+    try { hasUndo.value = !!localStorage.getItem(_STORAGE_KEY + '-undo'); } catch(e) {}  /* 初始化：上次会话清空过且未还原 → 显示恢复 */
+    let _persistTimer = null;
+    /* 去抖把全量 pin 烤回【工作文件本身】(anno-server /anno-persist)，使"拷贝原文件即可分享 + 对方可编辑"；
+       无 anno-server 时静默降级(localStorage 已存)。只读分享版不回写。*/
+    const _persistPinsToFile = () => {
+      if (window.__ANNO_READONLY__ === true) return;
+      clearTimeout(_persistTimer);
+      _persistTimer = setTimeout(() => {
+        const PRDD = (typeof window.__PRD_DATA__ !== 'undefined' && window.__PRD_DATA__) || {};
+        try {
+          fetch('http://localhost:3799/anno-persist', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ systemName: PRDD.system_name || '', pins: annoPins.value }),
+            signal: AbortSignal.timeout(4000),
+          }).catch(() => {});
+        } catch (e) {}
+      }, 1500);
+    };
+    const _savePins = () => { try { localStorage.setItem(_STORAGE_KEY, JSON.stringify(annoPins.value)); } catch(e) {} _persistPinsToFile(); };
+    /* 自动刷新含过期模板内容的旧 PIN（近30天/时间维度/tooltip 等旧图表模板特征词）*/
+    const _refreshStaleDraftPins = () => {
+      /* 刷新所有 isAIDraft=true 的 PIN（AI草稿）：代码改进后自动更新，无需匹配具体文字 */
+      /* 兼容旧格式：isAIDraft 未设置但含已知错误模板词也一并刷新 */
+      const _legacyStale = /近30天\/本月|切换时间维度|鼠标悬浮数据点|数据加载中显示骨架屏/;
+      let changed = false;
+      annoPins.value.forEach(pin => {
+        const _isAIDraft = pin.isAIDraft === true ||
+          (pin.isAIDraft === undefined && _legacyStale.test((pin.fieldSpecs || '') + (pin.useCaseRules || '')));
+        if (_isAIDraft && pin.zoneContext) {
+          const zc = pin.zoneContext;
+          try {
+            const draft = genAnnoDraft(
+              zc.zoneId || pin.id,
+              zc.zoneLabel || pin.title,
+              zc.zoneTexts || [],
+              zc.zoneGroups || [],
+              zc.fpKey || pin.boundFp || '',
+              zc.zoneHTML || ''
+            );
+            if (draft && (draft.fieldSpecs || draft.useCaseRules)) {
+              pin.fieldSpecs = draft.fieldSpecs || pin.fieldSpecs;
+              pin.useCaseRules = draft.useCaseRules || pin.useCaseRules;
+              if (draft.title && draft.title !== '功能区') pin.title = draft.title;
+              pin.isAIDraft = true; /* 保持标记，直到用户主动确认 */
+              changed = true;
+            }
+          } catch(e) { /* 单条失败不影响其他 */ }
+        }
+      });
+      if (changed) _savePins();
+    };
+    const _loadPins = () => {
+      try {
+        /* ?reset=1 一键清空全部已保存标注（从这个浏览器清掉），用于干净体验流程 */
+        if (new URLSearchParams(location.search).get('reset') === '1') { localStorage.removeItem(_STORAGE_KEY); annoPins.value = []; pinCounter.value = 0; return; }
+        const raw = localStorage.getItem(_STORAGE_KEY);
+        let saved = null;
+        if (raw !== null) { try { saved = JSON.parse(raw); } catch(e) { saved = null; } }
+        /* ★ 仅当【本浏览器从没存过】(raw===null) → 回退读随 HTML 文件烤进的标注 window.__USER_ANNOTATIONS__
+           （换浏览器 / 拷给别人"打开即见"：pin 随文件走）。
+           本浏览器存过(哪怕空数组=用户主动清空) → 一律尊重 localStorage，绝不让烤进的标注复活，
+           否则"清空"在带标注的文件上会永远失效（清空→刷新→标注又回来）。*/
+        if (raw === null && Array.isArray(window.__USER_ANNOTATIONS__) && window.__USER_ANNOTATIONS__.length) {
+          saved = JSON.parse(JSON.stringify(window.__USER_ANNOTATIONS__));
+        }
+        if (!Array.isArray(saved) || !saved.length) return;
+        /* 检测 5 分钟内注入的新 pin，打上 _isNew 标记 */
+        const fiveMinAgo = Date.now() - 5 * 60 * 1000;
+        let newCount = 0;
+        saved.forEach(p => {
+          if (p.injectedAt && new Date(p.injectedAt).getTime() > fiveMinAgo) {
+            p._isNew = true; newCount++;
+          }
+        });
+        annoPins.value = saved;
+        /* 单一真理源回填:PIN空内容从__PRD_DATA__拉_draft_(杜绝"数据在__PRD_DATA__、PIN却空"——脚本注入未经SSE实时填到本浏览器时) */
+        try { const _fps=(window.__PRD_DATA__&&window.__PRD_DATA__.function_points)||{}; let _filledAny=false; annoPins.value.forEach(p=>{ const fk=(p.zoneContext&&p.zoneContext.fpKey)||p.boundFp||''; const d=fk&&_fps[fk]; if(!d)return; if((!p.fieldSpecs||!String(p.fieldSpecs).trim())&&d._draft_fieldSpecs&&String(d._draft_fieldSpecs).trim()){p.fieldSpecs=d._draft_fieldSpecs;_filledAny=true;} if((!p.useCaseRules||!String(p.useCaseRules).trim())&&d._draft_useCaseRules&&String(d._draft_useCaseRules).trim()){p.useCaseRules=d._draft_useCaseRules;_filledAny=true;} }); if(_filledAny){ try{localStorage.setItem(_STORAGE_KEY,JSON.stringify(annoPins.value));}catch(e){} } } catch(e){}
+        pinCounter.value = Math.max(...saved.map(p => p.number || 0));
+        if (newCount > 0) {
+          nextTick(() => {
+            ElMessage({ message: `检测到 ${newCount} 个新标注已注入，已高亮显示`, type: 'success', duration: 4000 });
+            setTimeout(() => { annoPins.value.forEach(p => { p._isNew = false; }); }, 10000);
+          });
+        }
+      } catch(e) {}
+    };
+
+    /* ── 重新锚定 pin（切页/resize 后按选择器或视口比例重算坐标）── */
+    const _repositionPins = () => {
+      annoPins.value.forEach(pin => {
+        if (pin.selectorPath) {
+          try {
+            const el = document.querySelector(pin.selectorPath);
+            if (el) {
+              const r = el.getBoundingClientRect();
+              pin.x = r.right - 2; pin.y = r.top - 2;
+              pin.docX = pin.x + window.scrollX; pin.docY = pin.y + window.scrollY;
+              pin.vx = pin.x / window.innerWidth; pin.vy = pin.y / window.innerHeight;
+              return;
+            }
+          } catch(e) {}
+        }
+        if (pin.vx != null) {
+          pin.x = pin.vx * window.innerWidth; pin.y = pin.vy * window.innerHeight;
+          if (pin.docX == null) { pin.docX = pin.x + window.scrollX; pin.docY = pin.y + window.scrollY; }
+        }
+      });
+    };
+
+    /* ── pin 手动拖拽 ── */
+    let _dragPin = null, _dx = 0, _dy = 0, _px0 = 0, _py0 = 0;
+    const startPinDrag = (pin, e) => {
+      if (e.button !== 0) return;
+      _dragPin = pin; _dx = e.clientX; _dy = e.clientY; _px0 = pin.x; _py0 = pin.y;
+      activePinId.value = null; e.preventDefault();
+    };
+
+
+/* ═══════ ③-B  onMounted 初始化（触发系统 + 框选引擎）═══════ */
+/* 注入：把以下整块合并进宿主 setup() 的 onMounted(() => { ... }) 内。
+   ★ 这是反复出 bug 的部分（气泡漂移/框选/区域识别），逻辑已稳，禁止改写。 */
+function initAnnotationLayer() {   /* ← 在宿主 onMounted 里调用一次 */
+
+  /* ── pin 加载 / 重定位 / 滚动跟随 ── */
+  _loadPins();
+  _refreshStaleDraftPins();
+  if (new URLSearchParams(location.search).get('pins') === '0') showPins.value = false;
+  nextTick(() => { _repositionPins(); });
+  window.addEventListener('resize', _repositionPins);
+  window.addEventListener('scroll', () => { pinScrollX.value = window.scrollX; pinScrollY.value = window.scrollY; }, { passive:true });
+  document.body.classList.toggle('anno-mode-on', showPins.value);
+
+  /* ── pin 手动拖拽（全局 mousemove / mouseup）── */
+  document.addEventListener('mousemove', (e) => {
+    if (!_dragPin) return;
+    _dragPin.x = _px0 + (e.clientX - _dx);
+    _dragPin.y = _py0 + (e.clientY - _dy);
+    _dragPin.vx = _dragPin.x / window.innerWidth;
+    _dragPin.vy = _dragPin.y / window.innerHeight;
+    _dragPin.selectorPath = '';
+    _dragPin.isDragging = true;
+  });
+  document.addEventListener('mouseup', () => {
+    if (!_dragPin) return;
+    _dragPin.isDragging = false;
+    _savePins();
+    _dragPin = null;
+  });
+
+  /* ── 标注触发系统（左键归业务，标注仅右键）── */
+  nextTick(() => {
+    let _triggerBtn = null;
+
+    /* ── 统一区域识别（右键单击 + 框选共用）── 通用：靠 data 属性 / 文本，无业务硬编码 */
+    const _detectZone = (el) => {
+      const s = sys.value, p = page.value;
+      /* 1. data-anno-zone 属性优先 */
+      const zEl = el.closest('[data-anno-zone]');
+      if (zEl) {
+        const zoneName = zEl.dataset.annoLabel || zEl.dataset.annoZone || zEl.textContent.trim().slice(0,30) || '功能区';
+        const zoneKey  = zEl.dataset.annoZone.replace(/\s+/g,'_').slice(0,30);
+        return { id: `zone-${s}-${p}-${zoneKey}`, label: `功能区：${zoneName}` };
+      }
+      /* 2. 单号链接（通用：名称取 data-anno-label，兜底"单号"）*/
+      const _ol = el.closest('.order-link');
+      if (_ol) { const _nm = _ol.dataset.annoLabel || '单号'; return { id:`link-${s}-${p}-${_nm.replace(/\s+/g,'_').slice(0,20)}`, label:`链接：${_nm}` }; }
+      /* 3. op-icon 操作图标 */
+      const opIcon = el.closest('.op-icon');
+      if (opIcon) {
+        const tip = opIcon.dataset.tip || opIcon.getAttribute('data-tip') || '操作';
+        return { id:`op-${s}-${p}-${tip}`, label:`操作：${tip}` };
+      }
+      /* 4. op-cell 操作列容器 */
+      const opCell = el.closest('.op-cell');
+      if (opCell) {
+        const icons = [...opCell.querySelectorAll('.op-icon[data-tip]')].map(ic => ic.dataset.tip).join('/');
+        return { id:`op-${s}-${p}-操作列`, label:`操作列：${icons || '操作列'}` };
+      }
+      /* 5. 表格列头 / 表单标签 */
+      const labelEl = el.closest('table.pt thead th, .el-form-item__label');
+      if (labelEl) {
+        const raw = labelEl.textContent.trim().replace(/[*:：]/g,'').trim().slice(0,40);
+        if (raw) return { id:`fld-${s}-${p}-${raw}`, label:`字段：${raw}` };
+      }
+      /* 6. el-button / button */
+      const btn = el.closest('.el-button:not([class*="pagination"]), button:not(.acb-ok):not(.acb-cancel)');
+      if (btn) {
+        const t = btn.textContent.trim().replace(/[*:：]/g,'').trim().slice(0,20);
+        if (t) return { id:`btn-${s}-${p}-${t.replace(/\s+/g,'_')}`, label:`按钮：${t}` };
+      }
+      /* 7. 状态标签 / stabs 容器 */
+      const stab = el.closest('.stab');
+      if (stab) {
+        const raw = stab.textContent.trim().replace(/[*:：]/g,'').trim().slice(0,40);
+        if (raw) return { id:`stab-${s}-${p}-${raw.split(' ')[0]}`, label:`状态：${raw.split(' ')[0]}` };
+      }
+      /* 7a. 点在 stabs 容器空白区（padding / gap），避免拼出所有页签文字 */
+      if (el.closest('.stabs')) {
+        return { id:`stabs-${s}-${p}-bar`, label:`功能区：状态页签` };
+      }
+      /* 8. tabs item */
+      const tabItem = el.closest('.el-tabs__item');
+      if (tabItem) {
+        const raw = tabItem.textContent.trim().replace(/[*:：]/g,'').trim().slice(0,40);
+        if (raw) return { id:`tab-${s}-${p}-${raw}`, label:`标签页：${raw}` };
+      }
+      /* 9. 表格单元格 */
+      const td = el.closest('td');
+      if (td) {
+        const tr = td.closest('tr');
+        const idx = tr ? Array.from(tr.cells).indexOf(td) : -1;
+        const thead = td.closest('table')?.querySelector('thead');
+        const thText = thead && idx >= 0 ? (thead.rows[0]?.cells[idx]?.textContent?.trim() || '') : '';
+        const cellText = el.textContent.trim().slice(0, 20);
+        const name = thText || cellText || '单元格';
+        return { id:`td-${s}-${p}-${name.replace(/\s+/g,'_').slice(0,20)}`, label:`单元格：${name}` };
+      }
+      /* 10. 通用区域：取最近有意义文字（仅叶节点才用 textContent，多子项容器禁止拼接）*/
+      const _isLeaf = el.children.length === 0;
+      const text = (_isLeaf ? el.textContent.trim().slice(0, 30) : '') || (typeof el.className === 'string' ? el.className.trim().split(/\s+/).find(c => /^[a-z]/i.test(c) && c.length > 2) || '' : '') || '功能区';
+      return { id:`zone-${s}-${p}-${text.replace(/\s+/g,'_').slice(0,20)}`, label:`功能区：${text}` };
+    };
+
+    /* ── 显示确认气泡（target 仅用于定位）── */
+    const _showTrigger = (target, zone) => {
+      if (isPreviewMode) return; // 预览模式：禁止添加标注
+      if (_triggerBtn) { _triggerBtn.remove(); _triggerBtn = null; }
+      if (!zone) zone = _detectZone(target);
+      if (!zone) return;
+      const bubble = document.createElement('div');
+      bubble.className = 'anno-confirm-bubble';
+      const fnName = zone.label.replace(/^(按钮|状态|标签页|功能区|操作|单元格|字段|链接|操作列)：/, '');
+      bubble.innerHTML = `
+        <div class="acb-title">是否为该功能生成PRD？</div>
+        <div class="acb-name">📋 ${fnName}</div>
+        <div class="acb-btns">
+          <button class="acb-cancel">跳过</button>
+          <button class="acb-ok">确定添加</button>
+        </div>`;
+      const r = target.getBoundingClientRect();
+      const bLeft = Math.min(r.left, window.innerWidth - 240);
+      const bTop  = r.top > 100 ? r.top - 90 : r.bottom + 8;
+      bubble.style.left = bLeft + 'px';
+      bubble.style.top  = bTop  + 'px';
+      document.body.appendChild(bubble);
+      _triggerBtn = bubble;
+      const autoHide = setTimeout(() => { if (_triggerBtn === bubble) { bubble.remove(); _triggerBtn = null; } }, 5000);
+      bubble.querySelector('.acb-ok').addEventListener('click', (e) => {
+        e.stopPropagation(); clearTimeout(autoHide);
+        /* genAnnoDraft / _auditDraft 由内容生成层提供（见 ③-C 适配指引）*/
+        let _boundFp = zone.fpKey || (target && target.closest && target.closest('[data-annotation]') ? target.closest('[data-annotation]').getAttribute('data-annotation') : '');
+        const draft = _auditDraft(genAnnoDraft(zone.id, zone.label, zone.zoneTexts || [], zone.zoneGroups || [], _boundFp, zone.zoneHTML || ''), zone.id);
+        /* ★ 点选铁律：单个按钮/操作 → 功能名取该按钮自己的可见文字（框选 target=fakeTarget 无 closest，自动跳过）；
+           fpKey 同步重定向到「祖先菜单段.按钮名」，让 AI 生成对的功能，而非被工具栏 fp 劫持（如 导出→充值）*/
+        if (target && typeof target.closest === 'function') {
+          const _btnEl = target.closest('button,.el-button,.search-btn,[class*="btn"]');
+          if (_btnEl) {
+            const _bt = (_btnEl.textContent || '').replace(/[\(（].*?[\)）]/g, '').trim().replace(/\s+/g, '');
+            if (_bt && _bt.length <= 14) {
+              draft.title = '功能点：' + _bt;
+              if (_boundFp && _boundFp.includes('.')) _boundFp = _boundFp.split('.')[0] + '.' + _bt;
+            }
+          }
+        }
+        const rect = target.getBoundingClientRect();
+        /* 采集该元素/区域的真实上下文，供 AI 读取后重新生成高质量 PRD（点/框两种模式同质）*/
+        const zoneContext = {
+          zoneId: zone.id,
+          zoneLabel: zone.label,
+          fpKey: _boundFp || '',   /* 精确 fp 绑定（data-annotation），AI 据此直接定位真实功能点 */
+          zoneTexts: zone.zoneTexts || [],
+          zoneGroups: zone.zoneGroups || [],   /* 框选多卡片时按板块分组 */
+          /* 框选优先用 zone.zoneHTML（fakeTarget 无 outerHTML），点击用 target.outerHTML */
+          zoneHTML: zone.zoneHTML || (target.outerHTML ? target.outerHTML.substring(0, 40000) : ''),
+        };
+        createPin(rect.right - 2, rect.top - 2,
+          draft.title || zone.label, draft.content || '',
+          draft.type || '业务规则', target,
+          draft.fieldSpecs || '', draft.useCaseRules || '',
+          draft.menuPath || '', draft.prdSection || '',
+          zoneContext, true);
+        /* 自动入队：将 zoneContext 推送到 /anno-ai-queue，供 AI 批量读取后重新生成高质量 PRD。
+           静默失败——anno-server 未运行时不报错、不中断用户操作。 */
+        fetch('http://localhost:3799/anno-ai-queue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item: {
+            zoneId:     zoneContext.zoneId,
+            zoneLabel:  zoneContext.zoneLabel,
+            zoneTexts:  zoneContext.zoneTexts,
+            zoneGroups: zoneContext.zoneGroups,
+            zoneHTML:   zoneContext.zoneHTML,
+            boundFp:    zoneContext.fpKey || '',
+            draftTitle: draft.title  || '',
+            draftType:  draft.type   || '',
+            reason:     'user_created',
+          }})
+        }).catch(() => {});
+        showPins.value = true;
+        bubble.remove(); _triggerBtn = null;
+        ElMessage({ message: '已添加 PRD 标注，点击标注号查看/编辑', type: 'success', duration: 2000 });
+      });
+      bubble.querySelector('.acb-cancel').addEventListener('click', (e) => {
+        e.stopPropagation(); clearTimeout(autoHide);
+        bubble.remove(); _triggerBtn = null;
+      });
+      bubble.addEventListener('mouseleave', () => {
+        clearTimeout(autoHide);
+        setTimeout(() => { if (_triggerBtn === bubble) { bubble.remove(); _triggerBtn = null; } }, 1200);
+      });
+    };
+
+    /* ════════════════════════════════════════════════════════════════
+       ★铁律：左键（含 hover）完全归业务 — 标注开关开/关都不拦截业务操作。
+       标注只通过【右键】触发：右键单击=标注该元素；右键拖拽=框选区域。
+       ════════════════════════════════════════════════════════════════ */
+    /* ★ 场景②：右键激活画框模式 → 左键拖拽框选 → 松开弹气泡 */
+    let _drawMode  = false;       /* 画框模式已激活（右键开启，再次右键/Escape 退出）*/
+    let _drawStart = null;        /* 左键按下起点 {x, y} */
+    let _dragRect = null, _dragOverlay = null;
+    let _suppressNextClick = false;
+    const _ANNO_EXCL = '.top-nav,.sys-bar,.anno-toolbar,.anno-pin,.anno-confirm-bubble,.pin-modal,.pin-modal-overlay,.el-overlay,.el-dialog,.ai-pin-bar,.el-pagination';
+
+    /* 退出画框模式（取消 / 完成 / Escape 共用）*/
+    const _exitDrawMode = () => {
+      _drawMode = false;
+      _drawStart = null;
+      document.body.classList.remove('anno-drawing');
+      if (_dragOverlay) { _dragOverlay.remove(); _dragOverlay = null; }
+      _dragRect = null;
+    };
+
+    /* ── 左键松开：完成绘制 ── */
+    const _finishDraw = (endX, endY) => {
+      const savedRect = _dragRect;   /* 先保存，再 exit（exit 会清空 _dragRect）*/
+      _exitDrawMode();
+      if (!savedRect) return;        /* 单击无拖拽：_suppressNextClick 保持 true，屏蔽本次 click */
+
+      /* 有拖拽：Chrome 不会再补发 click，必须手动重置，否则下一次真实点击（如「确定添加」）被误吞 */
+      _suppressNextClick = false;
+
+      const w = Math.abs(endX - savedRect.x), h = Math.abs(endY - savedRect.y);
+      const rx = Math.min(endX, savedRect.x), ry = Math.min(endY, savedRect.y);
+      if (w < 40 || h < 30) return;
+      /* 区域名识别线索：只用"对象/字段名词"，不含动作词（充值/审核/查询/导出等是按钮，绝不拿来命名区域）*/
+      const BIZ_RE = /余额|总额|金额|数量|价格|名称|状态|时间|日期|地址|联系|备注|规格|尺码|颜色|版本|型号|库存|订单|商品|用户|客户|账户|权限|角色|统计|图表|看板|搜索|筛选|详情|列表|分类|标签|描述|编号/;
+      const SKIP_RE = /^\d[\d,.\s]*$|^\d{2}[\/\-]\d{2}|更新时间|刷新|loading/i;
+      /* 多点采样：顶部 14/28/45px 三层（覆盖不同卡片内边距）+ 中部兜底 */
+      const scanPts = [
+        [rx + w * 0.25, ry + 14], [rx + w * 0.5, ry + 14], [rx + w * 0.75, ry + 14],
+        [rx + w * 0.25, ry + 28], [rx + w * 0.5, ry + 28], [rx + w * 0.75, ry + 28],
+        [rx + w * 0.25, ry + 45], [rx + w * 0.5, ry + 45],
+        [rx + w * 0.25, ry + h * 0.3], [rx + w * 0.5, ry + h * 0.3],
+        [rx + w * 0.5, ry + h * 0.5],
+      ];
+      /* 只返回叶节点，避免父容器 textContent 拼接所有子文字 */
+      const _scanEl = (sx, sy) => document.elementsFromPoint(sx, sy).filter(el =>
+        !el.closest('.anno-pin,.anno-confirm-bubble,.pin-modal,.anno-toolbar,.top-nav') &&
+        el.children.length === 0 &&
+        !SKIP_RE.test(el.textContent.trim())
+      );
+      /* 金额识别线索：只过滤纯货币串（"CNY 17,500.00"），不过滤含汉字标签（"账户余额 (CNY)"）*/
+      const NUM_RE = /^[\d,.\s¥$€£()]+$|^(?:CNY|USD|EUR|JPY|BRL|GBP|HKD|AUD|CAD|SGD|MXN|INR)\s*[\d,.]|^[\d,.]+\s*(?:CNY|USD|EUR|JPY|BRL|GBP|HKD|AUD|CAD|SGD|MXN|INR)$/;
+      /* ★ 区域取名铁律：只认"卡片/区域标题"，绝不取里面的按钮——
+           框整块=该区域 PRD（账户余额区即便含充值按钮，也命名"账户余额"）；
+           只有右键单击按钮本身才出按钮 PRD。多卡片框选=区域概览，禁被单个功能点劫持。*/
+      const _inBtn = (el) => el.closest('button,.el-button,.search-btn,[class*="btn"]');
+      let areaName = '';
+      /* 0. 最优先：框内卡片/面板标题（通配规律，覆盖任何 SaaS 命名，无需随新页面补类名）*/
+      /* 与下方 _CARD_TITLE_SEL（zoneCards 段）保持同一变量，两处同步 */
+      const _AREA_TITLE_SEL = '[class*="title"],h1,h2,h3,h4,'
+        + '.msg-tab,.stab,.tab-item,[class*="tab-label"],'  /* 状态/消息 tab 标签也算区域标题（Bug2/3：消息通知·消息公告 / 全部·待审核·已审核）*/
+        + '[class*="-label"]:not(.el-form-item__label):not(.el-checkbox__label):not(.el-radio__label),'
+        + '[class*="stat-"][class*="label"],[class*="metric"][class*="label"],[class*="kpi"][class*="label"],'
+        + '[class*="card"]>[class*="lab"],[class*="card"]>[class*="title"]';  /* 通用兜底：卡片直接子级的标签/标题（兼容 lab/label/stat-label 等任意渲染器命名·class无关·根治框选卡片→功能区）*/
+      /* ★ 圈选采集完整性铁律（圈选名称必须完整·不漏）：框只要【碰到】一个逻辑区（状态条/消息tab/EP-tab/带 data-annotation-zone 的区），
+         就取该区【全部】同级标题——不再要求每个标题像素级落在框内（否则方框差几像素就漏掉末个页签，如"已驳回"，且 OMS/WMS 还会不一致）。
+         原则：客户端只"完整搬运"不"猜"；圈一个区 = 该区完整名称。 */
+      const _inBox6 = (el) => { const r = el.getBoundingClientRect(); return r.width && r.left >= rx - 6 && r.top >= ry - 6 && r.right <= rx + w + 6 && r.bottom <= ry + h + 6; };
+      const _ovBox6 = (el) => { const r = el.getBoundingClientRect(); return r.width && r.right > rx && r.left < rx + w && r.bottom > ry && r.top < ry + h; };
+      const _ZONE_SEL = '.stabs,.msg-tabs,.el-tabs__nav,[data-annotation-zone]';
+      const _allTitleEl = Array.from(document.querySelectorAll(_AREA_TITLE_SEL)).filter(el => el.children.length === 0 && !_inBtn(el));
+      const _hitEl = new Set(_allTitleEl.filter(_inBox6));
+      const _zoneSet = new Set();
+      for (const el of _hitEl) { const z = el.closest(_ZONE_SEL); if (z && _ovBox6(z)) _zoneSet.add(z); }
+      for (const z of _zoneSet) for (const el of _allTitleEl) if (z.contains(el)) _hitEl.add(el);
+      const _titleEls = _allTitleEl.filter(el => _hitEl.has(el))
+        .map(el => el.textContent.trim().replace(/\s*[\(（].*?[\)）]\s*$/,'').replace(/\s+/g,' '))
+        .filter(t => t.length >= 2 && t.length <= 14 && !NUM_RE.test(t));
+      const _uTitles = [...new Set(_titleEls)];
+      if (_uTitles.length === 1) areaName = _uTitles[0];
+      else if (_uTitles.length >= 2 && _uTitles.length <= 8) areaName = _uTitles.join('/');  /* 状态/tab/卡片标题全取·完整不漏 */
+      else if (_uTitles.length > 8) areaName = '数据看板';
+      /* 1. 没标题，再按业务名词取短标签（排除按钮）*/
+      if (!areaName) for (const [sx, sy] of scanPts) {
+        for (const el of _scanEl(sx, sy)) {
+          if (_inBtn(el)) continue;
+          const t = el.textContent.trim().replace(/\s+/g,' ');
+          if (t.length >= 2 && t.length <= 12 && BIZ_RE.test(t) && !NUM_RE.test(t)) { areaName = t; break; }
+        }
+        if (areaName) break;
+      }
+      /* 2. 仍没有，取顶部第一个非按钮纯文字短标签 */
+      if (!areaName) {
+        for (const [sx, sy] of scanPts.slice(0, 3)) {
+          for (const el of _scanEl(sx, sy)) {
+            if (_inBtn(el)) continue;
+            const t = el.textContent.trim().replace(/\s+/g,' ');
+            if (t.length >= 2 && t.length <= 10 && !NUM_RE.test(t)) { areaName = t; break; }
+          }
+          if (areaName) break;
+        }
+      }
+      areaName = areaName || '功能区';
+      /* 收集框内可见文本作为字段上下文，供内容生成层感知 */
+      const seenEls = new Set();
+      const fieldTexts = [];
+      for (const [sx, sy] of scanPts) {
+        for (const el of _scanEl(sx, sy)) {
+          if (seenEls.has(el)) continue; seenEls.add(el);
+          const t = el.textContent.trim().replace(/\s+/g,' ');
+          if (t.length >= 1 && t.length <= 30 && el.children.length === 0) fieldTexts.push(t);
+        }
+      }
+      /* ★ 区完整采集（与取名同源·改名不影响这份内容）：框碰到的逻辑区(_zoneSet)的全部叶子文本并入，确保状态/枚举全集不漏 */
+      for (const z of _zoneSet) z.querySelectorAll('*').forEach(n => { if (!n.children.length) { const _zt = n.textContent.trim().replace(/\s*[\(（].*?[\)）]\s*$/,'').replace(/\s+/g,' '); if (_zt && _zt.length <= 20) fieldTexts.push(_zt); } });
+      const zoneTexts = [...new Set(fieldTexts)].filter(t => !SKIP_RE.test(t)).slice(0, 40);
+      /* ── 按"板块/卡片"分组采集：每个卡片标题 + 其内显示字段（供内容生成层按板块出字段规范）──
+           框多张卡片时，字段规范必须分板块列出各块字段、用例须讲清各板块能看到什么，禁扁平揉一起或图表套话 */
+      const zoneGroups = [];
+      const _zoneCards = new Set();
+      const _annoKeys = new Set();   /* 框内元素的精确 fp 绑定（data-annotation），优先于模糊匹配 */
+      /* 卡片标题通配选择器：精确类名 + 规律通配，覆盖任何 SaaS 常见命名，无需随新页面补类名 */
+      const _CARD_TITLE_SEL = '[class*="title"],h1,h2,h3,h4,'
+        + '[class*="-label"]:not(.el-form-item__label):not(.el-checkbox__label):not(.el-radio__label),'
+        + '[class*="stat-"][class*="label"],[class*="metric"][class*="label"],[class*="kpi"][class*="label"],'
+        + '[class*="card"]>[class*="lab"],[class*="card"]>[class*="title"]';  /* 通用兜底：卡片直接子级的标签/标题（兼容 lab/label/stat-label 等任意渲染器命名·class无关·根治框选卡片→功能区）*/
+      Array.from(document.querySelectorAll(_CARD_TITLE_SEL))
+        .filter(tEl => tEl.children.length === 0 && !_inBtn(tEl))
+        .filter(tEl => { const r = tEl.getBoundingClientRect();
+          return r.width && r.left >= rx - 6 && r.top >= ry - 6 && r.right <= rx + w + 6 && r.bottom <= ry + h + 6; })
+        .forEach(tEl => {
+          const card = tEl.closest('[class*="card"],[class*="panel"],.dcard,.dpanel,.acct-card,.stat-card') || tEl.parentElement;
+          if (!card) return;
+          _zoneCards.add(card);
+          const _ak = card.querySelector('[data-annotation]'); if (_ak) { const _v = _ak.getAttribute('data-annotation'); if (_v) _annoKeys.add(_v); }
+          const title = tEl.textContent.trim().replace(/\s*[\(（].*?[\)）]\s*$/,'').replace(/\s+/g,' ');
+          const fields = [];
+          card.querySelectorAll('*').forEach(n => {
+            if (n.children.length || n === tEl || _inBtn(n)) return;
+            const t = n.textContent.trim().replace(/\s+/g,' ');
+            /* 只过滤纯数字/纯货币串与 loading 噪声；保留"最后更新"等真实字段名 */
+            if (t.length >= 2 && t.length <= 16 && !/^\d[\d,.]*$/.test(t) && !/^(?:CNY|USD|EUR|JPY|BRL|GBP|HKD|AUD|CAD|SGD|MXN|INR)\b/.test(t) && t !== title && !/loading/i.test(t)) fields.push(t);
+          });
+          const uniq = [...new Set(fields)].slice(0, 14);
+          if (uniq.length && title) zoneGroups.push({ title, fields: uniq });
+        });
+      /* ── 采集框内真实 HTML（含数值/完整结构，供内容生成层读取）；有卡片取卡片，否则取框中心容器 ── */
+      let zoneHTML = '';
+      const _midEl = document.elementFromPoint(rx + w / 2, ry + h / 2);
+      if (_zoneCards.size) {
+        zoneHTML = [..._zoneCards].map(c => c.outerHTML).join('\n').slice(0, 40000);
+      } else {
+        const _host = _midEl && _midEl.closest('section,[class*="card"],[class*="panel"],.filter-wrap,form,table');
+        if (_host) zoneHTML = _host.outerHTML.slice(0, 40000);
+      }
+
+      /* ── 表格行/单元格上下文兜底：框选命中 td/tr 时用列标题替代数据值作为字段名 ── */
+      let _tableAnchorFp = '';
+      if (_zoneCards.size === 0 && _midEl) {
+        const _tdEl = _midEl.closest('td, th');
+        if (_tdEl) {
+          const _tableEl = _tdEl.closest('table, .el-table, [class*="table"]');
+          const _colHeaders = [];
+          const _thAll = _tableEl ? Array.from(_tableEl.querySelectorAll('thead th, .el-table__header-wrapper th, [role="columnheader"]')) : [];
+          if (_thAll.length) {
+            _thAll.forEach(th => {
+              const txt = th.textContent.trim().replace(/\s+/g,' ');
+              if (txt && txt.length >= 2 && txt.length <= 16) _colHeaders.push(txt);
+            });
+          }
+          const _annoAnc = _midEl.closest('[data-annotation]');
+          if (_annoAnc) _tableAnchorFp = _annoAnc.getAttribute('data-annotation') || '';
+          if (_colHeaders.length && !zoneGroups.length) {
+            const _secTitle = document.querySelector('[class*="page-title"],[class*="module-title"],h2,h3')?.textContent?.trim() || '列表';
+            zoneGroups.push({ title: _secTitle + '列表字段', fields: _colHeaders });
+            const _thRow = _tableEl?.querySelector('thead tr, .el-table__header-wrapper tr');
+            if (_thRow) zoneHTML = _thRow.outerHTML.slice(0, 40000);
+          }
+          /* areaName：优先 fp_key 中的功能名，其次页面标题 + 列表，绝不输出"功能区" */
+          if (!areaName) {
+            if (_tableAnchorFp) {
+              areaName = _tableAnchorFp.split('.')[1] || _tableAnchorFp;
+            } else {
+              const _pgTitle = document.querySelector('[class*="page-title"],[class*="module-title"],h2,h3')?.textContent?.trim();
+              areaName = (_pgTitle || page?.value || '') + '列表';
+            }
+          }
+        }
+      }
+      /* 精确绑定优先：框选恰好命中单张卡片且有唯一 data-annotation → 直接用该 fp，绝不模糊猜（根治同名/跨页错配）。
+         兜底(根治三方同步)：框选跨多卡/普通区域时原本 fpKey='' → pin 只剩 zoneId、复制给 AI 的 id 注入锚不回来；
+         只要框选区域覆盖了任意真实 [data-annotation]，就取第一个(DOM序·最靠上/主导)真实 fpKey，绝不再落到 zoneId。 */
+      const fpKey = (_zoneCards.size === 1 && _annoKeys.size === 1) ? [..._annoKeys][0]
+                  : (_tableAnchorFp || (_annoKeys && _annoKeys.size ? [..._annoKeys][0] : ''));
+      const s = sys.value, p = page.value;
+      const fakeTarget = { getBoundingClientRect: () => ({ left: rx, top: ry, right: rx+w, bottom: ry+h, width: w, height: h }) };
+      _showTrigger(fakeTarget, { id:`zone-${s}-${p}-${areaName.replace(/\s+/g,'_').slice(0,20)}`, label:`功能区：${areaName}`, zoneTexts, zoneGroups, zoneHTML, fpKey });
+    };
+
+    /* 右键单击：① 可识别元素直接弹气泡；② 通用区域进画框模式；③ 画框中再右键取消 */
+    document.addEventListener('contextmenu', (e) => {
+      if (!showPins.value) return;
+      if (e.target.closest(_ANNO_EXCL)) return;
+      e.preventDefault();
+      if (_drawMode) {
+        _exitDrawMode();
+        ElMessage({ message: '已取消画框', type: 'info', duration: 1500 });
+        return;
+      }
+      /* 右键命中"点"（op-icon / 业务按钮 / 状态页签 / 列标题字段）→ 直接弹气泡 */
+      const opIcon = e.target.closest('.op-icon[data-tip]');
+      const bizBtn = e.target.closest('.el-button:not([class*="pagination"]), .search-btn, button:not(.acb-ok):not(.acb-cancel)');
+      const stabEl = e.target.closest('.stab');
+      const thEl   = e.target.closest('table.pt thead th, .el-form-item__label');
+      const directTarget = opIcon || bizBtn || stabEl || thEl;
+      if (directTarget) {
+        const zone = _detectZone(e.target);
+        if (zone) { _showTrigger(directTarget, zone); return; }
+      }
+      /* 右键命中"面"（通用区域/容器空白/列表行）→ 进画框模式 */
+      _drawMode = true;
+      document.body.classList.add('anno-drawing');
+      ElMessage({ message: '✏️ 画框模式 — 左键拖拽框住区域，再次右键取消', type: 'info', duration: 3000 });
+    }, true);
+
+    /* Escape：取消画框模式 */
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && _drawMode) {
+        _exitDrawMode();
+        ElMessage({ message: '已取消画框', type: 'info', duration: 1500 });
+      }
+    }, true);
+
+    /* 左键按下：画框模式里开始绘制（同时拦截业务点击）*/
+    document.addEventListener('mousedown', (e) => {
+      if (!_drawMode) return;
+      if (e.button !== 0) return;
+      if (e.target.closest(_ANNO_EXCL)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      _suppressNextClick = true;
+      _drawStart = { x: e.clientX, y: e.clientY };
+    }, true);
+
+    /* 吞掉画框后遗留的 click，防止误触业务 */
+    document.addEventListener('click', (e) => {
+      if (!_suppressNextClick) return;
+      _suppressNextClick = false;
+      e.stopPropagation();
+      e.preventDefault();
+    }, true);
+
+    /* 鼠标移动：更新虚线框 */
+    document.addEventListener('mousemove', (e) => {
+      if (!_drawMode || !_drawStart) return;
+      const dist = Math.abs(e.clientX - _drawStart.x) + Math.abs(e.clientY - _drawStart.y);
+      if (dist < 4) return;
+      if (!_dragRect) {
+        _dragRect = { x: _drawStart.x, y: _drawStart.y };
+        _dragOverlay = document.createElement('div');
+        _dragOverlay.style.cssText = 'position:fixed;border:2px dashed #3B7DFF;background:rgba(59,125,255,.07);pointer-events:none;z-index:9200;border-radius:4px;transition:none';
+        document.body.appendChild(_dragOverlay);
+      }
+      const x = Math.min(e.clientX, _dragRect.x), y = Math.min(e.clientY, _dragRect.y);
+      const w = Math.abs(e.clientX - _dragRect.x), h = Math.abs(e.clientY - _dragRect.y);
+      Object.assign(_dragOverlay.style, { left: x+'px', top: y+'px', width: w+'px', height: h+'px' });
+    });
+
+    /* 左键松开：完成绘制 */
+    document.addEventListener('mouseup', (e) => {
+      if (!_drawMode || !_drawStart) return;
+      if (e.button !== 0) return;
+      _finishDraw(e.clientX, e.clientY);
+    }, true);
+  });
+}
+
+
+/* ═══════ ③-C  内容生成层（genAnnoDraft / _auditDraft）通用默认实现 ═══════
+   【使用规则】
+   ⓪ prd-data 命中（watch 层已处理）→ 从 PRD.function_points 渲染，本层不介入。
+   ① 精确 data-annotation 绑定（boundFp）→ genAnnoDraft 直接从 PRD 提取，优先级最高。
+   ② 无 boundFp → 从 zoneTexts/zoneGroups/zoneHTML 智能推断，生成有意义的草稿。
+   ③ 兜底 → 7 节占位框架，标注"待AI完善"，绝不输出空壳或"功能区"。
+   ★ 本实现为通用默认，适用 B端/APP/网站/小程序/任意产品形态，无需 prd-data 即可运行。
+   ★ 项目可在 setup() 内用同名函数覆盖（位于本块之后声明则自动覆盖）。       */
+
+    /* ── 动作词词典（通用，覆盖 B端/C端/APP/小程序/网站所有产品形态）── */
+    const _ACT_VERBS = ['查询','搜索','筛选','重置','新增','创建','添加','编辑','修改','删除',
+      '提交','保存','导入','导出','上传','下载','审核','通过','驳回','发布','启用','禁用',
+      '上架','下架','确认','取消','返回','分配','转移','打印','复制','刷新',
+      /* C端 / APP / 电商 / 小程序 */
+      '加入购物车','立即购买','去结算','结算','收藏','关注','点赞','评论','分享',
+      '申请退款','退货','下单','核销','兑换','签到','领取','投诉','举报','加购'];
+
+    /* ── 从 zoneTexts 检测包含哪些动作词 ── */
+    const _detectActions = (texts) => {
+      const all = texts.join(' ');
+      return _ACT_VERBS.filter(v => all.includes(v));
+    };
+
+    /* ── 推断区域类型（通用：B端/C端/APP/小程序/网站/任意产品形态）── */
+    const _detectAreaType = (zoneId, zoneTexts, zoneGroups, zoneHTML) => {
+      const all = zoneTexts.join(' ');
+      const html = (zoneHTML || '').toLowerCase();
+      const id  = (zoneId  || '').toLowerCase();
+
+      /* ── B端：查询/筛选区 ── */
+      if (html.includes('filter-wrap') || html.includes('filter-grid') ||
+          (all.includes('查询') && all.includes('重置'))) return 'filter';
+
+      /* ── 通用：弹窗/抽屉 ── */
+      if (html.includes('el-dialog') || html.includes('modal') ||
+          /drawer|dialog|modal/.test(id)) return 'dialog';
+
+      /* ── 通用：表单 ── */
+      if (html.includes('form-sec') || html.includes('el-form') ||
+          zoneTexts.filter(t => /[：:*]/.test(t)).length >= 3) return 'form';
+
+      /* ── 移动/APP：底部 Tab Bar ── */
+      if (html.includes('tab-bar') || html.includes('tabbar') ||
+          /tab.?bar|bottom.?nav|footer.?nav/.test(html) ||
+          /^tab-?bar|^bottom-?nav/.test(id)) return 'tab-bar';
+
+      /* ── 通用：顶部导航栏 / NavBar ── */
+      if (html.includes('top-nav') || html.includes('navbar') || html.includes('nav-bar') ||
+          /navbar|nav-bar|navigation/.test(id) ||
+          (zoneTexts.length <= 4 && (all.includes('返回') || all.includes('<')) && !all.includes('取消'))) return 'navbar';
+
+      /* ── C端/电商：规格/SKU 选择器 ── */
+      if (/规格|尺码|颜色|版本|型号|sku|套餐|配置|选型/.test(all) ||
+          /spec|sku|attribute|variant|selector/.test(html)) return 'spec-selector';
+
+      /* ── C端/电商：购物车 ── */
+      if (all.includes('购物车') || all.includes('去结算') ||
+          /cart|shopping.?bag|shopping.?cart/.test(html) ||
+          /^cart/.test(id)) return 'cart';
+
+      /* ── C端/电商：商品详情页 ── */
+      if ((all.includes('立即购买') || all.includes('加入购物车')) &&
+          (all.includes('价格') || all.includes('规格') || all.includes('¥') || all.includes('库存'))) return 'product-detail';
+
+      /* ── C端/电商：商品卡片网格/列表 ── */
+      if ((/商品|product|goods|sku/.test(html) && /card|grid|list/.test(html)) ||
+          (zoneGroups.length >= 2 && (all.includes('价格') || all.includes('¥') || all.includes('收藏')))) return 'product-card';
+
+      /* ── 通用：轮播图/Banner ── */
+      if (html.includes('carousel') || html.includes('swiper') || html.includes('slider') ||
+          html.includes('banner') || /carousel|swiper|slider|banner/.test(id)) return 'carousel';
+
+      /* ── C端：个人中心/我的 ── */
+      if (all.includes('个人中心') || all.includes('我的') ||
+          /profile|mine|user.?center|personal/.test(html) ||
+          /^profile|^mine|^user-center/.test(id)) return 'profile';
+
+      /* ── C端/通用：搜索结果页 ── */
+      if ((all.includes('搜索') || all.includes('search')) &&
+          (all.includes('综合') || all.includes('销量') || all.includes('价格') || zoneTexts.some(t => /排序|筛选/.test(t)))) return 'search-result';
+
+      /* ── B端/通用：统计/数据看板 ── */
+      if (html.includes('stat-card') || html.includes('stat-value') ||
+          html.includes('acct-block') || html.includes('kpi') ||
+          /\d+[\.,]\d+/.test(all)) return 'stat';
+
+      /* ── B端：工具栏 ── */
+      if (html.includes('table-toolbar') || html.includes('tbar')) return 'toolbar';
+
+      /* ── 通用：分页 ── */
+      if (html.includes('pg-bar') || html.includes('pagination')) return 'pagination';
+
+      /* ── 通用：页签/状态Tab ── */
+      if (html.includes('stab') || html.includes('page-tab') ||
+          (zoneTexts.length <= 6 && zoneTexts.every(t => t.length <= 12))) return 'tabs';
+      if (html.includes('status-card') || html.includes('sc-steps') ||
+          html.includes('el-steps')) return 'detail-header';
+      if (html.includes('el-dialog') || html.includes('modal')) return 'dialog';
+      return 'generic';
+    };
+
+    /* ── 字段类型推断（按字段名通用规律）── */
+    const _inferFieldType = (name) => {
+      if (/金额|价格|费用|收入|成本|余额|总额|单价|小计/.test(name)) return '金额（数字，保留2位小数）';
+      if (/时间|日期|创建|更新|审核|发布|有效期/.test(name)) return '日期时间';
+      if (/状态|类型|来源|方式|级别|类别|属性/.test(name)) return '枚举（下拉选择）';
+      if (/编号|单号|编码|ID|id|No/.test(name)) return '文本（系统生成，只读）';
+      if (/手机|电话|联系/.test(name)) return '手机号（11位数字）';
+      if (/邮箱|email/.test(name)) return '邮箱格式';
+      if (/数量|件数|库存|重量|体积/.test(name)) return '数字（正整数）';
+      if (/备注|说明|描述|原因|内容/.test(name)) return '文本（最多200字）';
+      if (/图片|文件|附件|水单/.test(name)) return '文件上传';
+      if (/是否|开关|启用|禁用/.test(name)) return '布尔（开关）';
+      return '文本';
+    };
+
+    /* ════════ genAnnoDraft：通用默认实现 ════════ */
+    const genAnnoDraft = (zoneId, zoneLabel, zoneTexts, zoneGroups, boundFp, zoneHTML) => {
+      zoneTexts  = zoneTexts  || [];
+      zoneGroups = zoneGroups || [];
+      /* ★ B架构（2026-06-23 锁定）：圈选/框选只圈范围，绝不在原型客户端生成 PRD 内容。
+         下方 genAnnoDraft 死模板（启发式猜内容）已停用——PRD 内容只由 AI 真推理 → /anno-inject → prd-data 提供。
+         此处直接返回空内容 + 标题（圈选即"待生成"）。下方旧实现保留但不可达。 */
+      {
+        /* 待生成功能名 = fpKey 的功能段（点选按钮叫什么就显示什么；系统+菜单已区分，不怕重名），不读 prd-data 旧占位名以免误导 */
+        const _fnFromKey = (boundFp && boundFp.includes('.')) ? boundFp.split('.').pop() : '';
+        const _t = _fnFromKey
+          || (zoneLabel || '').replace(/^(功能[点区]|操作|按钮|区域|页签|字段)[：:]/, '').trim() || '功能';
+        return { title: '功能点：' + _t, type: '业务规则', fieldSpecs: '', useCaseRules: '' };
+      }
+      const all = zoneTexts.join(' ');
+      /* 安全访问 prd-data（宿主可能未定义 PRD 变量）*/
+      const _PRD = (typeof PRD !== 'undefined' ? PRD : null) || window.__PRD_DATA__ || { function_points: {}, menus: {} };
+
+      /* ── ① 精确绑定命中 prd-data：输出完整 7 节标准用例规则（schema use_cases）──
+         铁律：前置三要素 / 操作流程双路径 / 提示消息 3 列 / 消息通知 4 列 / 操作日志固定说明语+6行表。
+         格式严格匹配 _parseUcText：提示消息=纯数据行(无表头)，消息通知/操作日志=表头(被解析跳过)+数据行。 */
+      if (boundFp && _PRD.function_points && _PRD.function_points[boundFp]) {
+        const fp = _PRD.function_points[boundFp];
+        const _fs = fp.field_specs?.groups?.map(g => {
+          const lines = (g.fields || []).map(f => {
+            const req = f.required === '是' ? '必填' : (!f.required || f.required === '-') ? '只读' : (f.required || '选填');
+            return `• ${f.name}（${req}，${f.type || ''}）：${f.constraint || ''}`;
+          });
+          return (g.group_name ? g.group_name + '：\n' : '') + lines.join('\n');
+        }).join('\n\n') || '';
+        const uc = fp.use_cases || {};
+        const _n = (arr) => (arr || []).map((s, i) => `${i + 1}. ${s}`).join('\n');
+        const _parts = [];
+        if (uc.preconditions?.length)  _parts.push(`【前置条件】\n${_n(uc.preconditions)}`);
+        if (uc.operation_flow?.length) _parts.push(`【操作流程】\n${uc.operation_flow.join('\n')}`);
+        if (uc.postconditions?.length) _parts.push(`【后置条件】\n${_n(uc.postconditions)}`);
+        if (uc.validations?.length)    _parts.push(`【校验规则】\n${_n(uc.validations)}`);
+        /* 提示消息：3 列数据行（弹窗模板自带表头，故此处不写表头/分隔行）*/
+        if (Array.isArray(uc.prompt_messages) && uc.prompt_messages.length) {
+          _parts.push('【提示消息】\n' + uc.prompt_messages
+            .map(p => `${p.field} | ${p.empty_prompt || '—'} | ${p.error_prompt || '—'}`).join('\n'));
+        }
+        /* 消息通知：4 列表格（表头被解析跳过），无则写 无。*/
+        if (Array.isArray(uc.message_notifications) && uc.message_notifications.length) {
+          _parts.push('【消息通知】\n通知场景 | 通知标题 | 通知内容 | 接收方\n---|---|---|---\n' +
+            uc.message_notifications.map(m => `${m.scene} | ${m.title} | ${m.content} | ${m.receiver}`).join('\n'));
+        } else {
+          _parts.push('【消息通知】\n' + (typeof uc.message_notifications === 'string' ? uc.message_notifications : '无。'));
+        }
+        /* 操作日志：固定说明语 + 6 行字段表（§4.7.1，行序锁定），展示类写不输出 */
+        if (uc.operation_log && typeof uc.operation_log === 'object') {
+          const _ol = uc.operation_log;
+          const _intro = _ol.fixed_intro || '用户操作成功后，系统在操作日志模块记录：操作时间、操作账号、操作模块、操作功能、操作明细、IP地址。';
+          _parts.push('【操作日志】\n' + _intro + '\n' +
+            '字段 | 字段说明 | 规则/示例\n---|---|---\n' +
+            '操作时间 | 系统自动记录操作发生时间 | 格式：YYYY-MM-DD HH:mm:ss\n' +
+            '操作账号 | 执行操作的登录账号 | 示例：admin\n' +
+            '操作模块 | 操作所在模块 | 示例：' + (fp.menu_name || '') + '\n' +
+            '操作功能 | 本次操作名称 | 示例：' + (fp.fp_name || '') + '\n' +
+            '操作明细 | 操作对象唯一标识及变更内容 | 示例：' + (_ol.detail_example || '') + '\n' +
+            'IP地址 | 操作终端 IP 地址 | 示例：192.168.1.100');
+        } else {
+          _parts.push('【操作日志】\n' + (uc.operation_log || '查询/查看不输出操作日志。'));
+        }
+        return { title: `功能点：${fp.fp_name || zoneLabel}`, type: '业务规则', fieldSpecs: _fs, useCaseRules: _parts.join('\n\n') };
+      }
+
+      /* ── 优先路径②：zoneGroups 有卡组 → 数据驱动分组输出（优先于所有关键词匹配）──
+         zoneGroups 在框选时由 CSS 选择器精确采集（.dcard-title/.dpanel-title 等），
+         只有真实的卡片式板块才会触发；table列表列头被独立路径处理（!zoneGroups.length时才填入），
+         因此 zoneGroups.length>=1 可安全判定为"多板块数据看板"，无需关键词辅助。 */
+      if (zoneGroups && zoneGroups.length >= 1) {
+        const _danger2 = /异常|超时|逾期|预警|告警|拦截|失败|驳回|缺货|风险/;
+        const _click2  = /^待|未发|未处理|未审|待发货|待收货|待入库|待出库/;
+        const _msg2    = /消息通知|消息公告|通知|公告/;
+        const _fmtF2 = (f) => _danger2.test(f)
+          ? `• ${f}（只读，数值，红色高亮）：存在异常/需关注的数量，>0 时红色提示，需及时处理`
+          : _click2.test(f)
+          ? `• ${f}（只读，数值，可点击）：处于"${f}"状态的数量，点击数字下钻对应明细列表`
+          : _msg2.test(f)
+          ? `• ${f}（只读，列表）：默认展示最新 5 条记录（标题 + 时间），点击【更多】跳转消息中心查看全部`
+          : `• ${f}（只读，数值）：当前"${f}"的实时统计数量`;
+        const _msgGroups2  = zoneGroups.filter(g => _msg2.test(g.title));
+        const _statGroups2 = zoneGroups.filter(g => !_msg2.test(g.title));
+        const _fieldBlocks2 = zoneGroups.map(g => `${g.title}：\n${g.fields.map(_fmtF2).join('\n')}`).join('\n\n');
+        const _groupNames2  = zoneGroups.map(g => g.title).join('、');
+        const _groupSum2    = _statGroups2.map(g => `${g.title}（${g.fields.slice(0,6).join('、')}）`).join('；');
+        const _cardName2    = (zoneLabel || '首页') + '数据看板';
+        const _hasRecharge2 = zoneTexts.some(t => /^充值$/.test(t.trim())) || /充值/.test(zoneHTML || '');
+        const _hasMsgArea2  = _msgGroups2.length > 0 || /msg-card|消息通知|消息公告/.test(zoneHTML || '');
+        let _flowSteps2 = `1. 页面加载后，各板块实时统计自动展示（只读，按系统刷新周期自动更新）：${_groupNames2}。\n2. 用户在各数据板块可看到：${_groupSum2 || _groupNames2}。\n3. 红色数字表示异常或需关注的待处理项；带链接的数字（如待发货）可点击数字下钻对应明细列表。`;
+        if (_hasRecharge2) _flowSteps2 += `\n4. 账户余额区域：用户点击【充值】按钮 → 跳转至充值管理页面，发起充值申请。`;
+        if (_hasMsgArea2) _flowSteps2 += `\n${_hasRecharge2 ? 5 : 4}. 消息通知/消息公告区域：默认展示最新 5 条消息；用户点击【更多】→ 跳转消息中心查看全部消息；用户点击具体消息条目 → 跳转对应详情页。`;
+        const _msgFieldSpec2 = _hasMsgArea2 && !_msgGroups2.length
+          ? `\n\n消息通知 / 消息公告（Tab 切换）：\n• 消息通知（只读，列表）：默认展示最新 5 条系统通知（标题 + 时间），点击【更多】跳转消息中心\n• 消息公告（只读，列表）：默认展示最新 5 条平台公告（标题 + 时间），点击【更多】跳转消息中心`
+          : '';
+        return {
+          title: _cardName2, type: '展示规则',
+          content: '', fieldSpecs: _fieldBlocks2 + _msgFieldSpec2,
+          useCaseRules: `【前置条件】\n1. 用户已登录，进入首页，具备查看「${_cardName2}」的权限。\n\n【操作流程】\n${_flowSteps2}\n\n【后置条件】\n1. 数据板块：仅查看统计，不产生任何数据变更。\n2. 点击【充值】：跳转充值管理页，当前余额数据不变。\n3. 点击消息【更多】：跳转消息中心，当前首页状态不变。\n\n【校验规则】\n1. 无数据时显示 0；异常/超时类指标 >0 时红色高亮。\n2. 用户无权限的板块/指标不展示或显示 "--"。\n3. 消息列表为空时显示"暂无消息"。\n\n【提示消息】\n（无）\n\n【消息通知】\n（无，本区域本身是消息展示区）\n\n【操作日志】\n查询/查看不输出操作日志。`,
+        };
+      }
+
+
+      /* ── ③-B 操作类按钮专用路径（PRD skill 规范 §4.7.1 合规版）──
+         触发：zoneLabel（去前缀后）精确匹配操作动词，且无 zoneGroups（与看板路径互斥）。
+         铁律：前置三要素 + 双路径操作流程 + 固定说明语 + 6行操作日志字段表（行序锁定）。 */
+      const _opBtnLbl = (zoneLabel || '').replace(/^(操作[：:]|功能[点区][：:]|按钮[：:])/, '').trim();
+      const _opVerbToType = {
+        '删除': 'delete', '移除': 'delete',
+        '新增': 'create', '创建': 'create', '添加': 'create',
+        '编辑': 'edit',   '修改': 'edit',
+        '导入': 'import', '批量导入': 'import',
+        '导出': 'export', '批量导出': 'export', '下载': 'export',
+        '审核': 'audit',  '通过': 'approve', '驳回': 'reject',
+        '启用': 'enable', '停用': 'disable', '禁用': 'disable',
+        '上架': 'publish','下架': 'unpublish',
+        '充值': 'recharge','提现': 'withdraw',
+        '发布': 'publish2','作废': 'void',
+        '冻结': 'freeze', '解冻': 'unfreeze',
+        '打印': 'print',  '复制': 'copy',
+        '提交': 'submit', '确认': 'confirm',
+      };
+      const _matchedOpVerb = Object.keys(_opVerbToType).find(v =>
+        _opBtnLbl === v || _opBtnLbl === ('批量' + v) ||
+        _opBtnLbl.startsWith(v + '（') || _opBtnLbl.startsWith(v + '(') ||
+        (zoneTexts.length <= 2 && zoneTexts.some(t => t.trim() === v || t.trim() === '批量' + v))
+      );
+      if (_matchedOpVerb) {
+        const _opType = _opVerbToType[_matchedOpVerb];
+        const _opVerb = _matchedOpVerb;
+        const _opObj  = _opBtnLbl.replace(new RegExp('^(批量)?' + _opVerb), '').trim() || '<业务对象>';
+        const _prdD   = (typeof PRD !== 'undefined' && PRD) || window.__PRD_DATA__ || {};
+        const _modFromPrd = _prdD.menus ? (Object.values(_prdD.menus)[0] || {}).title || '' : '';
+        const _modFromDom = (document.querySelector('.page-title,.page-hd,.breadcrumb-last,.el-breadcrumb__item:last-child') || {}).textContent || '';
+        const _opMod  = (_modFromPrd || _modFromDom || '<模块>').trim();
+
+        /* 操作日志固定说明语 + 6行字段表（规范 §4.7.1，行序锁定）*/
+        const _OL_INTRO = '用户操作成功后，系统在操作日志模块记录：操作时间、操作账号、操作模块、操作功能、操作明细、IP地址。';
+        const _detailEgMap = {
+          'delete':    '删除' + _opObj + '：编号=<示例编号>，名称=<示例名称>',
+          'create':    '新增' + _opObj + '：编号=<示例编号>，名称=<示例名称>',
+          'edit':      '编辑' + _opObj + '：编号=<示例编号>，<字段>：<旧值>→<新值>',
+          'import':    '导入' + _opObj + '：共 N 件，成功 X 条，失败 Y 条',
+          'export':    '导出' + _opObj + '：共 N 条',
+          'audit':     '审核' + _opObj + '：编号=<示例编号>，结论=通过/驳回',
+          'approve':   '审核通过' + _opObj + '：编号=<示例编号>',
+          'reject':    '驳回' + _opObj + '：编号=<示例编号>，驳回原因=<原因>',
+          'enable':    '启用' + _opObj + '：编号=<示例编号>',
+          'disable':   '停用' + _opObj + '：编号=<示例编号>',
+          'publish':   '上架' + _opObj + '：编号=<示例编号>，生效门店=<门店名>',
+          'unpublish': '下架' + _opObj + '：编号=<示例编号>',
+          'recharge':  '充值：账户=<账户编号>，金额=¥<金额>，单号=<充值单号>',
+          'withdraw':  '提现申请：账户=<账户编号>，金额=¥<金额>，单号=<申请单号>',
+          'publish2':  '发布' + _opObj + '：编号=<示例编号>，发布范围=<范围>',
+          'void':      '作废' + _opObj + '：编号=<示例编号>',
+          'freeze':    '冻结' + _opObj + '：编号=<示例编号>，冻结金额=¥<金额>',
+          'unfreeze':  '解冻' + _opObj + '：编号=<示例编号>',
+          'print':     '打印' + _opObj + '：编号=<示例编号>',
+          'copy':      '复制' + _opObj + '：源编号=<源编号>，新编号=<新编号>（系统自动生成）',
+          'submit':    '提交' + _opObj + '：编号=<示例编号>',
+          'confirm':   '确认' + _opObj + '：编号=<示例编号>',
+        };
+        const _detailEg = _detailEgMap[_opType] || (_opVerb + _opObj + '：编号=<示例编号>');
+        const _opLogText = _OL_INTRO + '\n' +
+          '| 字段 | 字段说明 | 规则/示例 |\n' +
+          '|---|---|---|\n' +
+          '| 操作时间 | 系统自动记录操作发生时间 | 格式：YYYY-MM-DD HH:mm:ss |\n' +
+          '| 操作账号 | 执行操作的登录账号 | 示例：admin |\n' +
+          '| 操作模块 | 操作所在模块 | 示例：' + _opMod + ' |\n' +
+          '| 操作功能 | 本次操作名称 | 示例：' + _opVerb + ' |\n' +
+          '| 操作明细 | 操作对象唯一标识及变更内容 | 示例：' + _detailEg + ' |\n' +
+          '| IP地址 | 操作终端 IP 地址 | 示例：192.168.1.100 |';
+
+        /* 消息通知：业务下发 8 类必双消息，普通操作写"无。" */
+        const _isBizDown = /上架|下架|发布|改价|发货|签收|退货/.test(_opVerb);
+        const _notifText = _isBizDown
+          ? '| 消息类型 | 触发场景 | 标题 | 内容 | 接收方 |\n|---|---|---|---|---|\n' +
+            '| 系统消息 | ' + _opVerb + '成功 | 「' + _opObj + '」' + _opVerb + '通知 | 您有 1 个' + _opObj + '已' + _opVerb + '，请及时查看 | 相关责任人 |\n' +
+            '| 消息公告 | ' + _opVerb + '成功 | 平台' + _opVerb + '公告 | 以下' + _opObj + '已' + _opVerb + '，请知悉 | 所有相关方 |'
+          : '无。';
+
+        /* 前置条件三要素（铁律 §4.2.1）*/
+        const _preMap = {
+          'delete':    ['用户已登录系统', '具备「' + _opMod + '-删除」权限', _opMod + '列表中存在可删除状态的' + _opObj],
+          'create':    ['用户已登录系统', '具备「' + _opMod + '-新增」权限', _opMod + '功能页面可正常访问'],
+          'edit':      ['用户已登录系统', '具备「' + _opMod + '-编辑」权限', _opMod + '列表中存在可编辑状态的' + _opObj],
+          'import':    ['用户已登录系统', '具备「' + _opMod + '-导入」权限', '已准备符合模板格式的 .xlsx 文件'],
+          'export':    ['用户已登录系统', '具备「' + _opMod + '-导出」权限', _opMod + '列表中存在可导出的数据'],
+          'audit':     ['用户已登录系统', '具备「' + _opMod + '-审核」权限', _opObj + '处于「待审核」状态'],
+          'approve':   ['用户已登录系统', '具备「' + _opMod + '-通过」权限', _opObj + '处于「待审核」状态'],
+          'reject':    ['用户已登录系统', '具备「' + _opMod + '-驳回」权限', _opObj + '处于「待审核」状态'],
+          'enable':    ['用户已登录系统', '具备「' + _opMod + '-启用」权限', _opMod + '列表中存在状态为「停用」的' + _opObj],
+          'disable':   ['用户已登录系统', '具备「' + _opMod + '-停用」权限', _opMod + '列表中存在状态为「启用」的' + _opObj],
+          'publish':   ['用户已登录系统', '具备「' + _opMod + '-上架」权限', _opObj + '处于「已下架/已停用」状态'],
+          'unpublish': ['用户已登录系统', '具备「' + _opMod + '-下架」权限', _opObj + '处于「已上架」状态'],
+          'recharge':  ['用户已登录系统', '具备充值操作权限', '账户余额可正常查看，充值通道正常'],
+          'withdraw':  ['用户已登录系统', '具备提现操作权限', '账户可用余额 ≥ 最低提现金额'],
+          'void':      ['用户已登录系统', '具备「' + _opMod + '-作废」权限', _opObj + '处于可作废状态（非已作废）'],
+          'freeze':    ['用户已登录系统', '具备「' + _opMod + '-冻结」权限', _opObj + '处于正常状态（非已冻结）'],
+        };
+        const _pre = _preMap[_opType] || ['用户已登录系统', '具备「' + _opMod + '-' + _opVerb + '」权限', _opMod + '中存在可' + _opVerb + '的' + _opObj];
+
+        /* 操作流程双路径（铁律 §4.3.2）*/
+        const _flowMap = {
+          'delete': [
+            '用户在' + _opMod + '列表，点击操作列「删除」按钮（单条）或顶部「批量删除」（多条）。',
+            '系统弹出二次确认提示框：单条「确认删除该' + _opObj + '？」/ 多条「确认删除所选' + _opObj + '？」',
+            '用户点击「确认」，系统执行软删除，列表自动刷新，顶部提示"' + _opObj + '删除成功"。',
+            '用户点击「取消」，系统关闭弹窗，不执行任何操作，列表数据不变。',
+          ],
+          'create': [
+            '用户点击「新增」按钮，系统弹出新增' + _opObj + '表单弹窗。',
+            '用户填写各字段（标 * 为必填，其余选填），详见字段规范。',
+            '用户点击「确认」，系统校验字段格式和业务规则；校验通过后保存，关闭弹窗，列表刷新，提示"' + _opObj + '新增成功"。',
+            '用户点击「取消」或关闭按钮（×），系统关闭弹窗，已填内容不保存，列表不变。',
+          ],
+          'edit': [
+            '用户在' + _opMod + '列表，点击操作列「编辑」按钮，系统弹出编辑' + _opObj + '表单弹窗并回显当前数据。',
+            '用户修改目标字段（编号/ID 类字段置灰不可改）。',
+            '用户点击「确认」，系统校验并保存变更，关闭弹窗，列表刷新，提示"' + _opObj + '编辑成功"。',
+            '用户点击「取消」或关闭按钮（×），系统关闭弹窗，修改不保存，数据回滚到编辑前状态。',
+          ],
+          'import': [
+            '用户点击「导入」按钮，系统弹出导入弹窗，展示模板下载入口。',
+            '用户下载模板，按格式填写数据后，点击「选择文件」上传 .xlsx 文件（≤10MB）。',
+            '用户点击「开始导入」，系统异步解析文件；导入完成后列表刷新，提示"共 N 条，成功 X 条，失败 Y 条"；失败条目可下载错误报告。',
+            '用户点击「取消」，系统关闭弹窗，不执行导入。',
+          ],
+          'export': [
+            '用户根据需要选择筛选条件（可选，不选则导出全部符合条件的数据）。',
+            '用户点击「导出」，系统按当前筛选条件异步生成 .xlsx 文件。',
+            '文件生成后自动下载至浏览器下载目录，提示"导出成功，共 N 条"。',
+            '（导出任务一经触发即后台处理，无取消操作）',
+          ],
+          'audit': [
+            '用户在' + _opMod + '列表，点击操作列「审核」按钮，系统弹出审核弹窗，展示' + _opObj + '详情。',
+            '用户选择审核结论（通过/驳回），驳回时必须填写驳回原因。',
+            '用户点击「确认」，系统更新' + _opObj + '状态，关闭弹窗，列表刷新，提示"审核操作成功"。',
+            '用户点击「取消」，系统关闭弹窗，' + _opObj + '状态不变。',
+          ],
+          'enable': [
+            '用户在' + _opMod + '列表，点击操作列「启用」按钮。',
+            '系统弹出二次确认提示框：「确认启用该' + _opObj + '？」',
+            '用户点击「确认」，系统切换状态为「已启用」，列表刷新，提示"' + _opObj + '启用成功"。',
+            '用户点击「取消」，系统关闭弹窗，不执行任何操作。',
+          ],
+          'disable': [
+            '用户在' + _opMod + '列表，点击操作列「停用」按钮。',
+            '系统弹出二次确认提示框：「确认停用该' + _opObj + '？」',
+            '用户点击「确认」，系统切换状态为「已停用」，列表刷新，提示"' + _opObj + '停用成功"。',
+            '用户点击「取消」，系统关闭弹窗，不执行任何操作。',
+          ],
+          'recharge': [
+            '用户点击「充值」按钮，系统弹出充值表单弹窗，展示当前账户余额及充值规则。',
+            '用户填写充值金额（必填），选择支付方式，上传付款凭证（如有）。',
+            '用户点击「确认充值」，系统校验金额范围和凭证格式；校验通过后提交充值申请，关闭弹窗，提示"充值申请提交成功，审核通过后余额更新"。',
+            '用户点击「取消」，系统关闭弹窗，不提交任何充值申请，账户余额不变。',
+          ],
+          'withdraw': [
+            '用户点击「提现」按钮，系统弹出提现表单弹窗，展示可用余额和最低/单次最高提现金额。',
+            '用户填写提现金额（必填，≥最低提现金额，≤可用余额），填写或确认收款账户信息。',
+            '用户点击「确认提现」，系统校验金额范围和余额；校验通过后提交提现申请，关闭弹窗，提示"提现申请提交成功，预计 1-3 个工作日到账"。',
+            '用户点击「取消」，系统关闭弹窗，不提交提现申请，账户余额不变。',
+          ],
+          'publish': [
+            '用户在' + _opMod + '列表，点击操作列「上架」按钮。',
+            '系统弹出二次确认提示框：「确认上架该' + _opObj + '？上架后将对相关方可见。」',
+            '用户点击「确认」，系统切换状态为「已上架」，列表刷新，提示"' + _opObj + '上架成功"；下游系统（门店/客户端）同步推送。',
+            '用户点击「取消」，系统关闭弹窗，不执行上架，状态不变。',
+          ],
+          'unpublish': [
+            '用户在' + _opMod + '列表，点击操作列「下架」按钮。',
+            '系统弹出二次确认提示框：「确认下架该' + _opObj + '？下架后相关方将不可见。」',
+            '用户点击「确认」，系统切换状态为「已下架」，列表刷新，提示"' + _opObj + '下架成功"；下游系统同步更新。',
+            '用户点击「取消」，系统关闭弹窗，不执行下架，状态不变。',
+          ],
+          'void': [
+            '用户在' + _opMod + '列表，点击操作列「作废」按钮。',
+            '系统弹出二次确认提示框：「确认作废该' + _opObj + '？作废后不可恢复。」',
+            '用户点击「确认」，系统将' + _opObj + '状态更新为「已作废」，列表刷新，提示"' + _opObj + '作废成功"。',
+            '用户点击「取消」，系统关闭弹窗，不执行作废，状态不变。',
+          ],
+        };
+        const _flowDefault = [
+          '用户在' + _opMod + '列表，点击操作列「' + _opVerb + '」按钮。',
+          '系统弹出二次确认提示框：「确认' + _opVerb + '该' + _opObj + '？」',
+          '用户点击「确认」，系统执行' + _opVerb + '操作，列表自动刷新，提示"' + _opObj + _opVerb + '成功"。',
+          '用户点击「取消」，系统关闭弹窗，不执行任何操作。',
+        ];
+        const _flow = _flowMap[_opType] || _flowDefault;
+
+        /* 后置条件 */
+        const _postTxtMap = {
+          'delete':    _opObj + '从' + _opMod + '列表移除（详见术语：软删除）。',
+          'create':    '生成一条' + _opObj + '数据；可在' + _opMod + '列表查询到。',
+          'edit':      _opObj + '数据更新；' + _opMod + '列表对应行数据同步刷新。',
+          'import':    '批量' + _opObj + '数据写入系统；导入结果（成功/失败明细）可下载查看。',
+          'export':    _opObj + '数据以 .xlsx 格式下载至本地；原始数据不变。',
+          'audit':     _opObj + '状态更新为「已审核」；相关人员可在列表看到最新状态。',
+          'approve':   _opObj + '状态更新为「审核通过」；触发后续业务流程。',
+          'reject':    _opObj + '状态更新为「已驳回」；驳回原因记录在操作明细。',
+          'enable':    _opObj + '状态变为「已启用」；' + _opMod + '列表对应行状态字段同步刷新。',
+          'disable':   _opObj + '状态变为「已停用」；' + _opMod + '列表对应行状态字段同步刷新。',
+          'publish':   _opObj + '状态变为「已上架」；下游系统实时同步，相关方可见。',
+          'unpublish': _opObj + '状态变为「已下架」；下游系统实时同步，相关方不可见。',
+          'recharge':  '充值申请提交成功，待审核后余额更新；充值记录可在充值列表查询到。',
+          'withdraw':  '提现申请提交成功，待处理后账户余额扣减；提现记录可在提现列表查询到。',
+          'void':      _opObj + '状态变为「已作废」，不可恢复，相关业务流程终止。',
+          'freeze':    _opObj + '状态变为「已冻结」，冻结期间不可进行相关操作。',
+        };
+        const _post = [_postTxtMap[_opType] || (_opObj + _opVerb + '操作完成；' + _opMod + '列表状态同步刷新。')];
+
+        /* 校验规则 */
+        const _valMap = {
+          'delete':    ['当用户点击「确认删除」时，若' + _opObj + '处于「<不可删除状态>」，则拦截并提示"该' + _opObj + '处于<状态>，不可删除"，系统不落库。'],
+          'create':    ['字段级校验见提示消息表；本功能点无跨字段、状态、权限、业务逻辑或异常类校验。'],
+          'edit':      ['字段级校验见提示消息表；编号/ID 类字段置灰不可改，不参与校验。', '若' + _opObj + '处于不可编辑状态，操作列「编辑」按钮不展示。'],
+          'import':    ['文件格式：仅支持 .xlsx，超限拦截提示"请上传 .xlsx 文件，大小不超过 10MB"。', '模板版本不匹配时，拦截并提示"模板版本不匹配，请下载最新模板重新填写"。', '导入行内容校验失败时，对应行在错误报告中标注原因，不影响其他行导入。'],
+          'export':    ['筛选结果为空时，导出提示"当前无可导出数据"，不生成文件。', '单次导出数据量超出系统上限时，拦截提示并建议缩小筛选范围。'],
+          'audit':     ['驳回时驳回原因为必填，为空时不允许提交，提示"请填写驳回原因"。', _opObj + '不处于「待审核」状态时，不展示「审核」按钮，无需校验。'],
+          'approve':   [_opObj + '不处于「待审核」状态时，不展示「通过」按钮，无需校验。'],
+          'reject':    ['驳回原因为必填，为空时不允许提交，提示"请填写驳回原因"。', _opObj + '不处于「待审核」状态时，不展示「驳回」按钮，无需校验。'],
+          'enable':    ['若' + _opObj + '当前已为「已启用」状态，则拦截并提示"该' + _opObj + '已启用，无需重复操作"，系统不落库。'],
+          'disable':   ['若' + _opObj + '当前已为「已停用」状态，则拦截并提示"该' + _opObj + '已停用，无需重复操作"，系统不落库。'],
+          'publish':   [_opObj + '不处于「已下架/已停用」状态时，不展示「上架」按钮。'],
+          'unpublish': [_opObj + '不处于「已上架」状态时，不展示「下架」按钮。'],
+          'recharge':  ['充值金额必须为正数，最小充值金额 ≥ <最小限额>；超出单次上限时拦截提示。', '付款凭证（如有）：仅支持图片格式（JPG/PNG），单文件 ≤ 5MB。'],
+          'withdraw':  ['提现金额不得超过可用余额，超出时拦截提示"提现金额不得超过可用余额 ¥<余额>"。', '提现金额不得低于最低提现金额 ¥<最低限额>，低于时拦截提示。', '账户存在未完结提现申请时不可重复提交，提示"您有 1 笔提现申请处理中，请等待完成后再申请"。'],
+          'void':      [_opObj + '处于不可作废状态（如已完成/已发货等）时，拦截并提示"该' + _opObj + '处于<状态>，不可作废"。'],
+          'freeze':    [_opObj + '已处于「已冻结」状态时，拦截并提示"该' + _opObj + '已处于冻结状态，无需重复操作"。'],
+        };
+        const _val = _valMap[_opType] || ['业务状态校验：若' + _opObj + '不满足' + _opVerb + '条件，则拦截并提示具体原因，系统不落库。'];
+
+        /* 提示消息：仅 新增/编辑/导入/审核/通过/驳回 4类写字段表，其余固定"无。" */
+        const _hasPm = ['create', 'edit', 'import', 'audit', 'approve', 'reject'].includes(_opType);
+        const _pmText = _hasPm
+          ? ('| 字段 | 未填写提示 | 格式错误提示 |\n' +
+             '|---|---|---|\n' +
+             '| <必填字段1> | 请输入<字段名> | <纯错误提示语> |')
+          : '无。';
+
+        const _ucRules = [
+          '【前置条件】\n' + _pre.map(function(p, i) { return (i + 1) + '、' + p; }).join('\n'),
+          '【操作流程】\n' + _flow.map(function(f, i) { return (i + 1) + '、' + f; }).join('\n'),
+          '【后置条件】\n' + _post.map(function(p, i) { return (i + 1) + '、' + p; }).join('\n'),
+          '【校验规则】\n' + _val.map(function(v, i) { return (i + 1) + '、' + v; }).join('\n'),
+          '【提示消息】\n' + _pmText,
+          '【消息通知】\n' + _notifText,
+          '【操作日志】\n' + _opLogText,
+        ].join('\n\n');
+
+        return {
+          title: '操作：' + _opVerb,
+          type: '业务规则',
+          fieldSpecs: (['create', 'edit', 'import'].includes(_opType))
+            ? '（' + _opVerb + '操作的字段规范见弹窗字段，详见弹窗标注）'
+            : '无（' + _opVerb + '操作无独立字段表）',
+          useCaseRules: _ucRules,
+        };
+      }
+
+      /* ── ② zoneContext 智能推断（无需 prd-data，纯从框选/点选内容生成）── */
+      const areaType = _detectAreaType(zoneId, zoneTexts, zoneGroups, zoneHTML);
+      const actions  = _detectActions(zoneTexts);
+      const label    = (zoneLabel || '').replace(/^功能[点区]：/, '') || '此区域';
+
+      /* 表格列表 */
+      if (areaType === 'table') {
+        const cols = zoneGroups.filter(c => c && !['操作','选择','序号','#','全选'].includes(c.trim()));
+        const fs = cols.map(c => `• ${c}（只读，${_inferFieldType(c)}）：展示规则待补充`).join('\n');
+        const ops = actions.filter(a => !['查询','搜索','筛选','重置'].includes(a));
+        return {
+          title: `列表：${label}`, type: '业务规则',
+          fieldSpecs: fs || '（列头字段未采集到，请手动补充）',
+          useCaseRules: `【操作说明】\n列表展示${label}数据，支持操作：${ops.length ? ops.join('、') : '查看'}。\n\n【操作流程】\n1. 进入页面，列表默认按创建时间倒序展示。\n2. 操作列按数据状态和用户权限动态显示可用按钮。\n\n【校验规则】\n1. 列表分页展示，默认每页10/25/50/100条可切换。\n\n【操作日志】\n查询/查看不输出操作日志。`,
+        };
+      }
+
+      /* 筛选区 */
+      if (areaType === 'filter') {
+        const filterFields = zoneTexts.filter(t => t.length >= 2 && t.length <= 12 &&
+          !_ACT_VERBS.includes(t) && !/^\d/.test(t) && !/[（）【】]/.test(t));
+        const fs = filterFields.slice(0, 8).map(f => `• ${f}（选填，${_inferFieldType(f)}）：支持模糊搜索`).join('\n');
+        return {
+          title: `筛选区：${label}`, type: '交互说明',
+          fieldSpecs: fs || '（筛选字段待补充）',
+          useCaseRules: `【操作流程】\n1. 用户输入或选择筛选条件（均为选填）。\n2. 点击「查询」刷新列表，分页重置至第1页。\n3. 点击「重置」清空所有条件，恢复全量展示。\n\n【校验规则】\n1. 日期范围：结束日期不得早于开始日期。\n2. 所有条件为空时等同于查询全部。\n\n【操作日志】\n查询/查看不输出操作日志。`,
+        };
+      }
+
+      /* 表单（新增/编辑） */
+      if (areaType === 'form') {
+        const labelFields = zoneTexts.filter(t => /[：:*]$/.test(t) || (t.length >= 2 && t.length <= 10 && !/^\d/.test(t)));
+        const cleanFields = [...new Set(labelFields.map(t => t.replace(/[：:*\s]/g, '')).filter(f => f.length >= 2 && f.length <= 10))];
+        const isEdit = all.includes('编辑') || all.includes('修改');
+        const submitBtn = actions.includes('保存') ? '保存' : actions.includes('提交') ? '提交' : '确认';
+        const _opVerb = isEdit ? '编辑' : '新增';
+        const _opMod = (typeof pageTitle !== 'undefined' && pageTitle) ? pageTitle : label;
+        const fs = cleanFields.slice(0, 12).map(f => `• ${f}（必填，${_inferFieldType(f)}）：`).join('\n');
+        const _olIntro = '用户操作成功后，系统在操作日志模块记录：操作时间、操作账号、操作模块、操作功能、操作明细、IP地址。';
+        const _opLogTxt = _olIntro + '\n' +
+          '| 字段 | 字段说明 | 规则/示例 |\n' +
+          '|---|---|---|\n' +
+          '| 操作时间 | 系统自动记录操作发生时间 | 格式：YYYY-MM-DD HH:mm:ss |\n' +
+          '| 操作账号 | 执行操作的登录账号 | 示例：admin |\n' +
+          '| 操作模块 | 操作所在模块 | 示例：' + _opMod + ' |\n' +
+          '| 操作功能 | 本次操作名称 | 示例：' + _opVerb + ' |\n' +
+          '| 操作明细 | 操作对象唯一标识及变更内容 | 示例：操作对象：编号=<示例编号>，' + _opVerb + '字段变更 |\n' +
+          '| IP地址 | 操作终端 IP 地址 | 示例：192.168.1.100 |';
+        return {
+          title: `${_opVerb}表单：${label}`, type: '业务规则',
+          fieldSpecs: fs || '（表单字段待补充，标 * 为必填）',
+          useCaseRules: `【前置条件】\n1. 用户已登录系统，具备${_opVerb}权限。\n2. ${isEdit ? '当前记录已存在且状态允许编辑。' : '当前模块支持新增操作，无需额外前置状态。'}\n\n【操作流程】\n正向流程：\n1. 用户点击"${_opVerb}"按钮，弹出表单弹窗。\n2. 用户填写各字段（标 * 为必填）。\n3. 用户点击「${submitBtn}」按钮，系统校验字段。\n4. 校验通过，系统${isEdit ? '更新记录' : '创建记录'}，提示"操作成功"，弹窗关闭，列表自动刷新。\n取消流程：\n1. 用户点击「取消」或右上角关闭按钮，弹窗关闭，不保存任何内容。\n\n【后置条件】\n1. ${isEdit ? '记录已更新为最新填写内容；' : '新记录已创建并显示在列表中；'}列表自动刷新，显示最新数据。\n2. 操作记录写入操作日志。\n\n【校验规则】\n1. 必填字段为空时，标红提示"请填写/选择 XX"，不允许提交。\n2. 格式不符（如日期/金额/手机号等）时，提示具体错误信息。\n3. 字段长度超限时，输入截断或给出错误提示。\n\n【提示消息】\n| 场景 | 提示内容 | 触发时机 |\n|---|---|---|\n| 操作成功 | 操作成功 | 点击${submitBtn}，校验通过后 |\n| 必填未填 | 请填写/选择 XX | 点击${submitBtn}，校验失败时 |\n| 格式错误 | XX 格式不正确，请重新输入 | 字段 blur 或点击${submitBtn} |\n\n【消息通知】\n无。\n\n【操作日志】\n${_opLogTxt}`,
+        };
+      }
+
+      /* 统计/KPI 卡片 → 优先用 zoneGroups 分组；有真实图表走图表模板 */
+      if (areaType === 'stat') {
+        const _hasRealChart = /canvas|echarts|line-chart|bar-chart|pie-chart|highcharts/.test(zoneHTML || '');
+        if (_hasRealChart) {
+          return {
+            title: `图表看板：${label}`, type: '展示规则',
+            fieldSpecs: `⚠ AI草稿\n\n图表区：\n• 时间维度（选填，下拉/Tab）：日/周/月/自定义\n• 数据指标（只读，数值+趋势箭头）：核心指标名 + 当期值 + 环比变化\n• 图表类型（只读）：折线图/柱状图/饼图按业务选择`,
+            useCaseRules: `⚠ AI草稿，请核对修改\n\n【前置条件】\n1. 用户已登录；后端数据接口正常。\n\n【操作流程】\n1. 页面加载时，默认展示近30天/本月数据。\n2. 用户切换时间维度（日/周/月），图表数据随之更新。\n3. 鼠标悬浮数据点/区域，显示详细数值 tooltip。\n4. 数据加载中显示骨架屏；加载失败显示"数据加载失败，点击重试"。\n\n【后置条件】\n1. 仅展示数据，不触发写操作。\n\n【校验规则】\n1. 数据为空时，图表区显示"暂无数据"占位图。\n2. 数值超出量级自动换算（如 12000 → 1.2万）。\n\n【操作日志】\n查询/查看不输出操作日志。`,
+          };
+        }
+        /* KPI 数字卡片看板 */
+        const _danger = /异常|超时|逾期|预警|告警|拦截|失败|驳回|缺货|风险/;
+        const _click  = /^待|未发|未处理|未审/;
+        const _fmtF = (f) => _danger.test(f) ? `• ${f}（只读，数值，红色高亮）：异常数量，>0 时红色提示，需及时处理`
+          : _click.test(f) ? `• ${f}（只读，数值，可点击）：点击数字下钻对应明细列表`
+          : `• ${f}（只读，数值）：当前"${f}"的实时统计数量`;
+        /* 优先路径：zoneGroups 有分组 → 按板块输出字段规范 */
+        if (zoneGroups && zoneGroups.length) {
+          const _fieldBlocks = zoneGroups.map(g => `${g.title}：\n${g.fields.map(_fmtF).join('\n')}`).join('\n\n');
+          const _groupNames  = zoneGroups.map(g => g.title).join('、');
+          const _groupSum    = zoneGroups.map(g => `${g.title}（${g.fields.slice(0,6).join('、')}）`).join('；');
+          return {
+            title: `数据看板：${label}`, type: '展示规则',
+            fieldSpecs: `⚠ AI草稿，请核对字段含义后修改\n\n${_fieldBlocks}`,
+            useCaseRules: `⚠ AI草稿，请核对修改\n\n【前置条件】\n1. 用户已登录，进入首页，具备查看权限。\n\n【操作流程】\n1. 页面加载后，数据看板展示以下各板块的实时统计：${_groupNames}。\n2. 用户在各板块可看到：${_groupSum}。\n3. 红色数字表示异常或需关注的待处理项；带链接的数字可点击下钻对应明细列表。\n\n【后置条件】\n1. 仅查看统计，不产生任何数据变更。\n\n【校验规则】\n1. 无数据时显示 0；异常/超时类指标 >0 时红色高亮。\n2. 用户无权限的板块/指标不展示或显示 "--"。\n\n【操作日志】\n查询/查看不输出操作日志。`,
+          };
+        }
+        /* 无分组 → 从 zoneTexts 提取标签，DOM 扫描兜底 */
+        const _stopW = new Set(['更多','刷新','最后更新','可用','锁定','展开','收起']);
+        const metrics = zoneTexts.filter(t => {
+          const s = t.trim();
+          return s.length >= 2 && s.length <= 12 && !/^\d/.test(t) && !_stopW.has(s);
+        });
+        const _hasClickNums = zoneTexts.some(t => /^\d+$/.test(t.trim()) && parseInt(t) > 0);
+        let fs = metrics.slice(0, 15).map(_fmtF).join('\n');
+        if (!fs) {
+          const _domLbls = [];
+          document.querySelectorAll('.dcard-title,.dpanel-title,.stat-label,.dcol-h,.dnum-lbl').forEach(el => {
+            const t = el.textContent.trim().replace(/\s+/g,' ');
+            if (t.length >= 2 && t.length <= 16) _domLbls.push(t);
+          });
+          const _uDom = [...new Set(_domLbls)].slice(0, 12);
+          if (_uDom.length) fs = _uDom.map(_fmtF).join('\n');
+        }
+        return {
+          title: `数据看板：${label}`, type: '数据展示（只读）',
+          fieldSpecs: `⚠ AI草稿，请核对字段含义后修改\n\n${fs || '（指标字段待补充）'}`,
+          useCaseRules: `⚠ AI草稿，请核对修改\n\n【前置条件】\n1. 用户已登录，具备查看权限；后端数据接口正常。\n\n【操作流程】\n1. 进入页面，看板自动加载最新数据并显示更新时间。\n${_hasClickNums ? '2. 蓝色/可点击数字 → 点击跳转对应列表并预置状态筛选（具体跳转规则待补充）。\n3. 红色/高亮数字表示异常或待处理项，点击进入对应功能模块处理。' : '2. 所有数值仅供查看，不支持点击操作。'}\n\n【后置条件】\n1. 仅展示数据，不触发写操作；无需记录操作日志。\n\n【校验规则】\n1. 数据为空或接口超时，对应指标显示"—"或"0"，页面不崩溃。\n2. 数值超出量级时自动换算（如 12,000 → 1.2万）。\n\n【操作日志】\n查询/查看不输出操作日志。`,
+        };
+      }
+
+      /* 工具栏 */
+      if (areaType === 'toolbar') {
+        const ops = actions.length ? actions : ['查看'];
+        return {
+          title: `工具栏：${label}`, type: '交互说明',
+          fieldSpecs: '',
+          useCaseRules: `【操作说明】\n工具栏提供以下操作：${ops.join('、')}。\n\n【权限控制】\n各按钮按角色权限动态显示，无权限时不展示对应按钮。`,
+        };
+      }
+
+      /* ── APP/小程序：底部 Tab Bar ── */
+      if (areaType === 'tab-bar') {
+        const tabItems = zoneTexts.filter(t => t.length >= 2 && t.length <= 8 && !/^\d/.test(t));
+        return {
+          title: `底部导航：${label}`, type: '交互说明',
+          fieldSpecs: (tabItems.length
+            ? tabItems.map(t => `• ${t}（Tab 项，图标+文字）：点击切换至对应页面，选中时图标高亮`).join('\n')
+            : '（Tab 项待补充）'),
+          useCaseRules: `【前置条件】\n1. 用户已进入 App，底部 Tab Bar 全局可见。\n\n【操作流程】\n1. 用户点击底部任意 Tab 图标或文字标签，立即切换至对应页面。\n2. 当前激活的 Tab 图标和文字高亮显示（主色）；其余 Tab 显示默认灰色。\n3. 若 Tab 有消息徽标（红点/数字），点击后进入对应页面，消息徽标自动清除或更新。\n\n【后置条件】\n1. 页面切换完成，滚动位置保留（回到上次浏览位置）或重置至顶部（依产品策略决定）。\n2. Tab Bar 全程固定在页面底部，任何页面操作均不会隐藏。\n\n【校验规则】\n1. 当前 Tab 再次点击：不重复跳转，刷新当前页内容（或回到列表顶部，依策略）。\n2. 需登录的 Tab（如"我的"）：未登录时点击弹登录引导，登录后自动跳转。\n\n【提示消息】\n无。\n\n【消息通知】\n无。\n\n【操作日志】\n查询/查看不输出操作日志。`,
+        };
+      }
+
+      /* ── APP/小程序/H5/网站：顶部导航栏 ── */
+      if (areaType === 'navbar') {
+        const hasBack = all.includes('返回') || all.includes('<') || all.includes('Back');
+        const pageTitle = zoneTexts.filter(t => t.length >= 2 && t.length <= 20 && !/^[<>]$/.test(t) && !['返回','Back','更多','分享','搜索'].includes(t))[0] || label;
+        return {
+          title: `导航栏：${pageTitle}`, type: '交互说明',
+          fieldSpecs: [
+            hasBack ? '• 返回按钮（左侧，< 箭头）：点击返回上一页' : '',
+            `• 页面标题（居中，只读）：${pageTitle}`,
+            all.includes('更多') ? '• 更多按钮（右侧，⋮ 图标）：点击弹出更多操作菜单' : '',
+            all.includes('分享') ? '• 分享按钮（右侧，图标）：点击触发分享操作' : '',
+            all.includes('搜索') ? '• 搜索图标（右侧）：点击进入搜索页' : '',
+          ].filter(Boolean).join('\n') || '（导航栏元素待补充）',
+          useCaseRules: `【前置条件】\n1. 用户已进入当前页面，导航栏固定显示在顶部。\n\n【操作流程】\n${hasBack ? '1. 用户点击左侧返回按钮（< 箭头），返回上一页；若无上一页则返回首页/App入口。\n' : ''}${all.includes('更多') ? '2. 用户点击右侧"更多"图标，弹出操作菜单（分享/收藏/举报等）。\n' : ''}${all.includes('分享') ? '3. 用户点击"分享"图标，弹出系统分享菜单。\n' : ''}（如无上述操作则导航栏为纯展示）\n\n【后置条件】\n1. 点击返回：返回上一级页面，当前页面销毁（或保留在栈中）。\n2. 点击更多/分享：弹出对应操作面板，页面内容不变。\n\n【校验规则】\n1. 返回按钮：若为 App 第一级页面（无上级），则隐藏返回按钮或显示为关闭（×）。\n\n【提示消息】\n无。\n\n【消息通知】\n无。\n\n【操作日志】\n查询/查看不输出操作日志。`,
+        };
+      }
+
+      /* ── C端/电商：商品详情页内容区 ── */
+      if (areaType === 'product-detail') {
+        const _olIntro = '用户操作成功后，系统在操作日志模块记录：操作时间、操作账号、操作模块、操作功能、操作明细、IP地址。';
+        const _opLogBuy = _olIntro + '\n| 字段 | 字段说明 | 规则/示例 |\n|---|---|---|\n| 操作时间 | 系统自动记录操作发生时间 | 格式：YYYY-MM-DD HH:mm:ss |\n| 操作账号 | 执行操作的登录账号 | 示例：user_001 |\n| 操作模块 | 操作所在模块 | 示例：商品详情 |\n| 操作功能 | 本次操作名称 | 示例：加入购物车 |\n| 操作明细 | 操作对象唯一标识及变更内容 | 示例：商品ID=<商品编号>，规格=<选中规格>，数量=<数量> |\n| IP地址 | 操作终端 IP 地址 | 示例：192.168.1.100 |';
+        return {
+          title: `商品详情：${label}`, type: '业务规则',
+          fieldSpecs: `商品详情页字段：\n• 商品名称（只读，文本）：完整商品名\n• 商品主图/轮播图（只读，图片）：支持左右滑动切换，点击放大查看\n• 商品价格（只读，金额）：当前售价，格式 ¥X.XX；有促销时显示划线原价\n• 规格选择（必选，按钮组）：颜色/尺码/版本等，售罄置灰不可选\n• 购买数量（必填，步进器）：默认1，最小1，最大=当前规格库存\n• 已选规格回显（只读）：显示当前选中的完整规格组合，如"黑色 / XL"\n• 库存提示（只读，辅助文字）：库存≤10时显示"仅剩 X 件"\n• 商品描述（只读，富文本）：可上下滚动查看\n• 用户评价（只读，列表）：评分 + 评价内容，默认展示前3条`,
+          useCaseRules: `【前置条件】\n1. 用户已进入商品详情页，商品处于"在售"状态。\n2. 用户已登录（加购/下单需要；浏览不需要）。\n\n【操作流程】\n正向流程（加入购物车）：\n1. 用户浏览商品信息（主图/价格/描述）。\n2. 用户依次选择所有必选规格（颜色/尺码等），系统实时更新价格和库存。\n3. 用户调整购买数量（默认1件）。\n4. 用户点击「加入购物车」，系统将商品（含规格+数量）加入购物车，顶部购物车图标数量+N。\n正向流程（立即购买）：\n1. 用户完成规格选择和数量填写后，点击「立即购买」。\n2. 系统校验登录状态，未登录则跳转登录页，登录后回跳。\n3. 系统跳转订单确认页，展示商品信息、收货地址、支付方式。\n取消流程：\n1. 用户点击返回，回到上一页（列表/搜索结果）。\n\n【后置条件】\n1. 加入购物车：购物车新增记录，购物车图标数量更新。\n2. 立即购买：跳转订单确认页，当前商品数据不变。\n\n【校验规则】\n1. 规格未全部选择时，「加入购物车」和「立即购买」按钮置灰，点击弹出"请选择完整规格"。\n2. 售罄规格选项显示"售罄"并置灰，不可点击。\n3. 购买数量超出库存时，步进器"+"置灰，提示"库存不足，最多购买 X 件"。\n4. 商品下架/删除：页面显示"商品已下架"，按钮不可点击。\n\n【提示消息】\n| 场景 | 提示内容 | 触发时机 |\n|---|---|---|\n| 加购成功 | 已加入购物车 | 点击加入购物车成功后 |\n| 规格未选 | 请选择完整规格 | 点击加购/立即购买，规格未选全 |\n| 库存不足 | 库存不足，最多购买 X 件 | 数量超出库存时 |\n| 商品下架 | 该商品已下架 | 进入页面时商品不可售 |\n\n【消息通知】\n无。\n\n【操作日志】\n${_opLogBuy}`,
+        };
+      }
+
+      /* ── C端/电商：规格/SKU 选择器 ── */
+      if (areaType === 'spec-selector') {
+        const specItems = zoneTexts.filter(t => t.length >= 1 && t.length <= 10 && !/^\d+$/.test(t) && !['加入购物车','立即购买','确认'].includes(t));
+        return {
+          title: `规格选择：${label}`, type: '交互规则',
+          fieldSpecs: `规格选择区字段：\n• 规格维度（只读，标签）：如"颜色"、"尺码"，由商品后台配置，至少1个维度\n• 规格选项（必选，按钮组）：可选/已售罄/已选中三态；售罄选项置灰不可点\n• 已选规格回显（只读，文字）：显示当前所选完整规格，如"黑色 / XL"\n• 库存提示（只读，辅助文字）：当前选中规格组合的剩余库存，≤10时显示"仅剩X件"\n• 数量（必填，步进器）：默认1，最小1，最大=当前规格库存${specItems.length ? '\n\n已检测到规格选项：\n' + specItems.map(t => `• ${t}`).join('\n') : ''}`,
+          useCaseRules: `【前置条件】\n1. 用户进入商品详情页，商品处于"在售"状态，规格选择器展示。\n\n【操作流程】\n1. 页面加载时，展示所有规格维度（如颜色、尺码），默认不选中任何规格。\n2. 用户依次点击各维度的规格选项（如先选颜色，再选尺码）。\n3. 每次点击后，系统联动更新：\n   a. 已选规格文字回显\n   b. 库存数量和剩余提示\n   c. 当前商品主图（若对应该规格有图片）\n   d. 价格（若不同规格有差价）\n4. 所有必选规格已选定后，"加入购物车"/"立即购买"按钮从置灰变为可点击。\n5. 用户设置购买数量（默认1），系统校验≤当前库存。\n\n【后置条件】\n1. 所有规格已选 + 数量合法 → 允许加购或下单。\n2. 规格未全选 → 按钮保持置灰。\n\n【校验规则】\n1. 售罄的规格组合对应的按钮显示为灰色，不可点击，鼠标悬浮提示"已售罄"。\n2. 规格只有1个选项时，可自动默认选中。\n3. 数量超出库存时，步进器"+"置灰，显示"库存不足"。\n\n【提示消息】\n| 场景 | 提示内容 | 触发时机 |\n|---|---|---|\n| 规格未选全 | 请选择完整规格 | 点击加购/购买时 |\n| 库存不足 | 库存不足，最多可购 X 件 | 数量超库存时 |\n| 已售罄 | 该规格已售罄 | 鼠标悬浮售罄选项时 |\n\n【消息通知】\n无。\n\n【操作日志】\n查询/查看不输出操作日志。`,
+        };
+      }
+
+      /* ── C端/电商：购物车 ── */
+      if (areaType === 'cart') {
+        const _olIntro = '用户操作成功后，系统在操作日志模块记录：操作时间、操作账号、操作模块、操作功能、操作明细、IP地址。';
+        const _opLogCart = _olIntro + '\n| 字段 | 字段说明 | 规则/示例 |\n|---|---|---|\n| 操作时间 | 系统自动记录操作发生时间 | 格式：YYYY-MM-DD HH:mm:ss |\n| 操作账号 | 执行操作的登录账号 | 示例：user_001 |\n| 操作模块 | 操作所在模块 | 示例：购物车 |\n| 操作功能 | 本次操作名称 | 示例：提交订单 |\n| 操作明细 | 操作对象唯一标识及变更内容 | 示例：商品ID列表=<ID1,ID2>，总金额=¥XX.XX |\n| IP地址 | 操作终端 IP 地址 | 示例：192.168.1.100 |';
+        return {
+          title: `购物车：${label}`, type: '业务规则',
+          fieldSpecs: `购物车字段：\n• 商品勾选框（必选，多选）：勾选参与结算的商品；支持"全选/取消全选"\n• 商品主图（只读，缩略图）：点击跳转商品详情页\n• 商品名称（只读，文本，多行截断）：点击跳转商品详情页\n• 规格（只读，文本）：已选规格组合，如"黑色 / XL"\n• 商品单价（只读，金额）：格式 ¥X.XX\n• 数量（必填，步进器）：最小1，最大=库存上限；实时更新小计\n• 小计（只读，金额）：= 单价 × 数量\n• 删除（操作，图标/文字）：从购物车移除该商品，操作不可恢复\n• 已选商品数（只读，计数）：当前勾选的商品件数\n• 合计金额（只读，金额，加粗）：= 所有勾选商品小计之和\n• 去结算按钮（操作，主色）：提交选中商品进入订单确认`,
+          useCaseRules: `【前置条件】\n1. 用户已登录账号。\n2. 购物车内有≥1件商品（若为空则显示空态引导）。\n\n【操作流程】\n正向流程（结算）：\n1. 用户进入购物车，列表展示所有已加购商品（按加购时间倒序）。\n2. 用户勾选参与结算的商品（默认全选）；勾选/取消后，合计金额实时更新。\n3. 用户点击「去结算」，系统校验：所有勾选商品是否有效（未下架/有库存）。\n4. 校验通过 → 跳转订单确认页；校验失败 → 提示具体原因（商品下架/库存不足）。\n修改数量：\n1. 用户点击步进器 +/- 修改数量，小计和合计实时更新。\n删除商品：\n1. 用户点击删除图标，弹出确认"确认从购物车移除此商品？"，确认后移除，列表刷新。\n\n【后置条件】\n1. 结算：跳转订单确认页，购物车中对应商品状态变为"待支付"（或保留至支付成功后清除，依策略）。\n2. 删除：商品从购物车移除，合计重新计算。\n\n【校验规则】\n1. 未勾选任何商品时，「去结算」按钮置灰，点击提示"请至少选择一件商品"。\n2. 勾选商品中有下架商品：提示"部分商品已下架，请移除后再结算"，不允许结算。\n3. 数量超出库存：步进器"+"置灰，提示"库存不足"；结算时重新校验。\n\n【提示消息】\n| 场景 | 提示内容 | 触发时机 |\n|---|---|---|\n| 未选商品 | 请至少选择一件商品 | 点击结算时 |\n| 含下架商品 | 部分商品已下架，请移除后再结算 | 点击结算时 |\n| 库存不足 | 库存不足，最多购买 X 件 | 修改数量超库存时 |\n| 确认删除 | 确认从购物车移除此商品？ | 点击删除时 |\n\n【消息通知】\n无。\n\n【操作日志】\n${_opLogCart}`,
+        };
+      }
+
+      /* ── C端/电商/内容平台：商品卡片网格/Feed 列表 ── */
+      if (areaType === 'product-card') {
+        const priceKeywords = all.includes('¥') || all.includes('价格') || all.includes('Price');
+        return {
+          title: `商品列表：${label}`, type: '展示规则',
+          fieldSpecs: `商品卡片字段：\n• 商品主图（只读，图片）：点击进入商品详情页；支持懒加载\n• 商品名称（只读，文本，2行截断）：点击进入商品详情页\n${priceKeywords ? '• 商品价格（只读，金额，红色突出）：格式 ¥X.XX；有促销时显示划线原价\n• 原价（只读，文本，划线）：仅促销时展示\n' : ''}• 收藏图标（操作，右上角♡）：点击收藏/取消收藏，需登录\n• 评分（只读，星级）：展示平均评分，1-5分\n• 销量（只读，文字）：如"已售9999+"`,
+          useCaseRules: `【前置条件】\n1. 用户进入列表/搜索结果/推荐页，商品卡片自动加载。\n\n【操作流程】\n1. 页面加载时，根据当前筛选/排序/推荐算法展示商品卡片列表（默认20条/页或无限滚动）。\n2. 用户点击商品卡片（图片/名称/价格区域）→ 进入商品详情页。\n3. 用户点击右上角收藏图标♡：\n   - 已登录：收藏成功，图标变实心红色，提示"已收藏"；再次点击取消收藏。\n   - 未登录：弹出登录引导。\n4. 列表滚动到底部：自动加载下一页（无限滚动）或显示分页控件。\n\n【后置条件】\n1. 点击卡片：进入详情页，列表状态保留（返回时可回到原位置）。\n2. 收藏操作：用户收藏夹数量更新，图标状态持久化。\n\n【校验规则】\n1. 无商品时显示"暂无商品"空态引导（推荐相关商品或返回上一步）。\n2. 图片加载失败时显示默认占位图，不影响其他内容展示。\n3. 价格为0或未设置时不展示价格，显示"面议"或联系客服。\n\n【提示消息】\n| 场景 | 提示内容 | 触发时机 |\n|---|---|---|\n| 收藏成功 | 已收藏 | 点击收藏♡成功后 |\n| 取消收藏 | 已取消收藏 | 再次点击♡后 |\n| 未登录收藏 | 请先登录 | 未登录点击♡时 |\n\n【消息通知】\n无。\n\n【操作日志】\n查询/查看不输出操作日志。`,
+        };
+      }
+
+      /* ── 通用：轮播图/Banner ── */
+      if (areaType === 'carousel') {
+        return {
+          title: `轮播图：${label}`, type: '展示规则',
+          fieldSpecs: `轮播图字段：\n• 图片（只读，全宽）：按配置顺序轮播，比例通常为 2:1 或 3:1\n• 标题/描述（只读，文字，覆盖在图片上，可选）\n• 指示点（只读，小圆点）：当前激活项高亮\n• 点击跳转链接（可选）：跳转至对应活动页/商品页/外部链接`,
+          useCaseRules: `【前置条件】\n1. 后台已配置至少1条轮播内容（图片+跳转链接）。\n\n【操作流程】\n1. 页面加载完成后，轮播图自动播放（默认3-5秒/张，可配置）。\n2. 用户手动左右滑动（移动端）或点击左右箭头（桌面端）切换图片。\n3. 用户点击轮播图 → 跳转至配置的目标页面（活动页/商品页/URL链接）；若无跳转链接则无反应。\n4. 用户手动滑动后，自动播放暂停2秒后恢复。\n\n【后置条件】\n1. 点击跳转：进入对应目标页，轮播图页面状态不变。\n\n【校验规则】\n1. 图片加载失败时显示默认占位图，不影响轮播逻辑。\n2. 仅1张图时，不显示指示点，不自动播放。\n3. 跳转链接为外部URL时，在新页面/新Tab打开，不影响当前页。\n\n【提示消息】\n无。\n\n【消息通知】\n无。\n\n【操作日志】\n查询/查看不输出操作日志。`,
+        };
+      }
+
+      /* ── C端：个人中心/我的 ── */
+      if (areaType === 'profile') {
+        const hasOrder = all.includes('订单') || all.includes('购买记录');
+        return {
+          title: `个人中心：${label}`, type: '展示规则',
+          fieldSpecs: `个人中心字段：\n• 用户头像（只读/可点击，圆形图片）：点击进入个人资料编辑页\n• 用户昵称（只读，文字）：账号昵称，点击进入个人资料\n• 用户级别/标签（只读，文字/徽章）：如会员等级、认证标识\n${hasOrder ? '• 待付款/待收货/待评价（只读，数字徽标）：点击跳转对应订单列表\n• 全部订单（操作，文字按钮）：查看全部历史订单\n' : ''}• 功能菜单列表（只读，列表行）：每行含图标+文字+右箭头，点击进入对应功能页\n• 退出登录（操作，文字按钮）：弹出确认弹窗，确认后清除登录态返回首页`,
+          useCaseRules: `【前置条件】\n1. 用户已登录账号（未登录则展示登录引导）。\n\n【操作流程】\n1. 用户进入个人中心，展示用户信息 + 常用功能入口。\n2. 用户点击头像/昵称 → 进入个人资料编辑页。\n${hasOrder ? '3. 用户点击订单快捷入口（待付款/待收货等）→ 跳转至对应订单列表（带状态筛选）。\n4. 用户点击"全部订单" → 进入订单列表页（默认展示全部状态）。\n' : ''}5. 用户点击功能菜单任意行（收藏夹/优惠券/地址管理等）→ 跳转对应功能页。\n6. 用户点击"退出登录" → 弹出确认弹窗"确认退出登录？"，确认后清除登录态，返回首页。\n\n【后置条件】\n1. 退出登录：清除本地 Token/Cookie，返回首页未登录状态，需要登录的功能不可访问。\n\n【校验规则】\n1. 未登录时，展示"登录/注册"引导，不展示用户信息和订单数据。\n2. 退出登录操作需弹窗二次确认，防止误操作。\n\n【提示消息】\n| 场景 | 提示内容 | 触发时机 |\n|---|---|---|\n| 确认退出 | 确认退出登录？ | 点击退出登录时 |\n| 退出成功 | 已退出登录 | 确认退出后 |\n\n【消息通知】\n无。\n\n【操作日志】\n查询/查看不输出操作日志。`,
+        };
+      }
+
+      /* ── C端/通用：搜索结果页 ── */
+      if (areaType === 'search-result') {
+        return {
+          title: `搜索结果：${label}`, type: '查询规则',
+          fieldSpecs: `搜索结果页字段：\n• 搜索框（只读/可编辑，带关键词回填）：点击可修改关键词重新搜索\n• 结果数量（只读，文字）：如"共找到 X 件商品"\n• 排序选项（必选，Tab/下拉）：综合/销量/价格升序/价格降序；默认综合排序\n• 筛选面板（可选，侧边抽屉或展开区）：价格区间/分类/品牌/属性等多条件组合\n• 结果列表（只读，商品卡片/列表行）：按排序规则展示，支持网格/列表视图切换\n• 分页/无限滚动：每页20条或触底自动加载`,
+          useCaseRules: `【前置条件】\n1. 用户已输入搜索关键词并提交，或从分类/推荐点击进入带筛选条件的列表。\n\n【操作流程】\n1. 页面展示搜索关键词 + 结果数量 + 商品列表（默认"综合"排序）。\n2. 用户点击排序选项（综合/销量/价格升序/降序）→ 列表按新排序重新排列，回到顶部。\n3. 用户点击「筛选」→ 弹出筛选面板，选择价格区间/品牌/属性等条件。\n4. 用户确认筛选条件 → 列表按条件刷新，筛选面板关闭，已选条件显示为Tag。\n5. 用户点击已选筛选 Tag 上的 × → 移除该筛选条件，列表实时刷新。\n6. 用户修改搜索词（点击搜索框重新输入）→ 以新词重新搜索，排序/筛选条件重置。\n\n【后置条件】\n1. 排序/筛选变更：列表刷新，分页重置至第1页。\n\n【校验规则】\n1. 无搜索结果：显示"未找到相关商品"空态，推荐相关商品或热门搜索词。\n2. 搜索词含特殊字符时，转义处理，不报错。\n3. 价格区间：最小值不得大于最大值，否则提示"请输入有效价格区间"。\n\n【提示消息】\n| 场景 | 提示内容 | 触发时机 |\n|---|---|---|\n| 无结果 | 未找到相关商品 | 搜索结果为空时 |\n| 价格区间错误 | 请输入有效价格区间 | 最小值>最大值时 |\n\n【消息通知】\n无。\n\n【操作日志】\n查询/查看不输出操作日志。`,
+        };
+      }
+
+      /* 状态页签 / 导航页签 */
+      if (areaType === 'tabs') {
+        const tabs = zoneTexts.filter(t => t.length >= 2 && t.length <= 10 && !/^\d/.test(t));
+        return {
+          title: `页签：${label}`, type: '交互说明',
+          fieldSpecs: tabs.map(t => `• ${t}：显示条件和含义待补充`).join('\n') || '',
+          useCaseRules: `【操作说明】\n页签切换过滤当前列表数据，徽标数字实时反映各状态数据量。\n\n【切换规则】\n1. 点击页签后列表即时刷新，分页重置至第1页。\n2. 默认激活第一个页签。`,
+        };
+      }
+
+      /* 详情页状态卡 */
+      if (areaType === 'detail-header') {
+        return {
+          title: `单据状态：${label}`, type: '交互说明',
+          fieldSpecs: `• 单据编号（只读，文本）：系统生成\n• 当前状态（只读，枚举）：标不同颜色区分\n• 流程步骤（只读）：显示当前所在步骤`,
+          useCaseRules: `【操作说明】\n展示单据当前状态和流程进度，不可编辑。\n\n【状态流转】\n（待补充完整状态流转图）\n\n【操作日志】\n查询/查看不输出操作日志。`,
+        };
+      }
+
+      /* 弹窗 */
+      if (areaType === 'dialog') {
+        const isAudit = all.includes('审核') || all.includes('通过') || all.includes('驳回');
+        const submitBtn = actions.includes('确认') ? '确认' : actions.includes('提交') ? '提交' : '确认';
+        const _opVerb = isAudit ? '审核' : submitBtn;
+        const _opMod = (typeof pageTitle !== 'undefined' && pageTitle) ? pageTitle : label;
+        const _olIntro = '用户操作成功后，系统在操作日志模块记录：操作时间、操作账号、操作模块、操作功能、操作明细、IP地址。';
+        const _opLogTxt = _olIntro + '\n' +
+          '| 字段 | 字段说明 | 规则/示例 |\n' +
+          '|---|---|---|\n' +
+          '| 操作时间 | 系统自动记录操作发生时间 | 格式：YYYY-MM-DD HH:mm:ss |\n' +
+          '| 操作账号 | 执行操作的登录账号 | 示例：admin |\n' +
+          '| 操作模块 | 操作所在模块 | 示例：' + _opMod + ' |\n' +
+          '| 操作功能 | 本次操作名称 | 示例：' + _opVerb + ' |\n' +
+          '| 操作明细 | 操作对象唯一标识及变更内容 | 示例：操作对象：编号=<示例编号>，执行' + _opVerb + ' |\n' +
+          '| IP地址 | 操作终端 IP 地址 | 示例：192.168.1.100 |';
+        return {
+          title: `弹窗：${label}`, type: '业务规则',
+          fieldSpecs: zoneTexts.filter(t => t.length >= 2 && !_ACT_VERBS.includes(t)).slice(0, 6)
+            .map(t => `• ${t}（待补充）：`).join('\n') || '（弹窗字段待补充）',
+          useCaseRules: isAudit
+            ? `【前置条件】\n1. 用户已登录系统，具备审核权限。\n2. 当前数据状态为"待审核"，可执行审核操作。\n3. 审核人不得是提交人本人（如有业务要求）。\n\n【操作流程】\n正向流程（通过）：\n1. 用户在列表/详情页点击"审核"，弹出审核弹窗。\n2. 用户查看待审核内容，填写审核意见（可选），点击「通过」。\n3. 系统更新状态为"已审核/通过"，弹窗关闭，列表自动刷新。\n正向流程（驳回）：\n1. 用户填写驳回原因（必填），点击「驳回」。\n2. 系统更新状态为"已驳回"，弹窗关闭，列表自动刷新。\n取消流程：\n1. 用户点击「取消」或关闭按钮，弹窗关闭，数据不变。\n\n【后置条件】\n1. 状态已更新为通过或驳回；列表自动刷新。\n2. 被审核人收到审核结果通知（如有消息通知配置）。\n3. 操作记录写入操作日志。\n\n【校验规则】\n1. 驳回时，驳回原因为必填，为空时提示"请填写驳回原因"，不允许提交。\n2. 审核意见字数限制 ≤ 200 字。\n\n【提示消息】\n| 场景 | 提示内容 | 触发时机 |\n|---|---|---|\n| 审核通过 | 审核通过 | 点击通过后 |\n| 审核驳回 | 已驳回 | 点击驳回后 |\n| 驳回原因空 | 请填写驳回原因 | 点击驳回，校验失败 |\n\n【消息通知】\n无。\n\n【操作日志】\n${_opLogTxt}`
+            : `【前置条件】\n1. 用户已登录系统，具备${_opVerb}权限。\n2. 触发弹窗的业务前置条件已满足（具体条件与业务场景相关）。\n\n【操作流程】\n正向流程：\n1. 用户触发弹窗打开操作。\n2. 用户在弹窗中填写/确认信息。\n3. 用户点击「${submitBtn}」执行操作，系统校验字段并提交。\n4. 操作成功，提示"操作成功"，弹窗关闭，页面刷新或更新对应数据。\n取消流程：\n1. 用户点击「取消」或关闭按钮，弹窗关闭，不执行任何操作。\n\n【后置条件】\n1. 操作成功后，对应数据已更新；列表/详情页刷新显示最新状态。\n2. 操作记录写入操作日志。\n\n【校验规则】\n1. 必填字段为空时，提示"请填写/选择 XX"，不允许提交。\n2. 格式不符时，给出具体错误提示。\n\n【提示消息】\n| 场景 | 提示内容 | 触发时机 |\n|---|---|---|\n| 操作成功 | 操作成功 | 点击${submitBtn}，成功后 |\n| 必填未填 | 请填写/选择 XX | 点击${submitBtn}，校验失败 |\n\n【消息通知】\n无。\n\n【操作日志】\n${_opLogTxt}`,
+        };
+      }
+
+      /* ── 状态 Tab 容器：zoneTexts 含 ≥2 个状态词时，生成状态筛选说明而非通用骨架 ── */
+      const _stTexts = zoneTexts.filter(t => {
+        const s = t.replace(/[\s\(\)（）\d]+/g, '').trim();
+        return s === '全部' || /^(待|已|未|在)/.test(s) ||
+               /(审核|驳回|通过|完成|取消|关闭|发货|收货|付款|退款|失效|生效)$/.test(s);
+      });
+      if (_stTexts.length >= 2) {
+        const cleanSt = (t) => t.replace(/[\s\(\)（）\d]+/g, '').trim();
+        const statuses = _stTexts.map(cleanSt).filter(Boolean);
+        const stFlow = statuses.filter(s=>s!=='全部').map((s,i)=>`${i+1}. 点击「${s}」→ 列表仅显示该状态记录，分页重置至第 1 页。`).join('\n');
+        return {
+          title: `状态筛选：${label}`, type: '交互说明',
+          fieldSpecs: `状态 Tab 栏（${statuses.length} 个）：\n${statuses.map(s => `• ${s}（只读，数量徽标）：含义与流转规则待补充`).join('\n')}`,
+          useCaseRules: `【前置条件】\n1. 用户已进入列表页面，列表已加载。\n\n【操作流程】\n1. 点击「全部」→ 恢复展示所有状态记录，不做状态过滤。\n${stFlow}\n\n【后置条件】\n1. 列表仅显示所点击状态的记录，与其他筛选条件叠加生效。\n2. 分页重置至第 1 页；各 Tab 数量徽标实时更新。\n\n【校验规则】\n1. 该状态无记录时，列表显示"暂无数据"，徽标显示 0。\n\n【操作日志】\n查询/查看不输出操作日志。`,
+        };
+      }
+
+      /* ── ③ 兜底：从 zoneTexts 提取字段，生成骨架 ── */
+      const words = zoneTexts.filter(t => t.length >= 2 && t.length <= 14 && !/^\d+$/.test(t));
+      const fs = words.slice(0, 8).map(w => `• ${w}：待补充`).join('\n');
+      const ops2 = actions.length ? `支持操作：${actions.join('、')}。` : '';
+      const _hasOps = actions.length > 0;
+      const _opMod2 = (typeof pageTitle !== 'undefined' && pageTitle) ? pageTitle : label;
+      const _olIntro2 = '用户操作成功后，系统在操作日志模块记录：操作时间、操作账号、操作模块、操作功能、操作明细、IP地址。';
+      const _opLogTxt2 = _hasOps
+        ? (_olIntro2 + '\n' +
+            '| 字段 | 字段说明 | 规则/示例 |\n' +
+            '|---|---|---|\n' +
+            '| 操作时间 | 系统自动记录操作发生时间 | 格式：YYYY-MM-DD HH:mm:ss |\n' +
+            '| 操作账号 | 执行操作的登录账号 | 示例：admin |\n' +
+            '| 操作模块 | 操作所在模块 | 示例：' + _opMod2 + ' |\n' +
+            '| 操作功能 | 本次操作名称 | 示例：' + (actions[0] || label) + ' |\n' +
+            '| 操作明细 | 操作对象唯一标识及变更内容 | 示例：操作对象：编号=<示例编号> |\n' +
+            '| IP地址 | 操作终端 IP 地址 | 示例：192.168.1.100 |')
+        : '查询/查看不输出操作日志。';
+      return {
+        title: `功能点：${label}`, type: '业务规则',
+        fieldSpecs: fs || '（字段待AI生成）',
+        useCaseRules: `【前置条件】\n1. 用户已登录系统，具备操作权限。\n2. ${_hasOps ? '触发操作的业务前置条件已满足。' : '数据已加载，页面正常显示。'}\n\n【操作流程】\n${_hasOps
+          ? `正向流程：\n1. 用户执行${ops2}\n2. 系统处理并返回结果。\n3. 操作成功，提示"操作成功"，页面刷新或更新对应数据。\n取消流程：\n1. 用户点击取消或关闭，操作终止，数据不变。`
+          : `1. 用户进入页面，系统自动加载并展示数据。\n2. 用户可查看相关信息。`}\n\n【后置条件】\n1. ${_hasOps ? '操作成功后数据更新，操作记录写入操作日志。' : '仅展示数据，不触发写操作。'}\n\n【校验规则】\n1. （待补充）\n\n【提示消息】\n${_hasOps ? '| 场景 | 提示内容 | 触发时机 |\n|---|---|---|\n| 操作成功 | 操作成功 | 操作完成后 |' : '无。'}\n\n【消息通知】\n无。\n\n【操作日志】\n${_opLogTxt2}`,
+      };
+    };
+
+    /* ════════ _auditDraft：通用自检（展示类 vs 操作类）════════ */
+    const _auditDraft = (draft, zoneId) => {
+      if (!draft) return draft;
+      const title = (draft.title || '').toLowerCase();
+      const isView = /查看|详情|统计|看板|余额|流水|明细|只读/.test(title) ||
+                     /stat|detail|view|dashboard/.test(zoneId || '');
+      if (isView && draft.useCaseRules) {
+        draft.useCaseRules = draft.useCaseRules.replace(/【操作日志】\n(?!查询|查看)[\s\S]*?(?=\n【|$)/,
+          '【操作日志】\n查询/查看不输出操作日志。');
+      }
+      return draft;
+    };
+
+/* ─── ③-C 铁律（保留作规范说明，不删除）───────────────────────────────────
+   ⓪ 精确 data-annotation 绑定 → 直接用 PRD.function_points[boundFp]，不模糊匹配。
+   ① 无 boundFp → zoneContext 智能推断（上方通用实现）。
+   ② 兜底 → 7 节占位，标注"待AI生成"，绝不输出空壳或"功能区"。
+   ★ 北极星：任何地方框选/点选，都必须返回有意义的草稿内容。
+   ★ 项目可在 setup() 内于本块之后重新声明 genAnnoDraft 覆盖为业务特定版本。
+   详见 pm-design/annotation-templates.md §24-28 + prd-data-schema.md §8。   */
+
+/* ═══════ ③-B' onMounted（本实例自调用，宿主无需再调）═══════ */
+      onMounted(() => { try { initAnnotationLayer(); } catch (e) { console.warn('[标注层] 初始化失败（已隔离）：', e && e.message); } });
+
+/* ═══════ ④ return：暴露给本实例自己的 #anno-app 模板（不再合并进宿主）═══════ */
+      return {
+        sys, page,
+        // ── pin 状态 ──
+        showPins, annoPins, activePinId, activePinData, pinCount,
+        pinScrollX, pinScrollY, pinModeOn,
+        // ── pin 操作 ──
+        createPin, deletePin, openPinPop, startPinDrag, _savePins,
+        // ── 弹窗编辑态 ──
+        pinEditTab, pinEditMode, fieldGroups, ucSections, pmRows, notifRows, opLogRows, opLogIntro,
+        enterEdit, cancelEdit, commitEdit, savePinFields, saveUcSections, addFieldRow, removeFieldRow, addFieldGroup, _syncPinToServer,
+        // ── AI 命令栏 ──
+        aiPinCmd, aiPinLoading, aiAutoPin, clearPins, restoreCleared, restoreFromPRD, hasUndo, exportPins, exportShareVersion, isPreviewMode,
+        FT_CHIP_NAMES, applyFieldType,
+        showScanPanel, scanItems, scanMissing, quickAddFromScan,
+        // ── 复制已圈定功能（B方案）──
+        scopedListOpen, scopedFunctions, scopedSelection, openScopedList, onScopedSelect,
+        copyScoped, copyUngenerated, copySelected, deleteScopedFunction, renameScopedFn,
+        renameDlg, openRename, confirmRename, cancelRename,
+        // ── 宿主桥接：标注开关 / 模式（宿主 nav 通过 window.__anno 调用，见下）──
+        _bridge: (() => {
+          window.__anno = {
+            toggleShow: (v) => { showPins.value  = (v == null) ? !showPins.value  : !!v; },
+            toggleMode: (v) => { pinModeOn.value = (v == null) ? !pinModeOn.value : !!v; },
+            scanMissing: () => { try { scanMissing(); } catch (e) {} },
+            openScopedList: () => { try { openScopedList(); } catch (e) {} },  // 复制已圈定功能面板
+            exportShare: () => { try { exportShareVersion(); } catch (e) {} },  // 导出分享版（宿主头部按钮调）
+            clearPins: () => { try { clearPins(); } catch (e) {} },             // 清空标注（宿主头部按钮调）
+            restoreCleared: () => { try { restoreCleared(); } catch (e) {} },   // 恢复标注（误清空找回：备份→已生成PRD重建）
+            restoreFromPRD: () => { try { restoreFromPRD(); } catch (e) {} },   // 从已生成PRD重建标注
+            /* 方案A·浏览器内截图存档（零客户依赖）：按需载 html2canvas，逐标注截其锚元素 → /anno-screenshots 写进 PRD 的 .2 原型图。
+               隐藏元素（未打开的弹窗）自动跳过，PM 可开弹窗后再点一次增量补截（IMG 编号按功能点固定，互不覆盖）。 */
+            captureScreen: async () => {
+              const M = (window.ElementPlus && ElementPlus.ElMessage) || { success(){}, error(){}, warning(){}, info(){} };
+              try {
+                if (!annoPins.value.length) { M.warning('没有标注，无法截图'); return; }
+                if (!window.html2canvas) {
+                  M.info('首次截图：正在联网加载截图库…');
+                  await new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js'; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+                }
+                if (!window.html2canvas) { M.error('截图库加载失败，请联网后重试'); return; }
+                const prev = showPins.value; showPins.value = false; await nextTick();   // 截图时先藏标注 PIN，避免入图
+                const shots = [];
+                for (const pin of annoPins.value) {
+                  const fpKey = (pin.zoneContext && pin.zoneContext.fpKey) || pin.boundFp || pin.fpKey || '';
+                  if (!fpKey) continue;
+                  const el = document.querySelector(`[data-annotation="${fpKey}"]`) || document.querySelector(`[data-fp-key="${fpKey}"]`) || document.querySelector(`[data-annotation-key="${fpKey}"]`);
+                  if (!el || !el.offsetParent) continue;                                   // 跳过隐藏（未打开弹窗）
+                  const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
+                  try { const cv = await window.html2canvas(el, { backgroundColor: '#fff', scale: 1, logging: false, useCORS: true }); shots.push({ fpKey, imgBase64: cv.toDataURL('image/png') }); } catch (e) {}
+                }
+                showPins.value = prev;
+                if (!shots.length) { M.warning('未截到区域（标注元素可能在未打开的弹窗里，开弹窗后再点一次）'); return; }
+                const sysName = (window.__PRD_DATA__ && window.__PRD_DATA__.system_name) || '';
+                const resp = await fetch('http://localhost:3799/anno-screenshots', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ systemName: sysName, shots }) });
+                const j = await resp.json();
+                if (j && j.ok) M.success(`已截 ${j.count} 张原型图写入 PRD；弹窗类可开弹窗后再点一次补截`);
+                else M.error('截图存档失败：' + ((j && j.error) || ''));
+              } catch (e) { M.error('截图失败（anno-server 未运行？）：' + (e.message || e)); }
+            },
+            get showPins()  { return showPins.value;  },
+            get pinModeOn() { return pinModeOn.value; },
+            get pinCount()  { return pinCount.value;  },
+          };
+          return true;
+        })(),
+      };
+    }   /* setup 结束 */
+  });
+
+  /* ★ 故障隔离铁律：标注层内部任何渲染/生命周期错误只崩自己，业务 #app 照常运行 */
+  _annoApp.config.errorHandler = (err, instance, info) => {
+    console.warn('[标注层] 内部错误已隔离，业务页不受影响：', (err && err.message) || err, info);
+  };
+  _annoApp.use(ElementPlus);
+  if (window.ElementPlusIconsVue) {
+    for (const [k, c] of Object.entries(window.ElementPlusIconsVue)) _annoApp.component(k, c);
+  }
+  const _mountAnno = () => { if (document.getElementById('anno-app')) _annoApp.mount('#anno-app'); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _mountAnno);
+  else _mountAnno();
+})();
+</script>
+<!-- ╚═══════════════════ ③ JS 结束 ═══════════════════╝ -->
+
+
+<!-- ╔═══════════════════ ④ return（v1.1 已内置于独立实例，宿主无需合并）═══════════════════╗ -->
+<!-- ★ v1.1 解耦后：所有 return 键已写入 ③ 内 mountAnnotationLayer 的 setup return，
+       服务于本组件自己的 #anno-app 模板。【宿主 setup 不再需要合并任何标注键】。
+     宿主只需做三件事（其余全自动）：
+       1. 把 ② 的 <div id="anno-app"> 整段放在业务 #app 结束标签【之后】；
+       2. 视图标识桥接（两件，缺一会出现 PIN 归属错成 app/main）：
+          a) 业务 setup 内 onMounted 调一次 window.__annoSetView(sys.value, page.value)，多视图再 watch([sys,page],([s,p])=>window.__annoSetView(s,p))；
+          b) 业务 setup 内【必须】暴露实时读取：window.__annoGetView = () => sys.value + '-' + page.value;
+             —— 标注层建 PIN 时直接读它取当前页面（不依赖 a 的同步时序），PIN 归属才不会丢；
+             宿主须在 prd-data 配 page_menus{ 页面key: '归属菜单路径' }，面板「归属（上级菜单）」列据此显示。
+       3. 宿主【顶部导航】放控件，通过 window.__anno 桥接调用（不再 v-model 标注 ref）：
+          标注开关  ：<el-switch v-model="annoOn" @change="v=>{window.__anno.toggleShow(v);window.__anno.toggleMode(v)}" size="small" />（做成开关，非文字）
+          复制已圈功能：<el-button class="anno-author-only" size="small" @click="window.__anno.openScopedList()">📋 复制已圈功能</el-button>
+                       （B方案【唯一入口】，做成按钮放顶部，弹「已圈定功能清单」面板；禁止塞进每个标注弹窗）
+          扫描遗漏  ：@click="window.__anno.scanMissing()"（可选）
+          ※ 标注弹窗里不放生成/复制按钮——"生成 PRD"统一走对话框真推理，原型不生成。
+          ※ 宿主 setup 需有：const annoOn=ref(false); const onAnnoToggle=v=>{window.__anno&&(window.__anno.toggleShow(v),window.__anno.toggleMode(v))}; 并 return。
+     ★ 内容生成层 genAnnoDraft / _auditDraft 仍可在 ③ 块内本实例 setup 中按项目重声明覆盖。 -->
+<!-- ╚═══════════════════════════════════════════════════════════════╝ -->
+
+
+<!-- ╔═════════════════════ ⑤ SSE 事件监听（复制到 </body> 前）════════════════╗
+     三类事件：
+       prd-updated  → 原型操作（/anno-update）触发，提示 PRD 已写入
+       inject-pins  → AI 对话框（/anno-inject）触发，直接更新原型 PIN，不刷新
+       queue-updated→ 更新顶部角标
+     特性：anno-server 未启动时静默忽略，不影响正常使用。
+╚═══════════════════════════════════════════════════════════════════════════╝ -->
+<script>
+(function initSSEAutoRefresh() {
+  if (window.__ANNO_READONLY__ === true) return; /* 只读分享版纯静态托管，不连本地 anno-server */
+  let es;
+  function connect() {
+    try { es = new EventSource('http://localhost:3799/events'); } catch { return; }
+
+    /* PRD 文件写入完成（原型操作路径）→ 轻提示 */
+    es.addEventListener('prd-updated', () => {
+      if (window.ElMessage) {
+        window.ElMessage({ message: '✅ PRD 文件已更新', type: 'success', duration: 1500 });
+      }
+    });
+
+    /* AI 对话框路径：inject-pins → 直接更新原型 PIN，无需刷新 */
+    es.addEventListener('inject-pins', (ev) => {
+      try {
+        const { pins } = JSON.parse(ev.data);
+        if (typeof window._annoInjectPins === 'function') {
+          window._annoInjectPins(pins);
+        } else {
+          setTimeout(() => {
+            if (typeof window._annoInjectPins === 'function') window._annoInjectPins(pins);
+          }, 1000);
+        }
+      } catch(e) { console.error('inject-pins error', e); }
+    });
+
+    /* AI 对话框删功能 → pin-deleted → 实时移除原型对应标注 PIN，无需刷新 */
+    es.addEventListener('pin-deleted', (ev) => {
+      try {
+        const { fpKeys } = JSON.parse(ev.data);
+        if (typeof window._annoRemovePins === 'function') window._annoRemovePins(fpKeys);
+      } catch(e) { console.error('pin-deleted error', e); }
+    });
+
+    /* 队列变更 → 更新角标（若原型有 #anno-queue-badge 元素）*/
+    es.addEventListener('queue-updated', (ev) => {
+      try {
+        const { count } = JSON.parse(ev.data);
+        const badge = document.getElementById('anno-queue-badge');
+        if (badge) badge.textContent = count > 0 ? count : '';
+      } catch {}
+    });
+
+    es.onerror = () => {}; /* 静默：anno-server 未启动时不报错 */
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', connect);
+  } else {
+    connect();
+  }
+})();
+</script>
+<!-- ╚════════════════════════════════════════════════════════════════════════╝ -->

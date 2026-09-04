@@ -1,0 +1,59 @@
+{
+  "_note": "阶段2 A 生成器输入样例 · 商品模块 data_model（来自 TF WMS 新增商品实测字段·DB契约为推导建议）",
+  "data_model": {
+    "enums": {
+      "goods_status": { "comment": "商品审核状态", "values": [
+        { "code": 1, "key": "pending",  "zh": "待审核" },
+        { "code": 2, "key": "approved", "zh": "已审核" },
+        { "code": 3, "key": "rejected", "zh": "已驳回" },
+        { "code": 9, "key": "disabled", "zh": "停用"   }
+      ]},
+      "size_unit": { "comment": "公制/英制", "values": [
+        { "code": 1, "key": "metric",   "zh": "公制" },
+        { "code": 2, "key": "imperial", "zh": "英制" }
+      ]}
+    },
+    "entities": {
+      "goods": {
+        "table": "wms_goods",
+        "label": "商品",
+        "comment": "商品主数据",
+        "columns": [
+          { "field": "客户",        "col": "customer_id",   "type": "bigint",  "nullable": false, "fk": { "entity": "customer", "onDelete": "restrict" }, "comment": "所属客户ID" },
+          { "field": "商品名称",    "col": "goods_name",    "type": "varchar", "len": 60,  "nullable": false, "unique": { "scope": ["customer_id"] }, "comment": "商品名称·同客户下唯一" },
+          { "field": "商品条形码",  "col": "barcode",       "type": "varchar", "len": 32,  "nullable": true,  "index": true, "comment": "商品条形码" },
+          { "field": "参考SKU编号", "col": "ref_sku",       "type": "varchar", "len": 64,  "nullable": true,  "comment": "参考SKU编号" },
+          { "field": "商品别名",    "col": "alias",         "type": "varchar", "len": 128, "nullable": true,  "comment": "商品别名·多个逗号隔" },
+          { "field": "申报价值",    "col": "declared_value","type": "decimal", "precision": 14, "scale": 2, "nullable": true, "comment": "客户申报价值" },
+          { "field": "长",          "col": "length_cm",     "type": "decimal", "precision": 10, "scale": 2, "nullable": true, "comment": "长(cm)" },
+          { "field": "宽",          "col": "width_cm",      "type": "decimal", "precision": 10, "scale": 2, "nullable": true, "comment": "宽(cm)" },
+          { "field": "高",          "col": "height_cm",     "type": "decimal", "precision": 10, "scale": 2, "nullable": true, "comment": "高(cm)" },
+          { "field": "重量",        "col": "weight_g",      "type": "decimal", "precision": 10, "scale": 2, "nullable": true, "comment": "重量(g)" },
+          { "field": "计量单位",    "col": "size_unit",     "type": "tinyint", "enum": "size_unit",   "default": 1, "nullable": false, "comment": "公制/英制" },
+          { "field": "NCM编码",     "col": "ncm_code",      "type": "varchar", "len": 16,  "nullable": true, "comment": "巴西 NCM 税则编码" },
+          { "field": "状态",        "col": "status",        "type": "tinyint", "enum": "goods_status", "default": 1, "nullable": false, "index": true, "comment": "审核状态" }
+        ]
+      },
+      "customer": {
+        "table": "wms_customer",
+        "label": "客户",
+        "comment": "客户主数据",
+        "columns": [
+          { "field": "客户名称", "col": "customer_name", "type": "varchar", "len": 100, "nullable": false, "unique": true, "comment": "客户名称" }
+        ]
+      }
+    }
+  },
+  "function_points": {
+    "商品管理.商品库.新增-无规格": {
+      "entity": "goods",
+      "api": {
+        "list":   { "method": "GET",    "path": "/api/wms/goods",      "query": ["goodsName", "barcode", "status", "customerId"] },
+        "detail": { "method": "GET",    "path": "/api/wms/goods/{id}" },
+        "create": { "method": "POST",   "path": "/api/wms/goods" },
+        "update": { "method": "PUT",    "path": "/api/wms/goods/{id}" },
+        "delete": { "method": "DELETE", "path": "/api/wms/goods/{id}" }
+      }
+    }
+  }
+}

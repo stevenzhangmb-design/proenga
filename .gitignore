@@ -1,0 +1,76 @@
+# AI 输出目录（PRD .md 与原型 .html 默认输出在这里，包含用户私有业务内容）
+archive/
+
+# Claude Code 本地状态
+.claude/scheduled_tasks.lock
+.claude/sessions/
+.claude/transcript/
+.claude/local/
+
+# 用户本地 Claude 设置（包含个人偏好/绝对路径，不上传）
+.claude/settings.local.json
+.claude/settings.json
+# 本机 MCP 配置（含个人 npx/chrome 绝对路径，不上传；用 .mcp.json.example 作模板）
+.mcp.json
+# 个人记忆（本在用户主目录，双保险）
+memory/
+# 内部规划/研究文档（不随公共工具分发）
+_planning/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# VSCode workspace 文件（含用户本地路径如 D:\AI\，不分发）
+*.code-workspace
+
+# Node（预留 — 若未来加 tooling）
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python（预留）
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Logs
+*.log
+logs/
+
+# ── 工作过程产物 / 从真实系统抓取的截图与数据（仅本机留存，绝不随产品分发）──
+# 产品仓库根目录只应有：README / LICENSE / CLAUDE / AGENTS / INSTALL / CHANGELOG /
+# package.json / .gitignore / *.example / setup-*.ps1
+# 其余落在根目录的图片、抓取数据、客户文档一律视为工作产物，不进版本库。
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+/*.webp
+/*.docx
+/*.xlsx
+/*.pdf
+/*.txt
+/*.json
+!/package.json
+/br-summary.md
+# 真实生产系统（TF OMS/WMS 等）截图素材：含登录页/验证码/真实业务数据，仅本机提取设计规范用
+/screenshots/
+
+# 临时文件
+*.tmp
+*.bak
+skills/pm-design/qa/.gate-vendor-cache/
+# 代码生成器的产出（可由 emit-*.js 从 data_model 重新生成·不入库）
+skills/dev-codegen/codegen/out*/
+skills/pm-design/codegen/out*/
+*.bak-old

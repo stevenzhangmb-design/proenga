@@ -1,0 +1,85 @@
+<!-- ╔══════════════════════════════════════════════════════════════════════╗
+     宿主外壳标准组件 · host-shell · v1.0 （2026-06-30）
+     ────────────────────────────────────────────────────────────────────────
+     【单一真理源 · 禁手搓】顶栏（系统切换 + 标注工具条）+ 页签 + 标注 glue 函数。
+     画新原型时，这几块【原样复制】，禁止凭记忆重写——手搓必漂移（曾出现顶栏用旧单按钮
+     「让AI更新PRD」而非标准工具条、stat 标签用 lab 等）。配套机器闸：
+       · qa/prototype-pmdesign-gate.js C6/C10 校验 host 工具条接桥 + 桥方法有效；
+       · qa/prototype-standard-sync-gate.js（⑰ 漂移闸）另抽 host 契约片段
+         (window.__anno.toggleShow/toggleMode + anno-author-only 工具条创作控件类)
+         去空白断言每个原型都含；缺任一 = 外壳漂移、红了禁交付、随包发。
+     与 annotation-layer.html / page-renderer.html 三件配齐 = 一份原型的全部"标准部件"。
+     画原型 = 这三件原样拼 + 只填【项目数据】(NAV / PAGECFG / 主题色 / 系统切换条目)。
+
+     ★ 标注工具条按钮锁定（标准件 _CARD_TITLE_SEL 之外，这是 host 契约）：
+        复制已圈功能 / 导出分享版 / 清空 / 恢复标注 —— 一律 class="anno-author-only"
+        （只读分享版会被 .anno-preview-mode 自动隐藏），@click 调 window.__anno.*。
+        禁用旧单按钮「让AI更新PRD」「生成研发PRD」等历史叫法。
+     ★ in-DOM 铁律：自定义元素禁自闭合——`<el-switch ...></el-switch>` 必须显式闭合，
+        写 `<el-switch .../>` 会吞掉后面的兄弟节点（曾致工具条按钮整组不渲染）。
+     ╚══════════════════════════════════════════════════════════════════════╝ -->
+
+<!-- ═══════════ 第 1 段：顶栏（粘进 app 根模板顶部）═══════════
+     项目可改：① logo 文案 ② .sysseg 里的系统切换按钮条目（client/admin/... 按本项目）
+              ③ flow-tip 文案。标注工具条与 glue 一律不改。 -->
+<div class="topbar">
+  <div class="brand"><span class="logo">TF</span> 系统原型标题（项目改这里）</div>
+
+  <!-- 系统切换：条目按项目，<button class="seg"> 范式不变 -->
+  <div class="sysseg">
+    <button class="seg" :class="{active:currentSystem==='client'}" @click="setSys('client')">客户端系统</button>
+    <button class="seg" :class="{active:currentSystem==='admin'}" @click="setSys('admin')">管理端</button>
+  </div>
+  <span class="flow-tip">{{ currentSystem==='client' ? '当前：客户端' : '当前：管理端' }}</span>
+
+  <!-- 标注工具条 + 开关（标准件·原样复制·禁改按钮集）。注意 el-switch 显式闭合！ -->
+  <div class="right">
+    <div class="anno-sw">
+      <span>标注</span><el-switch v-model="annoOn" @change="onAnnoToggle"></el-switch>
+      <template v-if="annoOn">
+        <span class="anno-author-only" style="width:1px;height:15px;background:rgba(255,255,255,.25);margin:0 2px;flex-shrink:0"></span>
+        <el-button class="anno-author-only" size="small" type="primary" plain @click="genPRD" title="打开已圈定功能清单 → 复制给 AI 对话框生成 PRD">📋 复制已圈功能</el-button>
+        <el-button class="anno-author-only" size="small" type="primary" plain @click="annoShare" title="生成只读分享版，可发给别人看/上传">📤 导出分享版</el-button>
+        <el-button class="anno-author-only" size="small" type="warning" plain @click="annoDevkit" title="导出对接料(openapi+schema+设计令牌+提示词包)，喂给你自己的 AI 生成任意技术栈代码">📦 导出对接料·喂AI</el-button>
+        <el-button class="anno-author-only" size="small" type="success" plain @click="annoGenCode" title="Proenga 直接生成前后端骨架代码(默认 Vue3+EP·Java+Spring·MySQL；自己的栈走导出对接料)">🚀 一键生成代码</el-button>
+        <el-button class="anno-author-only" size="small" plain @click="annoClear" title="清空全部标注">🗑 清空</el-button>
+        <el-button class="anno-author-only" size="small" type="success" plain @click="annoRestore" title="误清空可恢复：先还原刚清空的，没有则从已生成PRD重建标注">↩ 恢复标注</el-button>
+      </template>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ 第 2 段：页签（粘进顶栏之下、renderer 之上）═══════════ -->
+<div class="pagetabs">
+  <el-tabs v-model="currentPage" type="card" @tab-remove="closeTab" @tab-change="go">
+    <el-tab-pane v-for="t in openTabs" :key="t" :name="t" :label="metaOf(t)[0]" :closable="t!==homePage" />
+  </el-tabs>
+</div>
+
+<!-- ═══════════ 第 3 段：标注 glue 函数（粘进业务 setup，并 return 全部）═══════════
+     这些是【宿主↔标注组件】的标准桥。一律原样复制，禁改名/禁改 window.__anno.* 调用。 -->
+<script id="host-shell-glue">
+const annoOn = Vue.ref(false);
+function onAnnoToggle(v){ document.body.classList.toggle('annotations-hidden', !v); if(window.__anno){ window.__anno.toggleShow(v); window.__anno.toggleMode(v); } msg(v?'标注已开启 · 右键元素/框选区域生成 PRD 标注':'标注已关闭'); }
+function genPRD(){ if(window.__anno&&window.__anno.openScopedList){ window.__anno.openScopedList(); } else { msg('标注层加载中… PRD 文件落地需 anno-server(:3799)'); } }   // 顶栏「复制已圈功能」
+function annoShare(){ if(window.__anno&&window.__anno.exportShare){ window.__anno.exportShare(); } else { msg('标注层加载中…'); } }      // 「导出分享版」
+function annoClear(){ if(window.__anno&&window.__anno.clearPins){ window.__anno.clearPins(); } else { msg('标注层加载中…'); } }          // 「清空」
+function annoRestore(){ if(window.__anno&&window.__anno.restoreCleared){ window.__anno.restoreCleared(); } else { msg('标注层加载中…'); } } // 「恢复标注」
+function annoDevkit(){ if(window.__anno&&window.__anno.exportDevkit){ window.__anno.exportDevkit(); } else { msg('标注层加载中…出对接料需 anno-server(:3799)'); } }  // 「导出对接料·喂AI」(A)
+function annoGenCode(){ if(window.__anno&&window.__anno.generateCode){ window.__anno.generateCode(); } else { msg('标注层加载中…生成代码需 anno-server(:3799)'); } } // 「一键生成代码」(B)
+/* go(id) 切页时必须桥接视图给标注层：window.__VIEW__={sys,page}; window.__annoSetView&&window.__annoSetView(sys,page); */
+/* setup() return 必含：annoOn, onAnnoToggle, genPRD, annoShare, annoClear, annoRestore（缺任一 → 按钮 @click 报错/不生效） */
+</script>
+
+<!-- ═══════════ 第 4 段：顶栏/页签 CSS（粘进 <style>）═══════════ -->
+<style id="host-shell-css">
+  .topbar{height:46px;display:flex;align-items:center;gap:16px;padding:0 18px;position:sticky;top:0;z-index:30;}
+  .topbar .right{margin-left:auto;}
+  .sysseg{display:flex;gap:6px;} .sysseg .seg{border:0;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;background:transparent;} .sysseg .seg.active{background:var(--el-color-primary);color:#fff;}
+  .flow-tip{font-size:12px;color:var(--el-color-warning,#e6a23c);}
+  .anno-sw{display:flex;align-items:center;gap:7px;font-size:12px;}
+  .pagetabs{padding:6px 18px 0;position:sticky;top:46px;z-index:20;}
+  .pagetabs .el-tabs__header{margin:0;} .pagetabs .el-tabs__nav{border:0 !important;}
+  /* 只读/分享版：标注创作控件统一隐藏（标注【显示】开关保留） */
+  body.anno-preview-mode .anno-author-only{display:none !important;}
+</style>

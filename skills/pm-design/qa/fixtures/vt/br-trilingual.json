@@ -1,0 +1,42 @@
+{
+  "_note": "视觉事实快照闸 fixture · BR 三语。改这里必然改 golden，需人工确认。",
+  "title": "VT-BR",
+  "systemName": "VT-BR",
+  "locales": ["zh", "en", "pt"],
+  "defaultLocale": "zh",
+  "region": "BR",
+  "currency": "BRL",
+  "systems": [{ "key": "OMS", "label": { "zh": "订单系统", "en": "Order System", "pt": "Sistema de Pedidos" } }],
+  "home": { "OMS": "OMS-list" },
+  "nav": {
+    "OMS": [{
+      "group": { "zh": "发票管理", "en": "Invoice Mgmt", "pt": "Gestão de NF" },
+      "items": [["OMS-list", { "zh": "发票列表", "en": "Invoice List", "pt": "Lista de NF" }]]
+    }]
+  },
+  "pagecfg": {
+    "OMS-list": {
+      "stats": [[{ "zh": "本月开票额", "en": "Issued This Month", "pt": "Emitido no Mês" }, "R$ 128.400,00", "", "up"]],
+      "filters": [
+        { "label": { "zh": "开票日期", "en": "Issue Date", "pt": "Data de Emissão" }, "ph": { "zh": "请选择", "en": "Select", "pt": "Selecione" } },
+        { "label": { "zh": "状态", "en": "Status", "pt": "Situação" }, "type": "select",
+          "options": [{ "zh": "已开票", "en": "Issued", "pt": "Emitida" }, { "zh": "待开票", "en": "Pending", "pt": "Pendente" }] }
+      ],
+      "toolbar": [{ "zh": "导出", "en": "Export", "pt": "Exportar" }],
+      "listTitle": { "zh": "发票列表", "en": "Invoice List", "pt": "Lista de NF" },
+      "primaryBtn": { "zh": "新建发票", "en": "New Invoice", "pt": "Nova NF" },
+      "columns": [
+        { "zh": "发票号", "en": "Invoice No.", "pt": "Nº da NF" },
+        { "zh": "开票日期", "en": "Issue Date", "pt": "Data de Emissão" },
+        { "zh": "金额", "en": "Amount", "pt": "Valor" },
+        { "zh": "状态", "en": "Status", "pt": "Situação" }
+      ],
+      "rows": [
+        ["NF-000128", "2026-07-09", "R$ 12.400,00", { "t": { "zh": "已开票", "en": "Issued", "pt": "Emitida" }, "c": "green" }],
+        ["NF-000129", "2026-07-10", "R$ 3.980,00", { "t": { "zh": "待开票", "en": "Pending", "pt": "Pendente" }, "c": "orange" }]
+      ],
+      "actions": [{ "zh": "查看", "en": "View", "pt": "Ver" }],
+      "total": 24
+    }
+  }
+}

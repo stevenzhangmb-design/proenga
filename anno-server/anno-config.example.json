@@ -1,0 +1,6 @@
+{
+  "_说明": "把本文件复制为 anno-config.json 并填入你存放原型 HTML 的实际目录。anno-server 会把 PRD/.docx/prd-data.json/截图/分享版 都输出到这里、并从这里扫描原型。",
+  "_优先级": "环境变量 ANNO_ARCHIVE_DIR > 本配置文件 archiveDir > 自动探测含原型的目录 > 兜底 ../archive",
+  "_archiveDir说明": "可填绝对路径（如 D:/我的项目/archive 或 /Users/you/archive），也可填相对 anno-server 目录的相对路径（如 ../archive）。",
+  "archiveDir": "../archive"
+}

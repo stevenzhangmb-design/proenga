@@ -1,0 +1,52 @@
+{
+  "_note": "阶段3B 主子表压力测试输入 · 入库单（头+明细行·一对多）。⚠️ 字段为【设计示例·非实测】(入库单真实字段未扒·登录未通)——本样例只为验证生成器对主子表的表达力，非 TF WMS 入库单真值。",
+  "data_model": {
+    "enums": {
+      "inbound_status": { "comment": "入库单状态", "values": [
+        { "code": 1, "key": "draft",     "zh": "草稿" },
+        { "code": 2, "key": "submitted", "zh": "已提交" },
+        { "code": 3, "key": "received",  "zh": "已收货" },
+        { "code": 9, "key": "cancelled", "zh": "已取消" }
+      ]}
+    },
+    "entities": {
+      "inboundOrder": {
+        "table": "wms_inbound_order",
+        "label": "入库单",
+        "comment": "入库单(主表)",
+        "columns": [
+          { "field": "入库单号",   "col": "order_no",    "type": "varchar", "len": 32,  "nullable": false, "unique": true, "comment": "入库单号" },
+          { "field": "仓库",       "col": "warehouse_id","type": "bigint",  "nullable": false, "fk": { "entity": "warehouse", "onDelete": "restrict" }, "comment": "入库仓库ID" },
+          { "field": "供应商",     "col": "supplier",    "type": "varchar", "len": 100, "nullable": true, "comment": "供应商名称" },
+          { "field": "状态",       "col": "status",      "type": "tinyint", "enum": "inbound_status", "default": 1, "nullable": false, "index": true, "comment": "入库单状态" },
+          { "field": "备注",       "col": "remark",      "type": "text",    "nullable": true, "comment": "备注" }
+        ]
+      },
+      "inboundOrderLine": {
+        "table": "wms_inbound_order_line",
+        "label": "入库明细",
+        "comment": "入库单明细行(子表)",
+        "columns": [
+          { "field": "入库单",     "col": "order_id",     "type": "bigint",  "nullable": false, "fk": { "entity": "inboundOrder", "onDelete": "cascade" }, "comment": "入库单ID(主表外键)" },
+          { "field": "商品",       "col": "goods_id",     "type": "bigint",  "nullable": false, "fk": { "entity": "goods", "onDelete": "restrict" }, "comment": "商品ID" },
+          { "field": "计划数量",   "col": "plan_qty",     "type": "int",     "nullable": false, "comment": "计划入库数量" },
+          { "field": "已收数量",   "col": "received_qty", "type": "int",     "default": 0, "nullable": false, "comment": "已收数量" },
+          { "field": "行备注",     "col": "remark",       "type": "varchar", "len": 200, "nullable": true, "comment": "行备注" }
+        ]
+      }
+    }
+  },
+  "function_points": {
+    "入库管理.入库单.新增": {
+      "entity": "inboundOrder",
+      "detail": { "entity": "inboundOrderLine", "fk": "order_id", "label": "商品明细" },
+      "api": {
+        "list":   { "method": "GET",    "path": "/api/wms/inbound",      "query": ["orderNo", "warehouseId", "status"] },
+        "detail": { "method": "GET",    "path": "/api/wms/inbound/{id}" },
+        "create": { "method": "POST",   "path": "/api/wms/inbound" },
+        "update": { "method": "PUT",    "path": "/api/wms/inbound/{id}" },
+        "delete": { "method": "DELETE", "path": "/api/wms/inbound/{id}" }
+      }
+    }
+  }
+}

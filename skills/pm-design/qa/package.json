@@ -1,0 +1,12 @@
+{
+  "name": "pm-prototype-qa",
+  "description": "Maintainer-side Playwright regression for annotation layer (RT-02/03/04). NOT for customers.",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "install-browsers": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0"
+  }
+}

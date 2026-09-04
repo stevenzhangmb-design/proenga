@@ -1,0 +1,48 @@
+{
+  "title": "TF Fiscal · 巴西发票系统（装配器样例）",
+  "systemName": "装配器样例",
+  "theme": { "primary": "#4b7cff", "sidebarBg": "#172133" },
+  "systems": [
+    { "key": "client", "label": "客户端" },
+    { "key": "admin", "label": "管理端" }
+  ],
+  "home": { "client": "c_home", "admin": "a_home" },
+  "nav": {
+    "client": [ { "id": "c_home", "label": "数据看板" } ],
+    "admin": [
+      { "id": "a_home", "label": "仪表盘" },
+      { "group": "监控", "items": [ ["a_list", "发票列表"] ] },
+      { "group": "开发", "items": [ ["a_docs", "接口文档"] ] }
+    ]
+  },
+  "pagecfg": {
+    "c_home": {
+      "stats": [ ["今日开票", "1.234", "+5% 今天", "up"], ["成功率", "99.2%", "", ""], ["待处理", "27", "需跟进", "warn"] ],
+      "chart": { "title": "开票趋势 · 近 5 周", "values": [40, 55, 60, 75, 92] }
+    },
+    "a_home": {
+      "stats": [ ["企业总数", "6.955", "+17 今天", "up"], ["用户总数", "7.354", "", ""], ["总营收", "R$ 60.001,00", "本年", ""] ],
+      "chart": { "title": "发票量 · 近 4 周", "values": [30, 48, 66, 88] },
+      "donut": { "title": "开票类型占比", "label": "本月\n9.412 张", "grad": "#4b7cff 0 58%, #16af78 58% 84%, #e6a23c 84% 100%", "items": [ ["NF-e", "58%", "#4b7cff"], ["NFC-e", "26%", "#16af78"], ["NFS-e", "16%", "#e6a23c"] ] }
+    },
+    "a_docs": {
+      "banner": "对接说明",
+      "custom": "<div class='gcard'><h4>接口文档 · 开票回执查询</h4><p style='color:#66778d;font-size:12px;margin:0 0 10px'>请求示例（GET /api/v1/invoices/{chave}）：</p><code class='code'>GET /api/v1/invoices/35260010\nAuthorization: Bearer &lt;token&gt;\n\n200 OK\n{ \"chave\": \"35260010\", \"status\": \"Autorizada\", \"valor\": \"1234.56\" }</code></div>",
+      "note": "本页为示例接口文档，正式环境以网关 OpenAPI 为准。"
+    },
+    "a_list": {
+      "banner": "发票列表",
+      "listTitle": "发票列表",
+      "filters": [ { "label": "类型", "type": "select", "options": ["全部", "NF-e", "NFC-e", "NFS-e"] }, { "label": "Chave", "ph": "44 位" } ],
+      "columns": ["Chave", "类型", "开票主体", "金额", "状态"],
+      "actions": ["详情", "XML"],
+      "rows": [
+        ["3526…0010", "NF-e", "Loja Modas SP Ltda", "R$ 1.234,56", { "t": "Autorizada", "c": "green" }],
+        ["3526…0011", "NFC-e", "Eletro Norte ME", "R$ 89,90", { "t": "Cancelada", "c": "gray" }],
+        ["3526…0012", "NFS-e", "Calçados Sul Ltda", "R$ 540,00", { "t": "Rejeitada", "c": "red" }],
+        ["3526…0013", "NF-e", "TikTok Seller BR 001", "R$ 2.780,10", { "t": "Autorizada", "c": "green" }],
+        ["3526…0014", "NF-e", "Café Mineiro Ltda", "R$ 312,75", { "t": "Pendente", "c": "orange" }]
+      ]
+    }
+  }
+}

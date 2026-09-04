@@ -1,0 +1,136 @@
+<!-- ╔══════════════════════════════════════════════════════════════════════╗
+     页面渲染器标准组件 · page-renderer · v1.0 （2026-06-30）
+     ────────────────────────────────────────────────────────────────────────
+     【单一真理源 · 禁现搓】数据驱动的通用页面渲染器。每画新原型时，渲染器
+     必须从本文件【三段原样复制】（CSS / 模板 / 助手 + cfg 契约），禁止各自手搓
+     —— 手搓必漂移（曾出现 stat-card 标签用 class="lab" 致标注组件认不出、框选退化为
+     "功能区"）。配套机器闸 qa/prototype-standard-sync-gate.js（⑰ 漂移闸）每次交付前
+     从本文件抽【渲染器契约片段】(卡片类 token stat-label/value/hint + 各区块锚点
+     ak('查看'/'查询'/'列表') + 全 PAGECFG 特性模板 + cell 单元格助手)，去空白断言每个原型
+     都含；缺任一 = 渲染器漂移、红了禁交付、随包发。
+
+     为什么单独成件（与 annotation-layer.html 并列）：
+       · annotation-layer 是自包含可整段注入的"标注层"；
+       · page-renderer 是交织进业务 Vue app 的"渲染层"（CSS 在 <style>、模板在 app
+         根模板、助手在 setup），不能像标注层那样一段注入，故以"三段原样复制 + 机器闸
+         校验契约"的方式保证单源一致（效果一致即可，无需逐字节相同）。
+
+     ★ 类名锁定（标注组件 _CARD_TITLE_SEL 据此识别卡片标题，禁改名）：
+        卡片标签=stat-label，卡片值=stat-value，卡片副文=stat-hint。
+        禁用 lab/val/note 等组件不认的私有命名。
+     ★ 锚点铁律：每个可标注区块（统计/图表/筛选/列表/自定义）必须带
+        :data-annotation="ak('<op>')"，ak(op)=`${page}.${op}`，否则点选/框选标不上。
+
+     —— 项目特有的 NAV / PAGECFG / 数据 留在各自原型里（本就该不同）；本文件只管"怎么渲染"。
+     ╚══════════════════════════════════════════════════════════════════════╝ -->
+
+<!-- ═══════════ 第 1 段：CSS（粘进原型 <style>）═══════════ -->
+<style id="page-renderer-css">
+  .content{padding:20px 24px 60px;max-width:1820px;}
+  .new-banner{display:flex;align-items:center;gap:10px;padding:10px 14px;background:linear-gradient(115deg,#eef9f3,#f3fbff);border:1px solid #d4ecdd;border-radius:9px;margin-bottom:16px;font-size:11px;color:#2c7a55;} .new-banner b{color:#1f6f49;}
+  /* 卡片：类名锁定 stat-label / stat-value / stat-hint（标注组件据此识别，禁改名） */
+  .stat-card{background:#fff;border:1px solid var(--border);border-radius:11px;padding:16px;box-shadow:0 5px 18px rgba(24,42,74,.055);height:100%;}
+  .stat-card .stat-label{color:var(--text-3);font-size:11px;margin-bottom:8px;}
+  .stat-card .stat-value{font-size:21px;font-weight:750;letter-spacing:-.6px;color:#182638;}
+  .stat-card .stat-hint{color:#8190a4;margin-top:8px;font-size:10px;}
+  .stat-card.up .stat-hint{color:var(--green);} .stat-card.down .stat-hint{color:var(--red);} .stat-card.warn .stat-hint{color:var(--orange);}
+  .chart{height:200px;position:relative;} .chart .bars{position:absolute;inset:6px 5px 10px 8px;display:flex;align-items:end;justify-content:space-around;gap:8px;} .bar{flex:1;max-width:26px;border-radius:4px 4px 2px 2px;background:linear-gradient(180deg,#79a0ff,#4b7cff);opacity:.85;} .chart .trend{position:absolute;inset:6px 5px 10px 8px;overflow:visible;pointer-events:none;} .chart .trend path{fill:none;stroke:#16af78;stroke-width:2;}
+  .donut{width:130px;height:130px;border-radius:50%;position:relative;} .donut:after{content:attr(data-label);white-space:pre;position:absolute;inset:23px;display:grid;place-items:center;text-align:center;line-height:1.4;border-radius:50%;background:#fff;color:#36445a;font-size:11px;font-weight:700;}
+  .rl{list-style:none;margin:0;padding:0;} .rl li{display:flex;align-items:center;gap:7px;padding:5px 0;color:#68768a;font-size:11px;} .rl i{width:8px;height:8px;border-radius:2px;} .rl b{margin-left:auto;color:#45546a;}
+</style>
+
+<!-- ═══════════ 第 2 段：模板（粘进原型 app 根模板内 <main> 里）═══════════
+     依赖以下响应式/方法由原型 setup() 提供（host 契约）：
+       cfg            当前页配置 = PAGECFG[currentPage]（见第 3 段 cfg 契约）
+       ak(op)         锚点生成器，ak(op)=`${page}.${op}`（page=当前页 key）
+       filterModel    筛选输入双向绑定对象  ·  resetFilter()  重置筛选
+       msg(text)      轻提示（ElMessage 封装）
+       openTabs / homePage / metaOf(id)  页签（如沿用 page-tabs）
+-->
+<div class="content">
+  <div v-if="cfg.banner" class="new-banner">✦ <b>{{ cfg.bannerType==='merge' ? '重组合并' : '新增模块' }}</b> · {{ cfg.banner }}</div>
+
+  <!-- 统计卡片：类名锁定 stat-label/stat-value/stat-hint -->
+  <el-row v-if="cfg.stats" :gutter="14" style="margin-bottom:18px" :data-annotation="ak('查看')">
+    <el-col v-for="(s,i) in cfg.stats" :key="i" :span="Math.floor(24/Math.min(cfg.stats.length,6))" :xs="12" :sm="8">
+      <div class="stat-card" :class="s[3]||''"><div class="stat-label">{{ s[0] }}</div><div class="stat-value">{{ s[1] }}</div><div class="stat-hint">{{ s[2]||'' }}</div></div>
+    </el-col>
+  </el-row>
+
+  <!-- 图表 / 环形图 -->
+  <el-row v-if="cfg.chart||cfg.donut" :gutter="16" style="margin-bottom:16px">
+    <el-col v-if="cfg.chart" :span="cfg.donut?14:24" :data-annotation="ak('查看')">
+      <el-card shadow="never"><template #header><b style="font-size:14px">{{ cfg.chart.title }}</b><span style="color:#8793a5;font-size:10px;margin-left:8px">{{ cfg.chart.sub||'' }}</span></template>
+        <div class="chart"><div class="bars"><div v-for="(v,i) in cfg.chart.values" :key="i" class="bar" :style="{height:v+'%'}"></div></div><svg class="trend" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0,70 L11,60 L22,64 L33,48 L44,54 L55,38 L66,42 L77,26 L88,30 L100,12"/></svg></div>
+      </el-card>
+    </el-col>
+    <el-col v-if="cfg.donut" :span="cfg.chart?10:12" :data-annotation="ak('查看')">
+      <el-card shadow="never"><template #header><b style="font-size:14px">{{ cfg.donut.title }}</b></template>
+        <div style="display:flex;align-items:center;gap:20px"><div class="donut" :data-label="cfg.donut.label" :style="{background:'conic-gradient('+cfg.donut.grad+')'}"></div>
+          <ul class="rl"><li v-for="(it,i) in cfg.donut.items" :key="i"><i :style="{background:it[2]}"></i>{{ it[0] }} <b>{{ it[1] }}</b></li></ul></div>
+      </el-card>
+    </el-col>
+  </el-row>
+
+  <!-- 筛选区 -->
+  <el-card v-if="cfg.filters" shadow="never" style="margin-bottom:16px" :data-annotation="ak('查询')">
+    <el-form :inline="true" size="default">
+      <el-form-item v-for="(f,i) in cfg.filters" :key="i" :label="f.label">
+        <el-select v-if="f.type==='select'" v-model="filterModel[i]" placeholder="全部" style="width:150px"><el-option v-for="o in (f.options||['全部'])" :key="o" :label="o" :value="o"/></el-select>
+        <el-input v-else v-model="filterModel[i]" :placeholder="f.ph||''" style="width:170px"/>
+      </el-form-item>
+      <el-form-item><el-button type="primary" @click="msg('已应用筛选条件')">查询</el-button><el-button @click="resetFilter">重置</el-button></el-form-item>
+      <el-form-item v-for="b in (cfg.toolbar||[])" :key="b"><el-button @click="msg(b+'：已执行')">{{ b }}</el-button></el-form-item>
+    </el-form>
+  </el-card>
+
+  <!-- 列表表格 -->
+  <el-card v-if="cfg.columns" shadow="never" :data-annotation="ak('列表')">
+    <template #header v-if="cfg.listTitle"><b style="font-size:14px">{{ cfg.listTitle }}</b><span style="color:#8793a5;font-size:10px;margin-left:8px">{{ cfg.listSub||'' }}</span>
+      <el-button v-if="cfg.primaryBtn" type="primary" size="small" style="float:right" @click="msg(cfg.primaryBtn+'：已打开')">{{ cfg.primaryBtn }}</el-button></template>
+    <el-table :data="cfg.rows" stripe>
+      <el-table-column v-for="(c,i) in cfg.columns" :key="i" :label="c" :min-width="i===0?140:100">
+        <template #default="{row}"><span v-html="cell(row[i])"></span></template>
+      </el-table-column>
+      <el-table-column v-if="cfg.actions" label="操作" width="180" fixed="right">
+        <template #default><el-link v-for="a in cfg.actions" :key="a" type="primary" :underline="false" style="margin-right:8px" @click="msg(a+'：已执行')">{{ a }}</el-link></template>
+      </el-table-column>
+    </el-table>
+    <div style="display:flex;justify-content:flex-end;margin-top:12px"><el-pagination background layout="total, sizes, prev, pager, next, jumper" :total="cfg.total||cfg.rows.length" :page-sizes="[10,20,50,100]" :page-size="20"/></div>
+  </el-card>
+
+  <!-- 自定义页（复杂页用 cfg.custom 原始 HTML；整块带锚点，可框选标注） -->
+  <div v-if="cfg.custom" v-html="cfg.custom" :data-annotation="ak('查看')"></div>
+  <el-card v-if="cfg.note" shadow="never" style="margin-top:16px"><div style="color:#66778d;font-size:12px;line-height:1.6">{{ cfg.note }}</div></el-card>
+  <el-card v-if="cfg.building" shadow="never"><div style="padding:46px 18px;text-align:center;color:#8190a4"><b style="display:block;color:#3a4760;font-size:14px;margin-bottom:6px">{{ cfg.building }}</b>本页按 prd-data 配置接入中。框架/系统切换/标注层已就绪，可在此右键/框选试标注。</div></el-card>
+</div>
+
+<!-- ═══════════ 第 3 段：助手 + cfg 契约（粘进原型 setup 顶部 / 主 <script>）═══════════ -->
+<script id="page-renderer-helpers">
+/* 单元格渲染助手（纯 JSON·单一真理源=prototype-skeleton.html·装配器逐字复制）：
+   rows 为纯二维数组，普通单元格写字符串，标签单元写对象 {t:'文本', c:'green'|'orange'|'red'|'gray'|'purple'|默认蓝}。
+   禁在数据里写任何函数调用（旧 row()/tg() 已废弃）——纯 JSON 才能被装配器确定性装配、零手搓漂移。 */
+function cell(v){ if(v&&typeof v==='object'&&'t'in v){ const c=v.c||'blue'; const fg={green:'#18865b',orange:'#bd711f',red:'#c54848',gray:'#5b6b82',purple:'#6e56c7'}[c]||'#436bd4'; const bg={green:'#eaf9f2',orange:'#fff5e7',red:'#fff0f0',gray:'#eef1f5',purple:'#f2efff'}[c]||'#eef3ff'; return '<span style="display:inline-flex;align-items:center;padding:3px 7px;border-radius:4px;font-size:9px;font-weight:650;color:'+fg+';background:'+bg+'">'+v.t+'</span>'; } return v==null?'':String(v); }
+/* metaG(id) → [页面名, ''] ：从 NAV 反查页面标题（用于页签/标注归属）。NAV 结构见各原型。 */
+// function metaG(id){ ... 见原型，依据本项目 NAV 结构实现 ... }
+
+/* ───────── cfg 契约（PAGECFG[pageKey] 支持的字段；加字段=加页面，不手写组件） ─────────
+  {
+    banner: '新增模块说明'，bannerType: 'merge'|undefined,      // 顶部提示条
+    stats: [['标签','值','副文','up'|'down'|'warn'|''], ...],    // 统计卡片（≤6）
+    chart: { title, sub, values:[百分比...] },                   // 柱状+趋势
+    donut: { title, label:'中心文字', grad:'conic 颜色串', items:[['名','值','色']...] },
+    filters: [{ label, type:'select'|undefined, options:[...], ph:'占位' }],
+    toolbar: ['导出','批量...'],                                  // 筛选区额外按钮
+    listTitle, listSub, primaryBtn,                              // 列表头
+    columns: ['列1','列2',...],                                  // 列标题（决定单元格数）
+    rows: [ ['v0','v1', {t:'状态',c:'green'}] , ... ],           // 数据行·纯二维数组（单元格数=columns.length；标签单元={t,c}）
+    actions: ['详情','导出'],                                     // 行操作列
+    total: 数字,                                                 // 分页总数（缺省=rows.length）
+    custom: '<...原始HTML...>',                                  // 复杂页（整块带锚点）
+    note: '页脚说明',
+    building: '建设中标题'                                        // 占位页
+  }
+  —— 渲染器据此渲染；每个区块自带 :data-annotation="ak('查看'|'查询'|'列表')" 锚点。
+*/
+</script>

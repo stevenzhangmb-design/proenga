@@ -1,0 +1,21 @@
+{
+  "name": "proenga",
+  "version": "1.0.0",
+  "description": "Proenga — AI 产研协同工具：可点击 HTML 原型 + 规范 PRD 一体化生成，原型与 PRD 双向同步（适配 Claude Code / Cursor / Codex / OpenClaw 等 AI 工具）",
+  "private": true,
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "prd",
+    "prototype",
+    "product-management",
+    "ai-skills",
+    "claude-code",
+    "design-spec"
+  ],
+  "scripts": {
+    "gate": "node skills/pm-design/qa/deliver-gate.js"
+  }
+}

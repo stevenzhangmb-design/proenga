@@ -1,0 +1,19 @@
+{
+  "title": "回路测试样例",
+  "systemName": "回路测试样例系统",
+  "theme": { "primary": "#3363FF", "sidebarBg": "#122041" },
+  "systems": [ { "key": "OMS", "label": "OMS" } ],
+  "home": { "OMS": "OMS-recharge-list" },
+  "page_menus": { "OMS-recharge-list": ["财务", "充值管理"] },
+  "nav": { "OMS": [ { "id": "OMS-recharge-list", "label": "充值管理" } ] },
+  "pagecfg": {
+    "OMS-recharge-list": {
+      "listTitle": "充值管理", "primaryBtn": "充值",
+      "filters": [ { "label": "充值单号", "ph": "请输入" } ],
+      "toolbar": ["导出"],
+      "columns": ["充值单号", "金额", "状态"],
+      "rows": [ ["CZ001", "BRL 100,00", { "t": "已审核", "c": "green" }], ["CZ002", "BRL 200,00", { "t": "待审核", "c": "orange" }] ],
+      "actions": ["查看", "编辑"]
+    }
+  }
+}

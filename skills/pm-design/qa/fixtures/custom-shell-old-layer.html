@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>模式2 换层样板（自定义外壳 · 旧标注层）· 测试夹具</title>
+<!-- 说明：本夹具供 inject-latest-anno-layer.js（模式2 换层工具）行为测试用——
+     它内嵌一个【旧版本(1.0.0)标注层】(旧 #anno-app + 旧层脚本)，工具应把旧层换成最新标准件。
+     业务外壳(#app)与旧层 CSS 应原样保留；换层后版本必须=components/annotation-layer.html 的最新版本。 -->
+<style>/* 业务外壳样式 */ .biz-shell{font-family:system-ui;color:#333;padding:20px}</style>
+<style>/* 旧标注层 CSS 段（工具保留·无害·新层层叠取胜） */ #anno-app .anno-pin{position:absolute}</style>
+<script>window.__PRD_DATA__ = { system_name: "模式2换层样板系统", function_points: {} };</script>
+</head>
+<body>
+<!-- 业务定制外壳（真实项目这里是顶菜单/双视图/品牌栏等定制外观；夹具从简）
+     含【标准标注工具条】：定制外壳也必须有四按钮(host 契约)——换层工具只换标注层、不加工具条，
+     故工具条须原型自带；⑰ 会强制校验其齐全(缺任一按钮=红)。 -->
+<div id="app">
+  <div class="custom-topbar">
+    <span class="biz-shell">自定义外壳业务区（模式2 定制外观占位）</span>
+    <div class="anno-sw">
+      <span>标注</span><el-switch v-model="annoOn" @change="onAnnoToggle"></el-switch>
+      <template v-if="annoOn">
+        <el-button class="anno-author-only" size="small" type="primary" plain @click="genPRD">📋 复制已圈功能</el-button>
+        <el-button class="anno-author-only" size="small" type="primary" plain @click="annoShare">📤 导出分享版</el-button>
+        <el-button class="anno-author-only" size="small" plain @click="annoClear">🗑 清空</el-button>
+        <el-button class="anno-author-only" size="small" type="success" plain @click="annoRestore">↩ 恢复标注</el-button>
+      </template>
+    </div>
+  </div>
+</div>
+<!-- 宿主↔标注层 glue（host 工具条接桥·window.__anno.* 带点调用只此一处·非标注层） -->
+<script id="host-glue">
+function onAnnoToggle(v){ if(window.__anno){ window.__anno.toggleShow(v); window.__anno.toggleMode(v); } }
+function genPRD(){ if(window.__anno&&window.__anno.openScopedList){ window.__anno.openScopedList(); } }
+function annoShare(){ if(window.__anno&&window.__anno.exportShare){ window.__anno.exportShare(); } }
+function annoClear(){ if(window.__anno&&window.__anno.clearPins){ window.__anno.clearPins(); } }
+function annoRestore(){ if(window.__anno&&window.__anno.restoreCleared){ window.__anno.restoreCleared(); } }
+</script>
+
+<!-- ════ 旧标注层 ② HTML #anno-app（工具应移除，换成最新层自带的） ════ -->
+<div id="anno-app">
+  <div class="anno-pin-layer">旧标注层根（1.0.0）</div>
+</div>
+
+<!-- ════ 旧标注层 ③ 脚本（版本 1.0.0·工具应移除并换成最新） ════ -->
+<script>
+(function mountAnnotationLayer() {
+  window.__ANNO_LAYER_VERSION__ = '1.0.0';
+  window._annoInjectPins = function () {};
+  window.__anno = { toggleShow: function () {}, toggleMode: function () {}, openScopedList: function () {} };
+})();
+</script>
+<!-- ════ 旧标注层 ⑤ SSE 脚本（另一段·工具也应移除） ════ -->
+<script>
+(function initSSEAutoRefresh() { /* 旧 SSE 占位 */ })();
+</script>
+</body>
+</html>

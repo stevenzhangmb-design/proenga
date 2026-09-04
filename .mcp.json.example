@@ -1,0 +1,16 @@
+{
+  "_README": "复制本文件为 .mcp.json，把下面的路径改成你本机的真实路径。.mcp.json 已被 .gitignore 排除，不会上传。",
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest",
+        "--browser", "chromium",
+        "--executable-path", "<你的Chrome/Chromium可执行文件绝对路径，如 D:\\browsers\\chrome\\chrome.exe>"
+      ],
+      "env": {
+        "PATH": "<你的Node.js安装目录>;C:\\Windows\\system32;C:\\Windows"
+      }
+    }
+  }
+}
