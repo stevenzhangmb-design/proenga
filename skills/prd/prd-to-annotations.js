@@ -34,6 +34,23 @@ function parsePrd(mdPath) {
   const fpOf = new Map();
   H.forEach(h => { if (/^(字段规范|用例规则)$/.test(h.name)) { const par = [...H.slice(0, h.k)].reverse().find(x => x.lv < h.lv); if (par && par.num) fpOf.set(par.num, par); } });
   const directKids = h => kids(h).filter(x => [...H.slice(0, x.k)].reverse().find(y => y.lv < x.lv) === h);
+  /* 2026-11-13：页面级写法——【字段规范】【用例规则】两节下面再按功能分小节（如 5.1.6.1 新增发票主体 / 5.1.7.1 新增发票主体），
+     同名小节配成一个功能点（章节号取用例规则那边的，没有就取字段规范那边的），每个功能各出一个标注挂到自己的按钮上。 */
+  const subFp = new Map();
+  for (const [num, par] of [...fpOf]) {
+    const ks = directKids(par);
+    const fsH = ks.find(x => x.name === '字段规范'), ucH = ks.find(x => x.name === '用例规则');
+    const fsK = fsH ? directKids(fsH) : [], ucK = ucH ? directKids(ucH) : [];
+    if (!fsK.length && !ucK.length) continue;
+    const names = [...new Set([...ucK, ...fsK].map(x => x.name))];
+    for (const nm of names) {
+      const f = fsK.find(x => x.name === nm), u = ucK.find(x => x.name === nm);
+      const key = (u || f).num; if (!key) continue;
+      subFp.set(key, { num: key, name: nm, parent: par, fs: f || null, uc: u || null });
+    }
+    fpOf.delete(num);   // 父节只是容器，不单独出标注
+  }
+  for (const [k, v] of subFp) fpOf.set(k, v);
   return { L, H, fpOf, body, kids, directKids, path, ancestors };
 }
 
@@ -45,8 +62,9 @@ function buildPins(prd, map) {
     const h = fpOf.get(sec);
     if (!h) { problems.push(`映射里的 ${sec} 在 PRD 里找不到，或它下面没有字段规范/用例规则`); continue; }
     mapped.add(sec);
-    const ks = directKids(h);
-    const fsH = ks.find(x => x.name === '字段规范'), ucH = ks.find(x => x.name === '用例规则');
+    let fsH, ucH;
+    if (h.parent) { fsH = h.fs; ucH = h.uc; }   // 页面级写法拆出来的功能
+    else { const ks = directKids(h); fsH = ks.find(x => x.name === '字段规范'); ucH = ks.find(x => x.name === '用例规则'); }
     /* PRD 里写“请参考 x.x.x 的目录。不同之处：……”时，标注里把被引用那一节的原文接在后面（点开标注就能看全；PRD 本身不改） */
     const withRef = t => { const m = t.match(/请参考\s*([\d.]+\d)\s*的目录/); if (!m) return t;
       const ref = prd.H.find(x => x.num === m[1]); if (!ref) return t;
@@ -55,7 +73,7 @@ function buildPins(prd, map) {
       id: 'prd-' + sec, x: 0, y: 0, number: pins.length + 1,
       title: h.name, content: '',
       fieldSpecs: fsH ? withRef(body(fsH)) : '', useCaseRules: ucH ? withRef(body(ucH)) : '',
-      menuPath: path(h), prdSection: sec, type: '业务规则', selectorPath: '', pageKey: '',
+      menuPath: h.parent ? path(h.parent) + ' › ' + h.name : path(h), prdSection: sec, type: '业务规则', selectorPath: '', pageKey: '',
       anchor: Object.assign({ pages: e.pages || [], tab: e.tab || '', texts: e.texts || [] }, e.notTab ? { notTab: e.notTab } : {}),
       zoneContext: { fpKey: '' }, isAIDraft: false, fromPrd: true,
     });
