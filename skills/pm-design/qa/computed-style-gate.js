@@ -48,7 +48,7 @@ async function renderExtract(htmlPath, dir, port) {
     ws.onmessage = m => { const d = JSON.parse(m.data); if (d.id && pend[d.id]) { pend[d.id](d); delete pend[d.id]; } };
     const send = (m, p = {}) => new Promise(r => { const i = ++id; pend[i] = r; ws.send(JSON.stringify({ id: i, method: m, params: p })); });
     const evalv = async e => (await send('Runtime.evaluate', { expression: e, returnByValue: true })).result?.result?.value;
-    await send('Page.enable'); await send('Runtime.enable');
+    await send('Page.enable'); await require('./_anno-isolate').isolateAnnoServer(send); /* 隔离真 anno-server(3799)：防标注层 /anno-persist 改写用户真实原型 */ await send('Runtime.enable');
     await send('Emulation.setDeviceMetricsOverride', { width: 1680, height: 1050, deviceScaleFactor: 1, mobile: false });
     await send('Page.navigate', { url: `http://localhost:${port}/p.html` });
     for (let i = 0; i < 120; i++) { await sleep(150); if (await evalv(`!!document.querySelector('.el-table__header th')`) === true) break; }

@@ -89,7 +89,7 @@ const results = [];
       };
       const send = (m, p = {}) => new Promise(res => { const i = ++id; pend[i] = res; ws.send(JSON.stringify({ id: i, method: m, params: p })); });
       const ev = async e => (await send('Runtime.evaluate', { expression: e, returnByValue: true, awaitPromise: false })).result?.result?.value;
-      await send('Page.enable'); await send('Runtime.enable');
+      await send('Page.enable'); await require('./_anno-isolate').isolateAnnoServer(send); /* 隔离真 anno-server(3799)：防标注层 /anno-persist 改写用户真实原型 */ await send('Runtime.enable');
       await send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 1000, deviceScaleFactor: 1, mobile: false });
       await send('Page.navigate', { url: `http://localhost:${wp}/p.html?reset=1` });
       for (let i = 0; i < 240; i++) { await sleep(120); if (await ev("(document.querySelector('#app')&&document.querySelector('#app').innerText.length>150)?1:0") === 1) break; }

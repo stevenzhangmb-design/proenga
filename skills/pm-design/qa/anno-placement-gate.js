@@ -47,7 +47,7 @@ async function checkOne(file, PORT, DPORT) {
     const send = (mt, p = {}) => new Promise(res => { const mid = ++id; pend[mid] = res; ws.send(JSON.stringify({ id: mid, method: mt, params: p })); });
     const ev = async e => { const r = await send("Runtime.evaluate", { expression: e, returnByValue: true, awaitPromise: true }); return r.result && r.result.result ? r.result.result.value : undefined; };
     const waitFor = async (e, t = 100) => { for (let i = 0; i < t; i++) { try { if (await ev(e) === true) return true; } catch (x) {} await new Promise(z => setTimeout(z, 300)); } return false; };
-    await send("Page.enable"); await send("Runtime.enable");
+    await send("Page.enable"); await require('./_anno-isolate').isolateAnnoServer(send); /* 隔离真 anno-server(3799)：防标注层 /anno-persist 改写用户真实原型 */ await send("Runtime.enable");
     await send("Page.navigate", { url: `http://localhost:${PORT}/` });
     await waitFor(`typeof window.__anno==='object'`);
     // 点「标注」开关（按 title 含"标注"找，回退第一个 el-switch）

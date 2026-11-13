@@ -197,7 +197,7 @@ const ASSERT = `(async () => {
   let c, exitCode = 1;
   try {
     c = await cdp();
-    await c.send("Page.enable"); await c.send("Runtime.enable");
+    await c.send("Page.enable"); await require('./_anno-isolate').isolateAnnoServer((m, p) => c.send(m, p)); /* 隔离真 anno-server(3799)：防标注层 /anno-persist 改写用户真实原型 */ await c.send("Runtime.enable");
     // 视口必须 ≥ 规范页面最小宽(§5.1 min-width:1350px)；否则内容溢出视口 → 右键坐标落到视口外
     // → elementFromPoint 取不到目标 → 气泡不弹 → ③圈选假失败。(--window-size 在 headless=new 下不可靠，用 CDP 明确设。)
     try { await c.send("Emulation.setDeviceMetricsOverride", { width: 1680, height: 1180, deviceScaleFactor: 1, mobile: false }); } catch (_) {}

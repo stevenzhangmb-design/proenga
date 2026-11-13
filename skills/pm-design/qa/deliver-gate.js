@@ -81,6 +81,8 @@ const gates = [
   /* 51 2026-11-13 加·根治「后台逐页自检端口写死被残留进程占住→每次假红；报告 GBK 乱码没人看得懂」 */
   ["51逐页自检健康(自检闸端口不写死·只清自己的残留·后台报告UTF-8不乱码·真跑编码链路)", "verify-gate-health-gate.js"],
   /* ㊽ 2026-10-30 加·根治「注入浏览器的模板字符串被注释里的反引号截断·同形状踩两次」 */
+  /* 52 2026-11-13 加·根治「②㊱开原型没拦 3799，真 anno-server 每跑一次总闸就改写 archive 里的用户原型」 */
+  ["52浏览器闸隔离真anno-server(开原型的闸必须把 localhost:3799 改到死端口/临时实例·治『跑总闸改写用户真实原型』)", "anno-isolation-gate.js"],
   ["㊽工具语法自检(skills/rpa+pm-design+qa 逐个 node --check·治『注释里的反引号截断模板字符串致整个工具跑不起来』)", "rpa-tool-syntax-gate.js"],
 ];
 
@@ -151,7 +153,10 @@ function isPureStatic(file) {
    不读 archive 里的原型、web/调试端口与 A 道不重叠（或运行时探空闲）、不起 anno-server 隔离实例、不写共享文件。
    ⚠ 读 archive 原型的 ⑦⑨㉛㊱ 留在 A 道：archive 里的原型会被真 anno-server 的 /anno-persist 回写
    （非原子写），实测 ㉛/㊱ 与 A 道并行时同一个充值原型"挂载失败/标注层未启用"、单跑全绿——
-   所以它们必须和其它会触发回写的闸串行（顺序同旧版）。新闸一律默认进 A，要进 B 先按上面几条核过再加。 */
+   所以它们必须和其它会触发回写的闸串行（顺序同旧版）。新闸一律默认进 A，要进 B 先按上面几条核过再加。
+   §2026-11-13 回写源头已堵：真正触发回写的是 ②regression-check、㊱full-interaction-regression（开原型没拦 3799）；
+   现在所有开浏览器的闸都接 _anno-isolate.js，由 52 anno-isolation-gate 静态卡 + 52b 跑闸前后哈希比对兜底。
+   分道暂不放宽（仍按旧顺序串行），等多跑几轮确认稳定再议。 */
 const LANE_B = new Set([
   "anno-portability-gate.js",            // ⑩ fixtures/reference-prototype.html·8866/9466
   "layout-sanity-gate.js",               // ㊷ fixtures/vt·探空闲端口·屏蔽 3799
@@ -608,6 +613,7 @@ function deliverableReportNote() {
 
 async function main() {
   const _t0 = Date.now();
+  let _archSnap = null; try { _archSnap = archiveSnapshot(); } catch (_) {}   // 52b 跑闸前快照（见 archiveSnapshot）
   /* 助手和纯静态池同时起步：助手编译约 2～4 秒，纯静态闸不需要它 */
   const helperP = startHelper();
   for (const j of jobs) j.lane = laneOf(j.file);
@@ -640,7 +646,47 @@ async function main() {
   } else if (firstRed.length) console.log("  ── 红了 " + firstRed.length + " 道（>5），不复验，全部按红算 ──");
   for (const j of jobs) if (j.cleanup) j.cleanup();
   stopHelper();
+  const changed = archiveChangedSince(_archSnap);
+  if (changed.length) {
+    console.log("  ❌ 跑闸期间这些用户原型被改写了（有闸的浏览器没隔离真 anno-server 3799）：");
+    changed.forEach(f => console.log("        │ " + f));
+    console.log("     若你跑闸时正好在浏览器里编辑这些原型，属于正常回写，重跑一次即可；否则是闸泄漏，查 52 anno-isolation-gate。");
+    preFail.push("52b跑闸前后用户原型未被改写(archive 等原型目录 *.html 哈希比对·改写 " + changed.length + " 个)");
+  }
   report(_t0);
+}
+
+/* 52b（2026-11-13）总闸前后给用户原型目录的 *.html 做哈希快照：任何一道闸让真 anno-server 回写了用户原型 → 红。
+   静态的 52 anno-isolation-gate 管"写法"，这里管"结果"——漏网的（比如闸起的子进程开了浏览器）也逮得到。
+   目录 = 闸扫描的原型目录 + anno-server 配置里的 archiveDir/archiveDirs（真实例回写的就是这些）。只读，不改任何文件。 */
+function archiveDirsToWatch() {
+  const dirs = new Set();
+  try { require("./_archive-dir").protoScanDirs().forEach(d => dirs.add(path.resolve(d))); } catch (_) {}
+  try {
+    const sd = path.resolve(QA, "..", "..", "..", "..", "anno-server");
+    const cfg = JSON.parse(fs.readFileSync(path.join(sd, "anno-config.json"), "utf8").replace(/^﻿/, ""));
+    [cfg.archiveDir, ...(cfg.archiveDirs || [])].filter(Boolean).forEach(d => dirs.add(path.resolve(sd, d)));
+  } catch (_) {}
+  return [...dirs];
+}
+function archiveSnapshot() {
+  const crypto = require("crypto"), snap = new Map();
+  for (const d of archiveDirsToWatch()) {
+    let fl = [];
+    try { fl = fs.readdirSync(d); } catch (_) { continue; }
+    for (const f of fl) {
+      if (!/\.html?$/i.test(f)) continue;
+      const p = path.join(d, f);
+      try { snap.set(p, crypto.createHash("sha1").update(fs.readFileSync(p)).digest("hex")); } catch (_) {}
+    }
+  }
+  return snap;
+}
+function archiveChangedSince(before) {
+  if (!before) return [];
+  const after = archiveSnapshot(), out = [];
+  for (const [p, h] of before) if (after.has(p) && after.get(p) !== h) out.push(p);
+  return out;
 }
 
 function report(_t0) {

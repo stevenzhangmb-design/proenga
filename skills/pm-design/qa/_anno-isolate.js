@@ -13,13 +13,15 @@
      await isolateAnnoServer(send, APORT);     // 3799 重定向到闸自己起的临时实例
    send = (method, params) => Promise（CDP 发送函数）。
    效果：fetch / EventSource / XMLHttpRequest / sendBeacon 里的 localhost:3799、127.0.0.1:3799
-   全部改到目标端口（默认 127.0.0.1:9 = 连接被拒，和服务没开时行为一致，不改变闸的判定）。
+   全部改到目标端口（默认 localhost:37990 = 连接被拒，和服务没开时行为一致，不改变闸的判定）。
    防回退：qa/anno-isolation-gate.js 静态扫所有浏览器闸，打开原型却没接本隔离 = 红。
    ════════════════════════════════════════════════════════════════════════ */
-const DEAD_PORT = 9;
+/* 死端口选 37990：① 不在 Chrome 的禁用端口表里（9/1 之类会报 ERR_UNSAFE_PORT，和"服务没开"不一样，闸会误判成真报错）；
+   ② 改写后的地址 localhost:37990 仍包含 "localhost:3799" 字样，各闸已有的"3799 连不上属正常噪声"过滤照常生效。 */
+const DEAD_PORT = 37990;
 
 function isolationSource(port) {
-  const to = "127.0.0.1:" + (port || DEAD_PORT);
+  const to = "localhost:" + (port || DEAD_PORT);
   return `(function(){
   var TO=${JSON.stringify(to)};
   function fx(u){try{if(typeof u==='string')return u.replace(/(localhost|127\\.0\\.0\\.1):3799(?=\\/|$)/g,TO);if(u&&typeof URL!=='undefined'&&u instanceof URL)return new URL(fx(u.href));}catch(e){}return u;}

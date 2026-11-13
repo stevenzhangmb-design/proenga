@@ -168,7 +168,7 @@ const PROBE = `(function(){
 })()`;
 
 (async () => {
-  const cdp = await connect(PORT);
+  const cdp = await connect(PORT); await require('./_anno-isolate').isolateAnnoServer((m, p) => cdp.send(m, p)); /* 隔离真 anno-server(3799)：防标注层 /anno-persist 改写用户真实原型 */
   const base = 'file:///' + OUT.replace(/\\/g, '/');
   const bad = [], warn = [];
   let checked = 0;

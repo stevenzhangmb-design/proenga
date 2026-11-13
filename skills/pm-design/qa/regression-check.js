@@ -222,7 +222,7 @@ const ASSERT = `(async () => {
   let c, exitCode = 1;
   try {
     c = await cdp();
-    await c.send("Page.enable"); await c.send("Runtime.enable"); await c.send("Log.enable");
+    await c.send("Page.enable"); await require('./_anno-isolate').isolateAnnoServer((m, p) => c.send(m, p)); /* 隔离真 anno-server(3799)：防标注层 /anno-persist 改写用户真实原型 */ await c.send("Runtime.enable"); await c.send("Log.enable");
     await c.send("Network.enable"); await c.send("Network.setBlockedURLs", { urls: ["*tailwindcss*"] });
     await c.send("Page.navigate", { url: `http://localhost:${PORT}/${encodeURIComponent(FILE)}?page=recharge-list&reset=1` });
     let mounted = false;

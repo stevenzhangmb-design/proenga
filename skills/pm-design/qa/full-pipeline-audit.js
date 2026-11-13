@@ -84,7 +84,7 @@ const add = (cond, label) => { if (!cond) fails.push(label); return cond; };
     const send = (method, params = {}) => new Promise(res => { const mid = ++id; pend[mid] = res; ws.send(JSON.stringify({ id: mid, method, params })); });
     const ev = async e => { const r = await send("Runtime.evaluate", { expression: e, returnByValue: true, awaitPromise: true }); if (r.result && r.result.exceptionDetails) return "EXC:" + JSON.stringify(r.result.exceptionDetails).slice(0, 150); return r.result && r.result.result ? r.result.result.value : undefined; };
     const waitFor = async (e, t = 120) => { for (let i = 0; i < t; i++) { try { if (await ev(e) === true) return true; } catch (x) {} await new Promise(z => setTimeout(z, 400)); } return false; };
-    await send("Page.enable"); await send("Runtime.enable");
+    await send("Page.enable"); await require('./_anno-isolate').isolateAnnoServer(send); /* 隔离真 anno-server(3799)：防标注层 /anno-persist 改写用户真实原型 */ await send("Runtime.enable");
 
     for (const sysv of systems) {
       const sysFps = fpKeys.filter(k => fps[k].system === sysv);

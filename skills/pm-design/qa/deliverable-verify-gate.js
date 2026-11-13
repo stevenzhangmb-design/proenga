@@ -242,7 +242,7 @@ if (!PARENT) (async () => {
         if (d.method === 'Runtime.consoleAPICalled' && d.params.type === 'error') { errors.push('ERR: ' + (d.params.args || []).map(a => a.value || a.description || '').join(' ').slice(0, 120)); }
       };
       sock.onclose = () => { if (ws !== sock) return; wsClosed = true; failAll('浏览器连接断开（Chrome 被关掉或被别的工具清理时误杀）'); };
-      await send('Page.enable'); await send('Runtime.enable');
+      await send('Page.enable'); await require('./_anno-isolate').isolateAnnoServer(send); /* 隔离真 anno-server(3799)：防标注层 /anno-persist 改写用户真实原型 */ await send('Runtime.enable');
       await send('Emulation.setDeviceMetricsOverride', { width: 1680, height: 1050, deviceScaleFactor: 1, mobile: false });
     };
     const LOST = /浏览器连接|没响应/;

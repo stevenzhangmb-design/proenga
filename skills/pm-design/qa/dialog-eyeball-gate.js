@@ -124,7 +124,7 @@ if (!jobs.length) { console.log('㊻ 弹窗眼验闸：没有弹窗可验，跳�
   let c = null;
   try {
     c = await connectCDP(PORT);
-    await c.send('Page.enable', {});
+    await c.send('Page.enable', {}); await require('./_anno-isolate').isolateAnnoServer((m, p) => c.send(m, p)); /* 隔离真 anno-server(3799)：防标注层 /anno-persist 改写用户真实原型 */
     const fileUrl = 'file:///' + path.resolve(html).replace(/\\/g, '/');
     let lastPage = null;
     for (const j of jobs) {

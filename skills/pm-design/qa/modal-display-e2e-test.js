@@ -78,7 +78,7 @@ const FIXTURE_UC = "• 前置条件：用户已登录并有权限\n• 操作�
       return false;
     };
 
-    await send("Page.enable"); await send("Runtime.enable");
+    await send("Page.enable"); await require('./_anno-isolate').isolateAnnoServer(send); /* 隔离真 anno-server(3799)：防标注层 /anno-persist 改写用户真实原型 */ await send("Runtime.enable");
 
     // ── 首次导航：等标注层就绪（window.__anno 为 object 时双 Vue 实例已挂载、_loadPins 已跑）──
     await send("Page.navigate", { url: `http://localhost:${PORT}/` });

@@ -38,7 +38,7 @@ const testData={ system_name:"同步闸测试", function_points:{
     const ws=new WebSocket(page.webSocketDebuggerUrl); await new Promise((res,rej)=>{ws.onopen=res;ws.onerror=rej;});
     let id=0;const pending={}; ws.onmessage=(m)=>{const d=JSON.parse(m.data); if(d.id&&pending[d.id]){pending[d.id](d);delete pending[d.id];}};
     const send=(method,params={})=>new Promise(res=>{const mid=++id;pending[mid]=res;ws.send(JSON.stringify({id:mid,method,params}));});
-    await send("Page.enable"); await send("Runtime.enable"); await send("Page.navigate",{url:`http://localhost:${PORT}/`});
+    await send("Page.enable"); await require('./_anno-isolate').isolateAnnoServer(send); /* 隔离真 anno-server(3799)：防标注层 /anno-persist 改写用户真实原型 */ await send("Runtime.enable"); await send("Page.navigate",{url:`http://localhost:${PORT}/`});
     await new Promise(z=>setTimeout(z,1200));
     const r=await send("Runtime.evaluate",{expression:`(function(){var d=${JSON.stringify(testData)}; return (window.prdGenerator&&window.prdGenerator.buildFpSections)?window.prdGenerator.buildFpSections(d):'NO-GEN';})()`,returnByValue:true});
     C=r.result&&r.result.result?r.result.result.value:"EVAL-ERR"; ws.close();

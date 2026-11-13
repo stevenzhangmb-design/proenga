@@ -55,7 +55,7 @@ const OTHER = [{ id: 9, number: 1, title: "功能点：本地另一个", pageKey
     ws.onmessage = m => { const d = JSON.parse(m.data); if (d.id && pend[d.id]) { pend[d.id](d); delete pend[d.id]; } if (d.method === "Runtime.exceptionThrown") cerr.push((d.params.exceptionDetails.exception || {}).description || ""); };
     send = (mt, p = {}) => new Promise(res => { const mid = ++id; pend[mid] = res; ws.send(JSON.stringify({ id: mid, method: mt, params: p })); });
     ev = async e => { const r = await send("Runtime.evaluate", { expression: e, returnByValue: true, awaitPromise: true }); return r.result && r.result.result ? r.result.result.value : undefined; };
-    await send("Page.enable"); await send("Runtime.enable");
+    await send("Page.enable"); await require('./_anno-isolate').isolateAnnoServer(send); /* 隔离真 anno-server(3799)：防标注层 /anno-persist 改写用户真实原型 */ await send("Runtime.enable");
 
     const load = async () => { await send("Page.navigate", { url: `http://localhost:${PORT}/` }); for (let i = 0; i < 40; i++) { if (await ev(`typeof window.__anno==='object'`) === true) break; await new Promise(z => setTimeout(z, 250)); } await new Promise(z => setTimeout(z, 800)); };
     const pinCount = async () => await ev(`(window.__anno && typeof window.__anno.pinCount!=='undefined') ? window.__anno.pinCount : -1`);
