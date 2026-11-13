@@ -119,7 +119,7 @@ $found = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
    （或右键单击区域空白 → 进画框模式 → 左键拖拽框选区域 → 松开弹气泡）
 3. 系统自动预生成字段规范 + 用例规则（AI 草稿，可在弹窗里编辑）
 4. 点开标注号可查看/编辑内容
-5. 点顶部「生成研发PRD」按钮（或每个标注号里的「生成研发PRD」）
+5. 点顶部【📋 复制已圈功能】（只处理一个功能时，用该标注号弹窗底部的【📋 复制已圈功能】），在清单里确认后复制，粘到 AI 对话框，由 AI 生成字段规范和用例规则并经 `/anno-inject` 回填到圈选位置；在标注弹窗里编辑后点【保存】，也会同步本地 PRD。（顶部工具栏实际按钮以 `skills/pm-design/components/annotation-layer.html`（标注层与【更多 ▾】自适应）和骨架 `prototype-skeleton.html` 的宿主工具栏为准：复制已圈功能、导出分享版、导出对接料·喂AI、一键生成代码、清空、恢复标注，窄屏时部分收进【更多 ▾】；没有“生成研发PRD”按钮，不许编造按钮名。）
 6. anno-server 自动：写 `prd-data.json` → 生成 `PRD-*.md` + `.docx` → 回写原型 HTML
 
 ### 分享给客户（预览模式）

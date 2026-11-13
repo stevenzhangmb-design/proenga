@@ -3,6 +3,9 @@
      v8.53（2076）：设置开关（flag）联动扩展，都写 flagHide:{名:值} / flagShow:{名:值}，不配不生效：列表列 columns[i]、筛选项 filters[i]、
             批量按钮 selectActions[i] 及其 menu[j]、说明条 alert 里写成 {label:{zh,en,pt}, flagHide} 的那一行、左侧状态面板 statusPanel.items[i]、详情板块 / 板块页签 / 字段；
             flagMoves 新写法 {when, fromStatus, toStatus, at, set} → 按标志位把左侧状态面板 byStatus[fromStatus]（含其页签）的行挪到 byStatus[toStatus]，改回时原样挪回。
+     v8.57（2150）：fd.maxSoft:true（不截断、超长红字「{f}最多 N 个字符」）扩到整页文本域、弹窗（分区 / 不分区）的输入框和文本域，右下仍显示 n / max 计数；
+            不分区弹窗的输入框 / 文本域写 blurCheck:true → 离开输入框即校验（原来只在点确定时校验）。
+            收银台【整单备注】【交班备注】【退款说明】写 noteSoft / softMax:true 同样不截断、超长红字并拦住确定；门店预订【预订信息】字段可写 pattern(+patternMsg)，填错在字段下面红字（默认「{f}格式不正确」）。都不配不生效。
      v8.56（2134）：交班日结【去处理】可配 failGoto + failFilter，【去上传】的 pendGoto 可配 pendFilter → 跳到收银台 › 订单管理并预选筛选（如 开票状态=开票失败 / 开票中）；不配不生效。
      v8.55（2114）：详情页表格下方的橙色提示（table.tip / tipBy）下移 8px，不再被表格横向滚动条盖住。
      v8.54（2046·BA）：弹窗字段 failFrom=列下标 → 从某一行打开弹窗时，该行这一格有内容就把字段标红、控件下方显示这段原因（开票失败后重开：税局退回的原因）；
@@ -1519,6 +1522,11 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
   .ta-items .el-textarea__inner{padding-bottom:22px;}
   .ta-items .ta-count{position:absolute;right:12px;bottom:8px;font-size:12px;color:#909399;pointer-events:none;background:#fff;padding-left:6px;}
   .ta-items .ta-count.over{color:#f56c6c;}
+  /* §v8.57 maxSoft 文本域：计数与 Element Plus show-word-limit 同位置同样式（不截断，超长计数变红） */
+  .soft-ta{position:relative;width:100%;}
+  .soft-ta .soft-cnt{position:absolute;right:10px;bottom:5px;font-size:12px;line-height:14px;color:#909399;background:#fff;pointer-events:none;}
+  .soft-ta .soft-cnt.over{color:#f56c6c;}
+  .pos-soft-err{display:block;color:#f56c6c;font-size:12px;line-height:1.5;margin-top:4px;font-style:normal;font-weight:400;text-align:left;}
   /* §v4.3 goto:{card} 跳过去后让那张卡闪一下，告诉人"就是这一块" */
   .card-flash{box-shadow:0 0 0 2px var(--primary,#3363FF) !important;transition:box-shadow .3s;}
   /* §v4.3 设置卡里的灰底摘要块（真系统开启定期导出后下面那两行） */
@@ -2826,7 +2834,9 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                   <!-- textarea 支持字数统计（真系统「补充信息(Fisco)」0/200） -->
                   <!-- §v5.0 这几种控件原来没绑 @blur，离开输入框不报错，只有点【提交】才知道错
                        （2026-10-07 用户要求：光标一离开就要在下面提示） -->
-                  <el-input v-else-if="fd.type==='textarea'" v-model="fd.value" type="textarea" :rows="2" :maxlength="fd.max" :show-word-limit="!!fd.max" @blur="dvBlur(fd)"></el-input>
+                  <el-input v-else-if="fd.type==='textarea' && !(fd.maxSoft && fd.max)" v-model="fd.value" type="textarea" :rows="2" :maxlength="fd.max" :show-word-limit="!!fd.max" @blur="dvBlur(fd)"></el-input>
+                  <!-- §v8.57 整页文本域 fd.maxSoft:true → 不截断，超过 max 红字「{f}最多 N 个字符」，右下仍显示 n / max -->
+                  <div v-else-if="fd.type==='textarea'" class="soft-ta"><el-input v-model="fd.value" type="textarea" :rows="2" @blur="dvBlur(fd)" @input="(fd._err || String(fd.value||'').length>fd.max) && dvBlur(fd)"></el-input><span class="soft-cnt" :class="{over:String(fd.value||'').length>fd.max}">{{ String(fd.value||'').length }} / {{ fd.max }}</span></div>
                   <el-input v-else-if="fd.type==='password'" v-model="fd.value" type="password" show-password :placeholder="L(fd.ph||'')" @blur="dvBlur(fd)"></el-input>
                   <span v-else-if="fd.type==='upload'" class="up-link" @click="msg(L(fd.label))">＋ {{ L(fd.upText||fd.label) }}</span>
                   <!-- §v4.9 只读值走 cell()：与列表单元格同一套渲染，支持 {t,c,dot} 彩点与作者写的内联标记。
@@ -4117,10 +4127,12 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                     <input type="radio" :checked="posPreWay===wi" :disabled="!!w.disabled" @change="posPreWay=wi">{{ L(w.label||w) }}</label></b></div>
                 <div v-for="(f,fi) in (curPos.preFields||[])" :key="fi" class="pos-pre-f">
                   <label :class="{req:f.required}">{{ L(f.label) }}</label>
-                  <input v-if="f.type!=='select'" v-model="posPreForm[fi]" :placeholder="L(f.ph||'请输入')" :disabled="!!f.disabled">
+                  <input v-if="f.type!=='select'" v-model="posPreForm[fi]" :placeholder="L(f.ph||'请输入')" :disabled="!!f.disabled" :style="posPreForm['e'+fi] ? {borderColor:'#f56c6c'} : null" @blur="f.pattern && posPreChk(fi)" @input="posPreForm['e'+fi] && posPreChk(fi)">
                   <select v-else v-model="posPreForm[fi]" :disabled="!!f.disabled">
                     <option v-for="(o,oi) in (f.options||[])" :key="oi">{{ L(o) }}</option>
                   </select>
+                  <!-- §v8.57 预订信息字段 f.pattern(+patternMsg) → 填错在字段下面红字（默认「{f}格式不正确」），点【确认收款】也拦 -->
+                  <div v-if="posPreForm['e'+fi]" class="pos-soft-err pos-pre-err">{{ posPreForm['e'+fi] }}</div>
                 </div>
               </div>
               <div class="pos-pre-foot">
@@ -4164,12 +4176,14 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
             <div class="pos-dlg">
               <div class="pos-dlg-h"><b>{{ L(curPos.noteTitle||'整单备注') }}</b><i @click="posNoteOpen=false">✕</i></div>
               <div class="pos-dlg-b">
-                <textarea v-model="posNote" rows="5" maxlength="200" :placeholder="L(curPos.notePh||'请输入')"></textarea>
-                <span class="pos-cnt">{{ (posNote||'').length }} / 200</span>
+                <textarea v-model="posNote" rows="5" :maxlength="curPos.noteSoft?undefined:200" :placeholder="L(curPos.notePh||'请输入')"></textarea>
+                <span class="pos-cnt" :style="curPos.noteSoft && (posNote||'').length>200 ? {color:'#f56c6c'} : null">{{ (posNote||'').length }} / 200</span>
+                <!-- §v8.57 curPos.noteSoft:true → 不截断，超过 200 字红字提示并拦住【确定】 -->
+                <div v-if="curPos.noteSoft && (posNote||'').length>200" class="pos-soft-err">{{ String(T('vMax')||'').replace('{f}', L(curPos.noteTitle||'整单备注')).replace('{n}', 200).trim() }}</div>
               </div>
               <div class="pos-dlg-f">
                 <button class="pos-cancel2" @click="posNoteOpen=false">{{ L(curPos.cancelText||'取消') }}</button>
-                <button class="pos-cancel" @click="posNoteOpen=false; posTip(curPos.noteDone||'整单备注已保存')">{{ L(curPos.okText2||'确定') }}</button>
+                <button class="pos-cancel" @click="(curPos.noteSoft && (posNote||'').length>200) ? null : (posNoteOpen=false, posTip(curPos.noteDone||'整单备注已保存'))">{{ L(curPos.okText2||'确定') }}</button>
               </div>
             </div>
           </div>
@@ -4483,8 +4497,10 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
               <template v-if="hvTab===0">
                 <div class="hv-h2">{{ L(curHandover.noteTitle||'交班备注') }}</div>
                 <div class="hv-note-w">
-                  <textarea class="hv-note" v-model="hvNote" maxlength="200" :placeholder="L(curHandover.notePh||'请输入')" rows="3"></textarea>
-                  <span class="hv-cnt">{{ (hvNote||'').length }} / 200</span>
+                  <textarea class="hv-note" v-model="hvNote" :maxlength="curHandover.noteSoft?undefined:200" :placeholder="L(curHandover.notePh||'请输入')" rows="3"></textarea>
+                  <span class="hv-cnt" :style="curHandover.noteSoft && (hvNote||'').length>200 ? {color:'#f56c6c'} : null">{{ (hvNote||'').length }} / 200</span>
+                  <!-- §v8.57 curHandover.noteSoft:true → 不截断，超过 200 字红字提示并拦住【交班】 -->
+                  <div v-if="curHandover.noteSoft && (hvNote||'').length>200" class="pos-soft-err">{{ String(T('vMax')||'').replace('{f}', L(curHandover.noteTitle||'交班备注')).replace('{n}', 200).trim() }}</div>
                 </div>
               </template>
             </div>
@@ -4494,7 +4510,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           <div v-if="hvTab===0" class="hv-foot">
             <div v-if="hvPend>0" class="hv-block">{{ String(L(curHandover.blockMsg)||'').replace('{n}', hvPend) }}</div>
             <div v-else class="hv-tip">{{ L(curHandover.footTip1||'请仔细核对') }}<strong>{{ L(curHandover.footTipStrong||'交班金额') }}</strong>{{ L(curHandover.footTip2||'，确认无误后，务必按时交班') }}</div>
-            <button class="hv-sub el-button--primary" :disabled="hvPend>0 && curHandover.blockPend!==false" @click="posTip(curHandover.doneMsg||'交班成功，本班次已结清')">{{ L(curHandover.submitText||'交班') }}</button>
+            <button class="hv-sub el-button--primary" :disabled="hvPend>0 && curHandover.blockPend!==false" @click="(curHandover.noteSoft && (hvNote||'').length>200) ? null : posTip(curHandover.doneMsg||'交班成功，本班次已结清')">{{ L(curHandover.submitText||'交班') }}</button>
           </div>
           <!-- §v6.2 【交班记录】右抽屉（真系统 1100px）：左 320 列表 + 时间筛选胶囊，右 739 详情占位 + 重打交班小票 -->
           <div v-if="hvRecOpen" class="pos-mask" @click.self="hvRecOpen=false">
@@ -4624,14 +4640,16 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                     <b><label style="display:inline-flex;align-items:center;gap:6px;font-weight:400"><input type="checkbox" v-model="poRetAtCounter"> {{ L(curPosOrder.exchangeAuto.counterText)||'顾客还在柜台，货没带走' }}</label>
                       <em style="display:block;color:#909399;font-size:12px;font-style:normal;margin-top:4px">{{ L(curPosOrder.exchangeAuto.counterHint) }}</em></b></div>
                   <div class="po-rete-r"><span>{{ L(curPosOrder.retDescText||'退款说明') }}</span>
-                    <b class="po-rete-ta"><textarea v-model="poRetDesc" maxlength="200" rows="3" :placeholder="L(curPosOrder.retDescPh||'请输入')"></textarea>
-                      <i>{{ (poRetDesc||'').length }} / 200</i></b></div>
+                    <b class="po-rete-ta"><textarea v-model="poRetDesc" :maxlength="curPosOrder.retDescSoft?undefined:200" rows="3" :placeholder="L(curPosOrder.retDescPh||'请输入')"></textarea>
+                      <i :style="curPosOrder.retDescSoft && (poRetDesc||'').length>200 ? {color:'#f56c6c'} : null">{{ (poRetDesc||'').length }} / 200</i>
+                      <!-- §v8.57 curPosOrder.retDescSoft:true → 不截断，超过 200 字红字提示并拦住【下一步】 -->
+                      <em v-if="curPosOrder.retDescSoft && (poRetDesc||'').length>200" class="pos-soft-err">{{ String(T('vMax')||'').replace('{f}', L(curPosOrder.retDescText||'退款说明')).replace('{n}', 200).trim() }}</em></b></div>
                 </div>
               </div>
               <div class="po-foot po-foot-sp">
                 <span class="po-retn">{{ L(curPosOrder.retTotalText||'合计') }} <b class="po-retamt">{{ poRetMax }}</b></span>
                 <button class="po-btn primary" :disabled="poRetReason<0"
-                        @click="poRetDone()">{{ L(curPosOrder.nextText||'下一步') }}</button>
+                        @click="(curPosOrder.retDescSoft && (poRetDesc||'').length>200) ? null : poRetDone()">{{ L(curPosOrder.nextText||'下一步') }}</button>
               </div>
             </template>
           </div>
@@ -5041,7 +5059,9 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           <el-select v-else-if="fd.type==='select'" v-model="fd.value" :multiple="!!fd.multiple" :placeholder="L(fd.ph||'')" :disabled="!!fd.disabled"><el-option v-for="o in (fd.options||[])" :key="K(o)" :label="L(o)" :value="K(o)" :title="L(o)" :disabled="!!optDisabledReason(fd,o)"><span>{{ L(o) }}</span><span v-if="optDisabledReason(fd,o)" class="opt-why">{{ optDisabledReason(fd,o) }}</span></el-option></el-select>
           <el-date-picker v-else-if="fd.type==='date'" v-model="fd.value" :type="fd.range?'daterange':(fd.month?'month':'date')" :unlink-panels="!!fd.range" :shortcuts="dtShortcuts(fd)" :start-placeholder="T('startTime')" :end-placeholder="T('endTime')"></el-date-picker>
           <el-switch v-else-if="fd.type==='switch'" v-model="fd.value"></el-switch>
-          <el-input v-else-if="fd.type==='textarea'" v-model="fd.value" type="textarea" :rows="2" :maxlength="fd.max" :show-word-limit="!!fd.max"></el-input>
+          <el-input v-else-if="fd.type==='textarea' && !(fd.maxSoft && fd.max)" v-model="fd.value" type="textarea" :rows="2" :maxlength="fd.max" :show-word-limit="!!fd.max" @blur="fd.blurCheck && dlgBlur(fd)" @input="fd.blurCheck && fd._err && dlgBlur(fd)"></el-input>
+          <!-- §v8.57 不分区弹窗的文本域 fd.maxSoft:true → 不截断，超过 max 红字「{f}最多 N 个字符」（离开即校验），右下仍显示 n / max -->
+          <div v-else-if="fd.type==='textarea'" class="soft-ta"><el-input v-model="fd.value" type="textarea" :rows="2" @blur="dlgBlur(fd)" @input="(fd._err || String(fd.value||'').length>fd.max) && dlgBlur(fd)"></el-input><span class="soft-cnt" :class="{over:String(fd.value||'').length>fd.max}">{{ String(fd.value||'').length }} / {{ fd.max }}</span></div>
           <el-input v-else-if="fd.type==='password'" v-model="fd.value" type="password" show-password :placeholder="L(fd.ph||'')"></el-input>
           <!-- §5.3r 多选网格（真系统「同步采购发票」弹窗：全选 + 两列勾选框·每项=名称+灰色副行(CNPJ)·可滚动）
                数据写 { type:'checkGrid', allLabel:'全部公司', items:[{label:'APAUL COM LTDA', sub:'64.962.869/0001-08'},…] } -->
@@ -5094,8 +5114,10 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
             <el-button v-for="(b,bi) in (fd.btns||[])" :key="bi" :type="b.type||undefined"
                        @click="msg(L(b.done)||(L(b.label)+'（原型演示）'))">{{ L(b.label) }}</el-button>
           </div>
-          <el-input v-else v-model="fd.value" :placeholder="L(fd.ph||'')" :disabled="!!fd.disabled" :maxlength="fd.max" :show-word-limit="!!fd.max">
+          <!-- §v8.57 不分区弹窗的输入框 fd.maxSoft:true → 不截断，超过 max 红字（离开即校验），右侧仍显示 n / max；fd.blurCheck:true → 离开输入框即按字段规则校验（原来只在点确定时校验） -->
+          <el-input v-else v-model="fd.value" :placeholder="L(fd.ph||'')" :disabled="!!fd.disabled" :maxlength="fd.maxSoft?undefined:fd.max" :show-word-limit="!!fd.max && !fd.maxSoft" @blur="(fd.maxSoft || fd.blurCheck) && dlgBlur(fd)" @input="(fd.maxSoft || fd.blurCheck) && (fd._err || (fd.maxSoft && String(fd.value||'').length>fd.max)) && dlgBlur(fd)">
             <template v-if="fd.prefix" #prepend>{{ L(fd.prefix) }}</template>
+            <template v-if="fd.maxSoft && fd.max" #suffix><span class="el-input__count" :style="String(fd.value||'').length>fd.max?{color:'#f56c6c'}:null"><span class="el-input__count-inner">{{ String(fd.value||'').length }} / {{ fd.max }}</span></span></template>
           </el-input>
           <div v-if="fd.hint" class="fd-sub">{{ L(fd.hint) }}</div>
           <!-- §选中后果说明（报告改进项#4·四态后果说明+风险标色）：select 配 optionHints[选中值]={c:'red|orange|blue|green|gray', t:文案} -->
@@ -5275,8 +5297,10 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                           @blur="normItems(fd)"></el-input>
                 <span class="ta-count" :class="{over:itemCount(fd)>fd.maxItems}">{{ itemCount(fd) }} / {{ fd.maxItems }}</span>
               </div>
-              <el-input v-else-if="fd.type==='textarea'" v-model="fd.value" type="textarea" :rows="fd.rows||3" :placeholder="L(fd.ph||'')"
+              <el-input v-else-if="fd.type==='textarea' && !(fd.maxSoft && fd.max)" v-model="fd.value" type="textarea" :rows="fd.rows||3" :placeholder="L(fd.ph||'')"
                         :maxlength="fd.max" :show-word-limit="!!fd.max" @blur="dlgBlur(fd)" @input="fd._err && dlgBlur(fd)"></el-input>
+              <!-- §v8.57 弹窗分区文本域 fd.maxSoft:true → 不截断，超过 max 红字「{f}最多 N 个字符」，右下仍显示 n / max -->
+              <div v-else-if="fd.type==='textarea'" class="soft-ta"><el-input v-model="fd.value" type="textarea" :rows="fd.rows||3" :placeholder="L(fd.ph||'')" @blur="dlgBlur(fd)" @input="(fd._err || String(fd.value||'').length>fd.max) && dlgBlur(fd)"></el-input><span class="soft-cnt" :class="{over:String(fd.value||'').length>fd.max}">{{ String(fd.value||'').length }} / {{ fd.max }}</span></div>
               <!-- §v6.13 弹窗里的多选勾选组（开 55 发票「交付方式」：打印 A4 DANFE / 发送到邮箱）——原来没有这个分支，显示成空白输入框 -->
               <el-checkbox-group v-else-if="fd.type==='checkboxGroup'" v-model="fd.value" @change="dlgBlur(fd)">
                 <el-checkbox v-for="o in (fd.options||[])" :key="K(o)" :value="K(o)" :label="K(o)">{{ L(o) }}</el-checkbox>
@@ -5316,9 +5340,11 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
               <el-input v-else-if="fd.prefix" v-model="fd.value" :placeholder="L(fd.ph||'')" @input="v=>numClean(fd,v)" @blur="dlgBlur(fd)"><template #prepend>{{ L(fd.prefix) }}</template></el-input>
               <!-- §v3.89 单行输入也支持 fd.max（右侧 50/60 计数）与 fd.icon:'search'/'edit'（框内右侧图标·真系统「退货 CFOP 🔍」「交易性质 ✏️」） -->
               <!-- §v6.12 弹窗分区里的输入框也支持 fd.suffix（BRL / %）、fd.disabled，以及 fd.ai（框内绿色 AI 标 + 查询图标，真系统「编辑详情 › NCM」） -->
-              <el-input v-else v-model="fd.value" :placeholder="L(fd.ph||'')" :maxlength="fd.max" :show-word-limit="!!fd.max" :disabled="!!fd.disabled" @input="v=>{ numClean(fd,v); if(fd._err) dlgBlur(fd); }" @blur="dlgBlur(fd); dlgFieldChange(fd)">
+              <!-- §v8.57 fd.maxSoft:true → 不截断（maxlength 不下发），超过 max 输入时即红字，右侧仍显示 n / max -->
+              <el-input v-else v-model="fd.value" :placeholder="L(fd.ph||'')" :maxlength="fd.maxSoft?undefined:fd.max" :show-word-limit="!!fd.max && !fd.maxSoft" :disabled="!!fd.disabled" @input="v=>{ numClean(fd,v); if(fd._err || (fd.maxSoft && String(fd.value||'').length>fd.max)) dlgBlur(fd); }" @blur="dlgBlur(fd); dlgFieldChange(fd)">
                 <template v-if="fd.icon==='search' || fd.ai" #suffix><span v-if="fd.ai" class="ai-badge" style="display:inline-block;padding:0 4px;margin-right:6px;border-radius:3px;background:#E8F7EE;color:#1BA45B;font-size:11px;font-weight:700;line-height:16px">AI</span><span class="fd-ic" :title="L(fd.pickTip||'')" @click="pkOpen(fd)" v-html="SEARCH_SVG"></span></template>
                 <template v-else-if="fd.icon==='edit'" #suffix><span class="fd-ic" v-html="PEN_SVG"></span></template>
+                <template v-else-if="fd.maxSoft && fd.max" #suffix><span class="el-input__count" :style="String(fd.value||'').length>fd.max?{color:'#f56c6c'}:null"><span class="el-input__count-inner">{{ String(fd.value||'').length }} / {{ fd.max }}</span></span></template>
                 <template v-if="fd.suffix" #append>{{ L(fd.suffix) }}</template>
               </el-input>
               <div v-if="fd.hint" class="fd-sub">{{ L(fd.hint) }}</div>
@@ -6301,9 +6327,14 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       const posPreOpen = ref(false);       /* 门店预订的「预订信息」抽屉 */
       const posPreWay  = ref(0);
       const posPreForm = Vue.reactive({});
+      /* §v8.57 预订信息字段可写 pattern(+patternMsg)：有值且不匹配 → 错误文案存 posPreForm['e'+下标]，模板显示在字段下面；没写 pattern 不生效 */
+      function posPreChk(i){ const f=((curPos.value&&curPos.value.preFields)||[])[i]; const v=String(posPreForm[i]==null?'':posPreForm[i]).trim();
+        const e=(f && f.pattern && v && !(new RegExp(f.pattern).test(v))) ? (L(f.patternMsg) || vMsg('vFormat', f.label)) : '';
+        posPreForm['e'+i]=e; return e; }
       function posPreOk(){
         const req=(curPos.value&&curPos.value.preFields||[]).map((f,i)=>({f,i})).filter(x=>x.f.required && !x.f.disabled && !posPreForm[x.i]);
         if(req.length){ posTip((curPos.value&&curPos.value.preMiss)||('请先填写：'+req.map(x=>L(x.f.label)).join('、'))); return; }
+        if((curPos.value&&curPos.value.preFields||[]).map((f,i)=>posPreChk(i)).some(Boolean)) return;   /* §v8.57 */
         posPreOpen.value=false; posPayOpen.value=true;
       }
       /* 真系统每次进收银/门店预订页都弹一次「没连打印机」—— 这不是摆设：
@@ -10512,7 +10543,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       hvDate,hvDaily,hvStats,hvRecOpen,hvRecTab,hvRecSel,hvDetail,hvOpenDetail,   /* §v6.2 日结页/交班记录/明细 */
       isPosPage,posHead,posNav,posNavOpen,posNavItems,posNavIcon,posNavGo,posNavBack,posStores,posStoreName,posPickStore,   /* §v6.0 收银台模块切换抽屉 */
       sgdOpen,posNoteOpen,posNote,posCancelOpen,posCancelDo,posCustOpen,posCustPhone,posCustKeys,posCustKey,posScOn,  /* §v6.1 单栏布局四面板 */
-      posSpec,posSpecSel,posSpecQty,posSpecOpen,posSpecOk,posPreOpen,posPreWay,posPreForm,posPreOk,posPrnOpen,posNavHwPage,  /* §v6.2 */
+      posSpec,posSpecSel,posSpecQty,posSpecOpen,posSpecOk,posPreOpen,posPreWay,posPreForm,posPreOk,posPreChk,posPrnOpen,posNavHwPage,  /* §v6.2 */
       curPosHw,hwDetected,hwAddOpen,                                                   /* §v6.1 硬件设备页 */
       poFilterOpen,poFilterSel,poMenu,poMenuPick,poRet,poRetWay,poRetSel,poRetReason,poRetDesc,poRetQty,poRetAmt,   /* §v6.2 订单管理 */
       poRetCount,poRetAll,poRetNames,poRetMax,poRetTitle,poRetToggleAll,poRetBack,poRetPick,poRetDone,poRetAtCounter,

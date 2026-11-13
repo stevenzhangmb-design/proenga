@@ -5,6 +5,8 @@ description: 研发交付——把已完成的原型+PRD 变成【对接料(A·�
 
 # 研发交付 skill（dev-codegen）
 
+> 🔴🔴🔴🔴 **先研究后建议铁律（2026-11-13 用户明令「工作底线」· 最高优先 · 随包 · 所有 skill 通用）**：给用户任何决策建议前，必须先研究竞品和行业标准系统、本系统现状、行业规范和法规原文，建议里写明依据和证据等级；研究不够就说“还不能建议，缺……”；结论和之前的建议不同，第一句就更正。全文见 [../_shared/research-before-advice.md](../_shared/research-before-advice.md)。
+
 > 🏛 **提速铁律（随包·三条产线通用）**：生成原型 / 写 PRD / 生成代码，**不管从 0 生成还是中途改**，一律按 [`skills/_shared/speed-protocol.md`](../_shared/speed-protocol.md) 走快路；同一个动作失败 2 次就停下说话，禁死循环。
 
 > **职责边界**：pm-design 管【画原型】、prd 管【写 PRD】、本 skill 管【把原型+PRD 变成料/代码】。

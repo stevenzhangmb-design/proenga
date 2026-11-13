@@ -5,6 +5,8 @@ description: 根据 pm-design 生成的原型 + prd-data.json 输出"测试用�
 
 # Test-Case Skill — 测试用例
 
+> 🔴🔴🔴🔴 **先研究后建议铁律（2026-11-13 用户明令「工作底线」· 最高优先 · 随包 · 所有 skill 通用）**：给用户任何决策建议前，必须先研究竞品和行业标准系统、本系统现状、行业规范和法规原文，建议里写明依据和证据等级；研究不够就说“还不能建议，缺……”；结论和之前的建议不同，第一句就更正。全文见 [../_shared/research-before-advice.md](../_shared/research-before-advice.md)。
+
 ## 触发场景
 
 | 触发 | 示例 |

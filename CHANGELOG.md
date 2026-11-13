@@ -16,6 +16,14 @@
 - 修复自检工具的端口问题。
 - 新增改原型提速工具（`p.js`、`scaffold.js`、`mockgen.js`、`pd-patch.js` 等）和更多交付前检查。
 - Vue / Element Plus 等资源随包提供（`skills/pm-design/vendor/`），离线生成原型不再需要联网下载。
+- 原型骨架 v8.56：交班日结里的【去处理】【去上传】可以配置跳转到指定页面，并预选好筛选条件；不配置时行为不变。
+
+### 使用指南与介绍
+- 使用指南更新为《Proenga详细使用指南-2026-11-13》和《Proenga安装使用指南-2026-11-13》，根目录的《使用指南.md》《使用指南.docx》换成新的短版。新增内容：两种生成 PRD 的方式（圈选生成、不圈选直接生成并自动出标注）、标注只放在功能按钮上、PRD 标准模板和个性化结构、Word 目录逐级显示、在线 PRD 网页和改完自动更新到网上、顶部工具栏自适应和【更多 ▾】、各操作大概耗时；同时更新了清空和恢复标注、导出保存位置、GitHub 网页上传 25MB 上限、常见问题和关键文件速查。
+- README 补充上述能力介绍；Node.js 版本统一写为“建议 22 或更高；18 也能用，但不能自动出标注”。
+- INSTALL.md 补上 Claude Code 启用钩子一步（把 `.claude/settings.json.example` 复制为 `settings.json`），以及需求清单的登记和验证方法。
+- prd 和 pm-design 的 SKILL.md 新增通用约定：用户说过“改完自动更新到网上”并配置了发布仓库后，改完 PRD 用 `skills/prd/publish-prd-html.js` 生成在线网页，改完原型用 `skills/pm-design/make-share-copy.js` 生成只读版，再用 git 推送。
+- 验收清单和 CLAUDE.md 里过时的按钮说法已改成实际按钮。
 
 ### 其它
 - 新增 `skills/rpa`：登录参考系统抓取页面结构与样式真值，供复刻和提炼规范使用。
