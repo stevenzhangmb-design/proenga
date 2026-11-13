@@ -209,7 +209,7 @@
             ⑤ 权限矩阵：单元格 ctrl:'checkboxes'（一格多个勾选项，可带行内下拉）+ table.checkAll 总开关（半选态）；
                整页头 detailData.headClose:true → 「✕｜标题」（真系统新增/编辑整页的头，不是「‹返回」）。
      v3.98：发票报表「按月度」堆叠面积图 areaChart（面积图数据取自同一张表，图表与表格永远对得上）。
-     v3.94：整页表单「离开输入框就校验」detailData.validateOnBlur:true（真系统 UpSeller 创建手工发票：不是点保存才报错）。
+     v3.94：整页表单「离开输入框就校验」detailData.validateOnBlur:true（真系统 某跨境电商 ERP 创建手工发票：不是点保存才报错）。
             ① 必填字段失焦为空 → 红框 + 下方「缺少必填字段」，填上就自动消失；
             ② 表格列写 required / gt0 / maxLen → 单元格同样即时校验（单位「缺少必填字段」、数量·单价「填写值须大于0」、标题「限制 1-120 字符」）；
             ③ 哪个板块还有红的，右侧锚点栏那条就变红 + 跟一个 ⓘ；
@@ -239,7 +239,7 @@
      v3.81：批量弹窗勾选的票全被 exclude/selExclude 过滤 → 不开空弹窗，直接提示 allFilteredMsg。
      v3.80：按默认 UI 规范纠正 v3.79 —— ① 查看页「返回」改白底次按钮（§⑦b）；② 详情整页补摘要卡 detailData.summary
             （与 pageForm 同一套 .pf-detail-head），过程型单据 = 摘要卡 + 步骤条；③ 弹窗说明框 info 改用 §5.3c 注意事项框的
-            橙底令牌（原来照 UpSeller 用了蓝底，默认规范里没有蓝底提示框）。
+            橙底令牌（原来照 某跨境电商 ERP 用了蓝底，默认规范里没有蓝底提示框）。
 
      v3.79：① 整页只读 detailData.readonly:true 现在真的只读 —— 原来只把底部按钮换成【返回】，字段照样是输入框/下拉；
                现在每个字段显示成纯文字（roVal：下拉显示选项文字、开关显示是/否、空值 --），表格里的控件同理，
@@ -371,7 +371,7 @@ v3.33：左侧两栏再收窄（导航 248→210、状态面板 200→180）—�
 v3.32：totalsPos / toolsPos / sortBtn / totalsBtn 改走 pick2 —— v3.31 写成只读顶层 cfg，配在 byStatus[状态] 里完全不生效（页面上看不到任何变化）。
      v3.31：照真系统截图补三处 —— 筛选行右端按钮支持下拉（导出▾ 六项两组）；「发票总金额 ↗」放页签行右端（curTotalsPos:'tabs'）；「排序⇅ 总计N ‹1/4› 50条/页▾」放工具条行右端（curToolsPos:'toolbar'）。
      v3.30：蓝链单元格整格可点 —— 订单号这类两行文字的格子，点在两行之间的空隙时 e.target 是外层 div.cell，原来只往上找就静默无反应。
-     v3.29：状态面板 262→200px（实测 UpSeller 左栏总宽 228px，我们是导航栏+面板两层，面板还更宽）——内容区被压到 880px，宽表右半边挤出屏幕、列排序点不到。
+     v3.29：状态面板 262→200px（实测 某跨境电商 ERP 左栏总宽 228px，我们是导航栏+面板两层，面板还更宽）——内容区被压到 880px，宽表右半边挤出屏幕、列排序点不到。
      v3.28：行内操作图标 ——【真 bug】图标表里没有的名字会被原样当文案显示，页面上冒出 "send"/"print" 这种英文（用户逮到）；改成认不出就返回 null，模板自动回退成文字标签。同时补齐 print/issue/void/check/fix/ignore/import/export 等常用图标。
      v3.27：primaryBtn / listHelp / selectable 改走 pick2，跟着左面板状态变（既存 bug：只读顶层 cfg，byStatus 里写了不生效 —— 草稿的【创建发票】出不来、「开票失败」写的 selectable 勾选列也一直没生效）。
      v3.26：按钮可指名打开某个详情整页 {opens:'detailView', detailName:'…'} —— 工具栏主按钮没有"当前行"，原来只能靠行文本匹配 when，「创建发票」这类新建整页会打开别人的详情。
@@ -382,24 +382,24 @@ v3.32：totalsPos / toolsPos / sortBtn / totalsBtn 改走 pick2 —— v3.31 写
      v3.25d：quickRange 的 el-radio-button 补 :label —— 原型跑的 EP 2.4.4 只认 label，光写 value 会三个按钮一个都不选中（实测 input.checked 全 false）。骨架别处的 el-radio 本来就是双写。
      v3.25c：修 v3.25 的致命错 —— 初始化用的 watch 放在了 cfg 定义之前，immediate 立刻求值抛 "Cannot access 'cfg' before initialization"，整个 setup 挂掉、筛选区与表格【整块不渲染】。改成不用 watch，默认值在模板里兜底；快捷段的存放 key 加选项指纹，换页不串味。
      v3.25b：补两个筛选控件形态 —— type:'dateOne' 单日框、f.sepBefore 控件前分隔符（真系统 NF-e 报表是「开始时间 ~ 结束时间」两个独立框，不是一个 daterange）。
-     v3.25：真系统报表页版式一整套（实测 UpSeller 发票报表四页截图逐项对照）——
+     v3.25：真系统报表页版式一整套（实测 某跨境电商 ERP 发票报表四页截图逐项对照）——
        cfg.pageNotice 顶部蓝色信息条(可关) / filters[{type:'quickRange'}] 时间快捷段 / cfg.filterRightBtn 筛选行右端主按钮 /
        cfg.noSearchBtn 隐藏查询重置 / cfg.tabsPos:'top' 胶囊页签(筛选行下·卡片上) / cfg.statsTitle+statsCompare 统计卡白壳与「对比:环比▾」/
        灰底卡 .flat + 标签 ⓘ 口径说明(s[4]) / cfg.listTools 表格卡标题行右端「⚙自定义列|总计N|‹1/1›|50条/页▾」/
        列 {sortable:true} 真排序 + {fixed:'left'} 左固定 / 行 __cls:'sum-row' 汇总加粗行。
        并纠正 v3.24 的认知错误：筛选行那个 radio 是【时间快捷段】不是维度切换，statusRadio 已删。
      v3.24b：修 v3.24 —— statsPos/rangeNote 那段原先插进了 listHelp 的 tooltip 内容里（只在悬停时渲染，实测 .stat-card 根本不存在），已移到筛选区与表格之间；且改用骨架既有的数组格式 [label,value,hint,cls]。
-v3.24：报表页布局（照 UpSeller 实测坐标）—— ① 【结论已被 v3.25 推翻】我把筛选行那个 radio 当成了维度切换(type:'statusRadio')，实测它是【时间快捷段】(去年|今年|本月)，维度切换是筛选行下方的胶囊页签；statusRadio 已在 v3.25 删除，改用 quickRange + cfg.tabsPos:'top'；② cfg.statsPos:'below' 让统计卡片排在筛选行【下方】（骨架原本是卡片在上、筛选在下，顺序反了）；③ cfg.rangeNote 在卡片与表格之间加一行口径灰字。
+v3.24：报表页布局（照 某跨境电商 ERP 实测坐标）—— ① 【结论已被 v3.25 推翻】我把筛选行那个 radio 当成了维度切换(type:'statusRadio')，实测它是【时间快捷段】(去年|今年|本月)，维度切换是筛选行下方的胶囊页签；statusRadio 已在 v3.25 删除，改用 quickRange + cfg.tabsPos:'top'；② cfg.statsPos:'below' 让统计卡片排在筛选行【下方】（骨架原本是卡片在上、筛选在下，顺序反了）；③ cfg.rangeNote 在卡片与表格之间加一行口径灰字。
      v3.23：showIf 支持数组 —— 一个动作对应多种行状态（「去开票」要同时出现在待开票行和部分开票行），原来只认单值配不下。
      v3.22：EP_LOCALE 补 datepicker 节点（四语）—— 手写的最小语言包只有 pagination/table/select，date-picker 缺 weeks/months 就画不出日历格子：面板高度 0、月标题显示成 el.datepicker.year。所有日期选择器都受影响，之前只数元素个数没量高度，一直没发现。
      v3.21：修 v3.20 —— 给 picker 面板的 body-wrapper 设 flex-direction:column 会把面板高度压成 0（实测 h=0、日期表 0 张）。改为只把 sidebar 绝对定位到底部、面板留 padding，日历流不动。教训：EP picker 面板别动它的盒模型流。
-     v3.20：日期面板快捷项可底部横排 —— date 字段写 popperClass:'dp-shortcuts-bottom'。UpSeller 把「今天/最近7天/最近30天/本月」横着放在日历下方（OCR 坐标 y 相同），EP 默认是左侧竖排。
+     v3.20：日期面板快捷项可底部横排 —— date 字段写 popperClass:'dp-shortcuts-bottom'。某跨境电商 ERP 把「今天/最近7天/最近30天/本月」横着放在日历下方（OCR 坐标 y 相同），EP 默认是左侧竖排。
      v3.19：行内控件宽度加 !important —— EP 单个 date-picker 的根同时带 .el-input(width:100%)，会撑满整行把控件挤到 radio 下面（实测量到 440px）。
      v3.18：弹窗里的 radio 改用与 pageForm 相同的渲染块（含 o.inline）—— v3.16 补弹窗 radio 时写成了单行简版，v3.17 的行内控件在弹窗里不生效；同一能力两套渲染是隐患，合成一套。
-     v3.17：radio 选项右侧可挂输入控件 o.inline（date/select/input），未选中自动置灰 —— UpSeller「导出 XML 发票」是「○ 按月导出 [月份框] / ● 自定义导出 [日期框]」两行同时在，旧的 sub/badge 配不出来。
+     v3.17：radio 选项右侧可挂输入控件 o.inline（date/select/input），未选中自动置灰 —— 某跨境电商 ERP「导出 XML 发票」是「○ 按月导出 [月份框] / ● 自定义导出 [日期框]」两行同时在，旧的 sub/badge 配不出来。
      v3.16：通用弹窗字段渲染补 radio（原来只有 pageForm 有，弹窗里写 type:'radio' 会掉到兜底 el-input 渲染成输入框）。
      ⚠ 骨架里有 4 处字段渲染块，通用弹窗用的是含 reviewList/multiSelect/checkGrid 的那块 —— 改弹窗字段渲染时认准这几个键，别按 password/switch 之类到处都有的串定位（2026-09-04 连插错两次）。
-v3.15：date 字段支持 month:true（年份+月份网格面板）—— UpSeller「导出XML发票」的「按月导出」就是这个面板，原来只有 date/daterange 配不出来。
+v3.15：date 字段支持 month:true（年份+月份网格面板）—— 某跨境电商 ERP「导出XML发票」的「按月导出」就是这个面板，原来只有 date/daterange 配不出来。
 v3.14：弹窗里的日期字段支持 range:true（daterange）与 shortcuts（本月/上月/近N天）—— 原来弹窗只能选单日，「按日期导出」这类要区间的场景配不出来。
 v3.13：blockIf 支持数组（一个按钮可挂多条拦截规则），向后兼容单对象写法。同时更正 §5.3t 注释里的 Manifestação 规则：结论性事件之间可互相覆盖（以最后一个为准），只有 Ciência 不能在结论性事件之后提交。
 v3.12：选项的禁用原因不再拼进 label —— EP 的 label 同时用于下拉项和触发器回显，拼进去会让选中框显示一长串被截断的说明（用户截图逮到）。改为 label 只放选项名、原因走 el-option 插槽的小灰字。同时 optionRules.disable 支持 {opt,reason}，一条规则禁多项时各给各的短原因（共用一句常常对不上）。
@@ -754,7 +754,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
   .stat-card.up .stat-hint{color:#67C23A;font-size:12px;font-weight:600;}
   .stat-card.down .stat-hint{color:#F56C6C;font-size:12px;font-weight:600;}
   .stat-card.flat0 .stat-hint{color:#909399;font-size:12px;}
-  /* §v3.25 真系统报表页版式（实测 UpSeller 发票报表四页） */
+  /* §v3.25 真系统报表页版式（实测 某跨境电商 ERP 发票报表四页） */
     .page-notice{display:flex;align-items:center;gap:9px;background:#EAF3FF;border:1px solid #D3E4FB;border-radius:6px;padding:10px 14px;margin-bottom:14px;color:#1F3D6B;font-size:13px;}
     .page-notice .pn-ic{color:#3363FF;font-size:14px;line-height:1;}
     .page-notice .pn-x{margin-left:auto;cursor:pointer;color:#8A9BB5;font-size:14px;line-height:1;padding:2px 4px;}
@@ -965,7 +965,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
   .cell-pop-tb th:last-child,.cell-pop-tb td:last-child{text-align:right;white-space:nowrap;}
   .cell-pop-tb td{padding:6px 10px;color:#444;border-bottom:1px solid #f2f4f7;}
   .cell-pop-tb tr:last-child td{border-bottom:none;}
-  /* §v6.11 点开式小浮层（subPop）：锚在链接正下方、能移进去点里面的单号、内容多了自己滚动（UpSeller Return History）。2026-10-16 */
+  /* §v6.11 点开式小浮层（subPop）：锚在链接正下方、能移进去点里面的单号、内容多了自己滚动（某跨境电商 ERP Return History）。2026-10-16 */
   .cell-pop-float.is-sticky{pointer-events:auto;max-height:260px;overflow:auto;}
   .cell-pop-float.is-sticky .cell-pop-tb th:last-child,.cell-pop-float.is-sticky .cell-pop-tb td:last-child{text-align:left;}
   .sub-pop-link{color:#3363FF;font-size:12px;cursor:pointer;}
@@ -979,7 +979,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
   .cell-pop-grid .cell-pop-val{line-height:22px;font-size:13px;}
   .cell-pop-grid .copy-ic{align-self:center;}
   .cell-pop-val{color:#303133;word-break:break-all;font-family:Consolas,Menlo,monospace;}
-  /* §v3.61 详情表单：输入框右侧单位 / 前置下拉+输入 / 合计区（UpSeller 创建手工发票 截图量：合计区 标签列约 235px、行高约 34px） */
+  /* §v3.61 详情表单：输入框右侧单位 / 前置下拉+输入 / 合计区（某跨境电商 ERP 创建手工发票 截图量：合计区 标签列约 235px、行高约 34px） */
   .fd-suffix{color:#909399;font-size:13px;}
   .fd-input-select .el-input-group__prepend{padding:0;background:#fff;}
   .fd-input-select .el-input-group__prepend .el-select{margin:0;}
@@ -1209,7 +1209,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
   .tf-alert-fold:hover{color:#8a5a1f;}
   /* §v3.79 蓝底说明框（真系统开具 CC-e 顶部）：浅蓝底、深色字、右侧/右下蓝色「查看更多 ∨ / 收起 ∧」 */
   /* §v3.80 按默认规范 §5.3c 注意事项框取色（橙底 #fdf6ec · ⓘ #f2ac3a · 字 #7d5a2a · 14px/22px · padding 12 16 · 圆角 4），
-     不用 UpSeller 的蓝底 —— 本项目功能照 UpSeller、UI 走我们默认规范（三种模式里的 B）。 */
+     不用 某跨境电商 ERP 的蓝底 —— 本项目功能照 某跨境电商 ERP、UI 走我们默认规范（三种模式里的 B）。 */
   .dlg-info{display:flex;align-items:flex-end;gap:16px;background:#fdf6ec;border-radius:4px;padding:12px 16px;margin:0 0 16px;
     color:#7d5a2a;font-size:14px;line-height:22px;}
   .dlg-info .tf-alert-ic{align-self:flex-start;}
@@ -1352,7 +1352,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
   .pf-radio-row .pf-inline-ctrl,
   .pf-radio-row .pf-inline-ctrl.el-input{flex:0 0 auto !important;width:236px !important;}
   .pf-radio-row .pf-inline-ctrl.el-date-editor--daterange{width:300px !important;}
-  /* §v3.21 日期面板快捷项【底部横排】（UpSeller 实拍：日历在上、四个快捷横排在下）
+  /* §v3.21 日期面板快捷项【底部横排】（某跨境电商 ERP 实拍：日历在上、四个快捷横排在下）
      v3.20 曾用 flex-direction:column 改 body-wrapper，把面板高度压成了 0 —— EP 的
      picker 面板对内部盒模型很敏感，别动它的流。这里只把 sidebar 抽出来绝对定位到底部，
      面板底部用 padding 让出空位，日历本身一点不动。 */
@@ -1582,7 +1582,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
   .dv-errsum-it u{text-decoration:none;color:var(--el-color-primary);margin-left:8px;}
   .el-form-item.is-err .el-input__wrapper,.el-form-item.is-err .el-select__wrapper,.el-form-item.is-err .el-textarea__inner{box-shadow:0 0 0 1px #f56c6c inset !important;}
   .fd-err{color:#f56c6c;font-size:12px;line-height:18px;margin-top:4px;}
-  /* §v3.94 离开输入框即校验（UpSeller 创建手工发票）：锚点栏该板块变红并跟一个红 ⓘ；表格单元格下方出红字 */
+  /* §v3.94 离开输入框即校验（某跨境电商 ERP 创建手工发票）：锚点栏该板块变红并跟一个红 ⓘ；表格单元格下方出红字 */
   .detail-anchors .da.err{color:#f56c6c;}
   .detail-anchors .da.err.on{color:#f56c6c;}
   /* §v5.9 注意：anchorPos:'right' 的右移由 §v3.47 的 `.detail-view.anchors-right{flex-direction:row-reverse}`
@@ -2518,7 +2518,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                序列号 / A1证书 / NFC-e 配置 / 关联门店 / 税种列表 / 出票规则 全都够不着（电商同配置同样中招）。
                滚动模式下锚点栏只是个方便入口，侧边菜单在时藏掉没问题，所以只放开 pane 模式。 -->
           <!-- §v5.9 再放开一种：页面自己声明了 anchorPos（左/右）＝它明确要锚点栏，侧边菜单在也要显示。
-               原规则「侧边菜单在时一律藏掉」把 UpSeller 创建手工发票那种【右侧锚点栏】整个藏没了，
+               原规则「侧边菜单在时一律藏掉」把 某跨境电商 ERP 创建手工发票那种【右侧锚点栏】整个藏没了，
                连带 anchorErr 的红 ⓘ 也永远看不到 —— 32 个字段的长表单恰恰最需要它。 -->
           <div v-if="detailData.anchors && (menuMode!=='side' || detailData.anchorMode==='pane' || detailData.anchorPos)" class="detail-anchors">
             <!-- §v4.3 anchorsTitle → 锚点栏顶上的分组标题（真系统 OMS「编辑发票账号」左栏第一行是「发票账号」，下面才是 公司信息/序列号/…） -->
@@ -2787,7 +2787,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
               <div v-if="pn.table && pn.table.tip" class="dv-tb-tip">{{ L(pn.table.tip) }}</div>
               <!-- §v8.30（S）table.minRowsInline:true → 点了提交后行数不够 minRows 时，表格下面红字显示 minSubmitMsg/minMsg，锚点也变红（不配不生效） -->
               <div v-if="minRowsErr(pn)" class="cell-err" style="margin-top:6px;white-space:normal">{{ minRowsErr(pn) }}</div>
-              <!-- §v3.61 detailData.reqStarAfter:true → 必填红星放在字段名后面（UpSeller 创建手工发票：「发票账号*」） -->
+              <!-- §v3.61 detailData.reqStarAfter:true → 必填红星放在字段名后面（某跨境电商 ERP 创建手工发票：「发票账号*」） -->
               <!-- §v3.99 整页板块也能「标签在左、控件在右」：sec/pn 写 labelPos:'left'（+labelWidth）。
                    原来这里写死 label-position="top"，与真系统那种左标签的整页表单对不上。 -->
               <el-form v-else :label-position="(pn.labelPos||sec.labelPos)==='left'?'left':'top'"
@@ -2858,7 +2858,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                     <el-input v-model="fd.value" readonly :placeholder="L(fd.ph||'')" :disabled="fdDisabled(fd)" style="flex:1"></el-input>
                     <a class="fd-pick" @click="fd.opens ? (dlgRow=null, dialogName=fd.opens) : msg(L(fd.label))">{{ L(fd.pickText||T('select')||'选择') }}</a>
                   </div>
-                  <!-- §v3.61 日期时间（UpSeller「出入库时间」：日历 + 时/分/秒 + 此刻/确定）
+                  <!-- §v3.61 日期时间（某跨境电商 ERP「出入库时间」：日历 + 时/分/秒 + 此刻/确定）
                        写法：{type:'datetime', value:'06/09/2026 18:51:40', format:'DD/MM/YYYY HH:mm:ss'} -->
                   <el-date-picker v-else-if="fd.type==='datetime'" v-model="fd.value" type="datetime" style="width:100%" @blur="dvBlur(fd)" @change="dvBlur(fd)"
                                   :format="fd.format||'DD/MM/YYYY HH:mm:ss'" :value-format="fd.format||'DD/MM/YYYY HH:mm:ss'"
@@ -2893,7 +2893,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                     </template>
                     <span v-if="fd.addBtn" class="fd-group-add" @click="msg(L(fd.label)+'：'+T('rowAdded'))">⊕</span>
                   </div>
-                  <!-- §v3.61 前置下拉 + 输入（UpSeller 承运商「税号」= [CPF▾|CNPJ] + 输入；占位符随所选类型变）
+                  <!-- §v3.61 前置下拉 + 输入（某跨境电商 ERP 承运商「税号」= [CPF▾|CNPJ] + 输入；占位符随所选类型变）
                        写法：{type:'inputSelect', selectOptions:['CPF','CNPJ'], selectValue:'CPF', selectWidth:90, phBy:{CPF:'000.000.000-00',CNPJ:'00.000.000/0000-00'}} -->
                   <!-- §v5.9 inputSuggest：能自己打字、也能从历史里挑（真系统「开票事由」就是这种）。
                        普通 input 挑不了历史，纯 select 又打不了新词 —— 这一类字段必须两者都要。 -->
@@ -2910,7 +2910,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                   </el-input>
                   <!-- §5.3o 普通输入：支持【前缀标签】(真系统「交易性质」= [出库]+输入) 与【字数统计】(39/60)
                        写法：{ label:"交易性质", prefix:"出库", max:60 } / { label:"税种名称", max:1000 }
-                       §v3.61 fd.suffix：输入框内右侧单位（UpSeller「运费 0,00 BRL」） -->
+                       §v3.61 fd.suffix：输入框内右侧单位（某跨境电商 ERP「运费 0,00 BRL」） -->
                   <el-input v-else v-model="fd.value" :placeholder="L(fd.ph||'')" :disabled="fdDisabled(fd)"
                             :maxlength="fd.maxSoft?undefined:fd.max" :show-word-limit="!!fd.max && !fd.maxSoft" @blur="dvBlur(fd)" @input="fd.maxSoft && (fd._err || String(fd.value||'').length>fd.max) && dvBlur(fd)"><!-- §v8.30（S）fd.maxSoft:true → 不在输入框里截断（粘贴超长也保留），超过 max 就红字提示 maxMsg（默认「{f}最多 N 个字符」），右侧仍显示 n / max 计数 -->
                     <template v-if="fd.maxSoft && fd.max && !fd.suffix" #suffix><span class="el-input__count" :style="String(fd.value||'').length>fd.max?{color:'#f56c6c'}:null"><span class="el-input__count-inner">{{ String(fd.value||'').length }} / {{ fd.max }}</span></span></template>
@@ -2924,7 +2924,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                   <div v-if="fieldErr(sec,fd)" class="fd-err"><span v-if="!fd._err">⚠ </span>{{ fieldErr(sec,fd) }}</div>
                 </el-form-item>
               </el-form>
-              <!-- §v3.61 合计区：pn.summary=[{label,value,strong?}] → 表单下方单独一块（UpSeller 支付信息下的 产品总额/运费/折扣/合计）；
+              <!-- §v3.61 合计区：pn.summary=[{label,value,strong?}] → 表单下方单独一块（某跨境电商 ERP 支付信息下的 产品总额/运费/折扣/合计）；
                    strong:true 的行上方加分隔线、字加粗 -->
               <div v-if="pn.summary" class="dv-summary">
                 <div v-if="pn.summaryTitle" class="dv-summary-title">{{ L(pn.summaryTitle) }}</div>
@@ -3590,14 +3590,14 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                     <span v-if="String(L(row[g.idx].t)).indexOf('<')>-1" class="cell-pop-ref" @mouseenter="cellPopShow($event,row[g.idx])" @mouseleave="cellPopHide" v-html="L(row[g.idx].t)"></span>
                     <span v-else class="cell-pop-ref" @mouseenter="cellPopShow($event,row[g.idx])" @mouseleave="cellPopHide">{{ L(row[g.idx].t) }}</span>
                     <span v-if="row[g.idx].sub" class="cell-sub" v-html="L(row[g.idx].sub)" @click.stop="onCellAct"></span>
-                    <!-- §v6.11 subPop:{text,pop,popTable,popWidth} → 值下面一行蓝字，点开锚在它下方的小浮层（UpSeller Return History） -->
+                    <!-- §v6.11 subPop:{text,pop,popTable,popWidth} → 值下面一行蓝字，点开锚在它下方的小浮层（某跨境电商 ERP Return History） -->
                     <div v-if="row[g.idx].subPop"><span class="sub-pop-link" @click.stop="cellPopShow($event,row[g.idx].subPop,true)">{{ L(row[g.idx].subPop.text) }}</span></div>
                   </span>
                   <!-- §v6.9 列表单元格「蓝链 + ✏️」：真系统发票主体的「绑定店铺」列就是这个样子
                        （`多个(2)` 蓝链，后面跟一个铅笔图标，点了进编辑页并定位到那个板块）。
                        写法：{cellLink:{text:'多个(3)', opens:'detailView', anchor:'hqstores', tip:'…'}, edit:{...}}
                        注意：详情表格里的 ctrl:'link' 主列表【不认】，所以单独给一条分支。 -->
-                  <!-- §v6.12 发票主体「关联门店/仓库」「绑定店铺」列（照 UpSeller 公司列表，2026-10-19）：
+                  <!-- §v6.12 发票主体「关联门店/仓库」「绑定店铺」列（照 某跨境电商 ERP 公司列表，2026-10-19）：
                        ① 没关联：{cellLink:{text:'关联门店/仓库', plus:true, opens:'detailView', anchor:'stores'}, warn:'发票账号未关联…'}
                           → 蓝色「＋ 关联门店/仓库」，下面一行红字提示，点了进编辑页并定位到那个板块；
                        ② 关联多个：{listPop:{text:'已关联门店/仓库(3)', pop:[{cells:[…]}], popTable:{cols:[…]}}, edit:{…}}
@@ -5481,7 +5481,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
     pickOne:      {zh:'请至少勾选一项',       en:'Please select at least one item', pt:'Selecione ao menos um item', spa:'Seleccione al menos un elemento'},
     noticeTitle:  {zh:'注意事项：',           en:'Notes:',                pt:'Observações:',          spa:'Notas:'},
     saveRules:    {zh:'保存前会校验：',       en:'Checked before saving:', pt:'Validado ao salvar:',  spa:'Se valida al guardar:'},
-    /* §v3.94 离开输入框即校验用的三句提示（真系统 UpSeller 创建手工发票逐字） */
+    /* §v3.94 离开输入框即校验用的三句提示（真系统 某跨境电商 ERP 创建手工发票逐字） */
     reqMissing:   {zh:'缺少必填字段',         en:'Required field is missing', pt:'Campo obrigatório não preenchido', spa:'Falta un campo obligatorio'},
     /* §v6.19 字段提示统一句式（与 PRD 规范 §4.5.3 同一套·用户 10-26 定）：{f}=字段名（取当前语言的字段名），{n}{x}{y}=数字 */
     vEnter:  {zh:'请输入{f}',            en:'Enter {f}',                       pt:'Informe {f}',                         spa:'Ingrese {f}'},
@@ -5717,7 +5717,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       const tbHide = k => { const v=viewOf(curView.value); return !!(v && Array.isArray(v.topbarHide) && v.topbarHide.indexOf(k)>-1); };
       /* §v4.2 视图自带的顶栏右侧按钮（真系统会计师端的「? 帮助」） */
       const topbarExtra = computed(()=>{ const v=viewOf(curView.value); return (v && v.topbarExtra) || []; });
-      /* §v4.2 视图自带页脚（真系统会计师端底部 © 2026 UpSeller｜服务条款｜隐私政策｜帮助中心） */
+      /* §v4.2 视图自带页脚（真系统会计师端底部 © 2026 某跨境电商 ERP｜服务条款｜隐私政策｜帮助中心） */
       const viewFooter  = computed(()=>{ const v=viewOf(curView.value); return (v && v.footer) || null; });
       const userMenu    = computed(()=>{ const v=viewOf(curView.value); return (v && v.userMenu) || []; });
       const userIconMode= computed(()=>{ const v=viewOf(curView.value); return !!(v && v.userIcon); });
@@ -7659,7 +7659,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         try{ return (failMap.value && failMap.value.get) ? (failMap.value.get(r)||null) : null; }catch(e){ return null; } });
       function fillFailD(s){ if(s==null) return s; const str=String(s); if(str.indexOf('{fail.')<0) return s;
         const f=detailFail.value; return str.replace(/\{fail\.(\w+)\}/g,(_,k)=>{ if(!f) return ''; const v=f[k]; return v==null?'':String(L(v)||v); }); }
-      /* ═══ §v3.94 离开输入框即校验（真系统 UpSeller「创建手工发票」：不是点保存才报错，鼠标一离开就红）═══
+      /* ═══ §v3.94 离开输入框即校验（真系统 某跨境电商 ERP「创建手工发票」：不是点保存才报错，鼠标一离开就红）═══
          开关：detailData.validateOnBlur:true。做三件事——
          ① 必填字段失焦为空 → 红框 + 下方「缺少必填字段」；填了就自动消失；
          ② 表格列写 {required:true} / {gt0:true} / {maxLen:n} → 单元格同样即时校验（单位「缺少必填字段」、数量·单价「填写值须大于0」、标题「限制 1-120 字符」）；

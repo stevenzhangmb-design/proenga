@@ -1853,3 +1853,16 @@ AI：
 ```
 
 > 🔁 **PRD → 原型标注（不圈选·2026-11-13 用户定）**：生成或修改 PRD 后，自动把 PRD 里每个有【字段规范】【用例规则】的功能点放进原型对应按钮的标注；圈选/点选生成 PRD 的方式同时保留。做法和映射表格式见 [`skills/prd/SKILL.md` §两种方式生成 PRD + 标注](../prd/SKILL.md)；标注层 1.11.0 `pin.anchor`（pages/tab/texts）让标注跟着按钮走，找不到按钮就不显示。
+
+## ⚡ 提速工具（2026-11-13 实测·随包·任何人安装后效果一样）
+
+| 环节 | 用什么 | 实测效果 |
+|---|---|---|
+| 改 project-data | `node skills/pm-design/pd-patch.js <project-data.json> <补丁1.js> [补丁2.js…] [--dry]`；补丁写成 `module.exports=function(pd,ctx){…;return '报告'}`。一次读入、校验（合法 JSON、往返一致、装配器接受）、紧凑写回、每轮只留一份 `<名>.bak.json`；检查通过后 `--commit` 删备份，有问题 `--restore` 还原 | 一轮约 2～3 秒；不再每轮堆一份 50MB 备份。**禁止手写读写代码、禁止每轮另存完整备份** |
+| project-data 存盘格式 | 统一紧凑（不缩进）。`p.js`、`scaffold.js`、`mockgen.js` 已改为紧凑保存 | 53MB→36MB（-32%），装配出的原型逐字节不变。紧凑文件只有一行：查内容用 `p.js find`，**不要直接 Grep 这个文件**（会把整行吐出来） |
+| 无损瘦身（可选） | `node skills/pm-design/pd-slim.js <in> <out> --report`：紧凑排版 + 重复子树共享（`{"$pd":"rN"}` 存顶层 `_pdslim`），三语对象不动，装配器自动展开；`--no-dedupe` 只排版；`--expand` 还原 | 53MB→25MB，原型逐字节不变。用了共享表的文件，用 p.js/mockgen/scaffold 修改前先 `--expand` |
+| 快速重建交付件 | `rebuild-deliverable.ps1 -Quick`：读 `_deliverable` 用 `qa/pd-top-field.js`（只认最外层字段，约 0.3 秒），报出的秒数从脚本启动算起 | 前台 13～23 秒 → 约 3 秒。**禁止在 PowerShell 里 `ConvertFrom-Json` 整份解析 project-data** |
+| 出 Word 的流程图 | `make-doc.ps1` 自动调 `render-mermaid.js`：按“流程图源码+mermaid 库+渲染参数”算指纹缓存 PNG（默认临时根同级 `.proenga-cache\mermaid-png`，`PROENGA_FLOW_CACHE` 可改，120 天未用自动清）；要画的只开一次浏览器、同时画 4 张（`MMD_PARALLEL`） | 24 张流程图：约 135 秒 → 首次 17 秒、再跑 0.4 秒、改一张 3 秒；整份 Word 约 17～29 秒。日志出现 “no svg size found” = 那张图 mermaid 语法写错 |
+| 浏览器检查（写新检查/闸时一律用） | `node skills/_shared/qa/cdp-run.js <原型.html|URL> <脚本.js> [--width 1440] [--dpr 1] [--strict]`，脚本导出 `async (api)=>{}`：`api.go(页面id)`、`api.goTab(页签)`、`api.click({text})`、`api.evaluate(fn,arg)`、`api.shot(png,{height})`、`api.errors`。一次运行只起一个 Chrome，端口自选，每步等页面真正就绪（不死等），截图按 CSS 像素，临时文件自动删 | 10 页检查 8.8～16.5 秒 → 5.2～7.1 秒；标注核对 366 秒 → 183 秒。**禁止再自己起 Chrome、禁止写固定等待** |
+| 交付前跑哪道检查（Stop 钩子自动分流） | 改了标准件（骨架/标注层/host-shell/page-renderer/规范/qa 脚本）→ 跑完整 `node qa/deliver-gate.js`（放后台、看输出文件）；只改项目内容（project-data→重建交付件）→ 不跑总闸，要 `<交付件>.gate-report.txt` 首行 PASS 且比交付件新（`rebuild-deliverable.ps1 -Quick` 后台自动出，或 `node qa/_stop-hook-prototype-check.js --self-check <project-data.json>` 只验不重建）。总闸内分三条跑道（纯静态并行 / 主跑道串行 / 只读样例浏览器道并行），并行时红的闸自动单跑复验；`DELIVER_SERIAL=1` 全串行对照、`DELIVER_LIST=1` 看分道 | 全量总闸 582 秒 → 296 秒（51 道全绿结果不变，故意弄坏仍判红）；只改内容时每轮省下整个总闸 |
+| 后台逐页自检 | 端口由系统分配、只清自己的残留进程、报告 UTF-8 中文可读（`qa/deliverable-verify-gate.js`，㊿㉛ 健康闸防回退） | 不再误报失败；多个自检可同时跑 |

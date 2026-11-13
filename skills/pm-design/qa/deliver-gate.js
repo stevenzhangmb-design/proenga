@@ -147,19 +147,17 @@ function isPureStatic(file) {
   try { return scanSources(file).every(src => src !== null && !IMPURE.test(src)); }
   catch (_) { return false; }
 }
-/* B 只读渲染道白名单（人工核过·2026-11-13）：每道都只开原型/fixture 的【临时副本】、
-   自己的 web/调试端口与 A 道不重叠（或运行时探空闲 / 系统分配）、不起 anno-server 隔离实例、
-   不写任何共享文件。新闸一律默认进 A，要进 B 先按这四条核过再加。 */
+/* B 只读渲染道白名单（人工核过·2026-11-13）：每道都只读 qa/fixtures 或 project-data 的【临时副本】、
+   不读 archive 里的原型、web/调试端口与 A 道不重叠（或运行时探空闲）、不起 anno-server 隔离实例、不写共享文件。
+   ⚠ 读 archive 原型的 ⑦⑨㉛㊱ 留在 A 道：archive 里的原型会被真 anno-server 的 /anno-persist 回写
+   （非原子写），实测 ㉛/㊱ 与 A 道并行时同一个充值原型"挂载失败/标注层未启用"、单跑全绿——
+   所以它们必须和其它会触发回写的闸串行（顺序同旧版）。新闸一律默认进 A，要进 B 先按上面几条核过再加。 */
 const LANE_B = new Set([
-  "full-pipeline-audit.js",              // ⑦ 8991/9531
-  "anno-placement-gate.js",              // ⑨ 8870/9470
-  "anno-portability-gate.js",            // ⑩ 8866/9466
-  "real-deliverable-smoke-gate.js",      // ㉛ 探空闲端口·拷副本·屏蔽 3799
-  "layout-sanity-gate.js",               // ㊷ 探空闲端口·屏蔽 3799
-  "computed-style-gate.js",              // ㊸ 9700 起探空闲
-  "full-interaction-regression-gate.js", // ㊱ listen(0) + 随机调试口·拷副本
+  "anno-portability-gate.js",            // ⑩ fixtures/reference-prototype.html·8866/9466
+  "layout-sanity-gate.js",               // ㊷ fixtures/vt·探空闲端口·屏蔽 3799
+  "computed-style-gate.js",              // ㊸ fixtures/vt·9700 起探空闲
   "dialog-eyeball-gate.js",              // ㊻ 9671+pid%90·自己的 dlgeye- 档案
-  "render-fidelity-gate.js",             // ⓵ 9222·装配到临时文件
+  "render-fidelity-gate.js",             // ⓵ project-data·9222·装配到临时文件
 ]);
 function laneOf(file) {
   if (isPureStatic(file)) return "S";
@@ -631,15 +629,30 @@ async function main() {
   }
   const lane = name => (async () => { for (const j of jobs.filter(x => x.lane === name)) await runGate(j); })();
   await Promise.all([poolP, lane("A"), lane("B")]);
+  /* §2026-11-13 并行红 → 单跑复验：三道并行时机器负载高（加上别的会话也在跑浏览器），重闸可能因等待超时假红
+     （实测 ㉛ 并行 25.5s 红、单跑 14.1s 绿）。所以红项在所有跑道结束后【逐道单跑】一次——这时没有任何别的闸在跑，
+     等于旧版的串行条件。单跑仍红 = 真红，照样判红、照样禁交付；单跑绿也会在报告里点名"并行时红过"，不悄悄吞掉。
+     成片红（>5 道）不复验：那是真问题或环境坏了，直接按红算。 */
+  const firstRed = results.filter(r => !r.ok);
+  if (firstRed.length && firstRed.length <= 5) {
+    console.log("  ── 并行时红了 " + firstRed.length + " 道 → 逐道【单跑】复验（此刻没有别的闸在跑）；单跑仍红 = 真红 ──");
+    for (const r of firstRed) await runGate(Object.assign({}, jobs[r.idx], { lane: "R" }));
+  } else if (firstRed.length) console.log("  ── 红了 " + firstRed.length + " 道（>5），不复验，全部按红算 ──");
   for (const j of jobs) if (j.cleanup) j.cleanup();
   stopHelper();
   report(_t0);
 }
 
 function report(_t0) {
-  const rows = results.slice().sort((a, b) => a.idx - b.idx);
+  /* 同一道闸若复验过，以【单跑】结果为准；并行时红过的打上标记，报告里点名 */
+  const byIdx = new Map();
+  for (const r of results) {
+    const prev = byIdx.get(r.idx);
+    byIdx.set(r.idx, prev ? Object.assign({}, r, { redInParallel: !prev.ok, parallelMs: prev.ms, lane: prev.lane + "→单跑" }) : r);
+  }
+  const rows = [...byIdx.values()].sort((a, b) => a.idx - b.idx);
   preFail.forEach(l => rows.push({ label: l, ok: false, ms: 0, timedOut: false }));
-  const allPass = rows.length > 0 && rows.every(r => r.ok) && results.length === jobs.length;
+  const allPass = rows.length > 0 && rows.every(r => r.ok) && byIdx.size === jobs.length;
   /* 🔒 绿标记（2026-07-13 加·根治"我没跑全闸就交付"）：
      跑绿 → 写 .deliver-gate-green（含时间戳）；跑红 → 删掉它。
      Stop 钩子据此拦截：标准件比绿标记新 = 改过但没重跑全闸 = 禁止收工。 */
@@ -649,18 +662,21 @@ function report(_t0) {
     else if (fs.existsSync(MARK)) fs.unlinkSync(MARK);
   } catch (_) {}
   console.log("──────────────────────────────────");
-  rows.forEach(r => console.log((r.ok ? "  ✓ " : (r.timedOut ? "  ⏱ " : "  ✗ ")) + r.label + (r.ms ? "  (" + (r.ms / 1000).toFixed(1) + "s)" : "")));
+  rows.forEach(r => console.log((r.ok ? "  ✓ " : (r.timedOut ? "  ⏱ " : "  ✗ ")) + r.label + (r.ms ? "  (" + (r.ms / 1000).toFixed(1) + "s)" : "") +
+                               (r.redInParallel ? (r.ok ? "  ← 并行时红（" + (r.parallelMs / 1000).toFixed(1) + "s），单跑复验绿" : "  ← 并行红 + 单跑复验仍红 = 真红") : "")));
   /* §2026-10-14 加耗时榜：以前只知道"全闸很慢"，不知道慢在哪一道，就只能凭感觉优化。 */
   const timed = rows.filter(r => r.ms).sort((a, b) => b.ms - a.ms).slice(0, 8);
   if (timed.length) {
     console.log("──────── 最慢 8 道（优化先看这里）────────");
     timed.forEach(r => console.log("  " + (r.ms / 1000).toFixed(1).padStart(6) + "s  [" + r.lane + "] " + r.label.slice(0, 60)));
-    const sum = rows.reduce((s, r) => s + (r.ms || 0), 0);
-    const laneSum = l => rows.filter(r => r.lane === l).reduce((s, r) => s + (r.ms || 0), 0) / 1000;
+    const sum = results.reduce((s, r) => s + (r.ms || 0), 0);
+    const laneSum = l => results.filter(r => r.lane === l).reduce((s, r) => s + (r.ms || 0), 0) / 1000;
     console.log("  闸本身合计 " + (sum / 1000).toFixed(1) + "s（S " + laneSum("S").toFixed(1) + " / A " + laneSum("A").toFixed(1) + " / B " + laneSum("B").toFixed(1) +
                 "）／ 总墙钟 " + ((Date.now() - _t0) / 1000).toFixed(1) + "s（三道并行，墙钟≈最长那条跑道）");
   }
   console.log("──────────────────────────────────");
+  const flaky = rows.filter(r => r.redInParallel && r.ok);
+  if (flaky.length) console.log("  ⚠ 并行时红、单跑绿的 " + flaky.length + " 道：" + flaky.map(r => r.label.slice(0, 16)).join("、") + " —— 判绿，但说明机器当时负载高（常见于别的会话同时在跑浏览器）。");
   deliverableReportNote();
   const to = rows.filter(r => !r.ok && r.timedOut);
   const realRed = rows.filter(r => !r.ok && !r.timedOut);
