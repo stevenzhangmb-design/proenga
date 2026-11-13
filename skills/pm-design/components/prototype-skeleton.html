@@ -3,6 +3,7 @@
      v8.53（2076）：设置开关（flag）联动扩展，都写 flagHide:{名:值} / flagShow:{名:值}，不配不生效：列表列 columns[i]、筛选项 filters[i]、
             批量按钮 selectActions[i] 及其 menu[j]、说明条 alert 里写成 {label:{zh,en,pt}, flagHide} 的那一行、左侧状态面板 statusPanel.items[i]、详情板块 / 板块页签 / 字段；
             flagMoves 新写法 {when, fromStatus, toStatus, at, set} → 按标志位把左侧状态面板 byStatus[fromStatus]（含其页签）的行挪到 byStatus[toStatus]，改回时原样挪回。
+     v8.56（2134）：交班日结【去处理】可配 failGoto + failFilter，【去上传】的 pendGoto 可配 pendFilter → 跳到收银台 › 订单管理并预选筛选（如 开票状态=开票失败 / 开票中）；不配不生效。
      v8.55（2114）：详情页表格下方的橙色提示（table.tip / tipBy）下移 8px，不再被表格横向滚动条盖住。
      v8.54（2046·BA）：弹窗字段 failFrom=列下标 → 从某一行打开弹窗时，该行这一格有内容就把字段标红、控件下方显示这段原因（开票失败后重开：税局退回的原因）；
             值没改就点确定仍按这段原因拦下，改过后按字段自己的规则校验。failGroup='组名' → 同组字段改了任意一个，整组的这段原因一起撤掉（邮编和城市不匹配，改其中一个即可）。不配不生效。
@@ -4466,7 +4467,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                 <div class="hv-h2">{{ L(curHandover.nfceTitle) }}</div>
                 <div class="hv-stats hv-stats3">
                   <div class="hv-s"><div class="hv-s-l">{{ L(curHandover.okText||'开具成功') }}</div><div class="hv-s-v ok">{{ curHandover.nfce.ok }}</div><div class="hv-s-f"><span>{{ L(curHandover.zhangText||'张') }}</span></div></div>
-                  <div class="hv-s"><div class="hv-s-l">{{ L(curHandover.failText) }}</div><div class="hv-s-v bad">{{ curHandover.nfce.fail }}</div><div class="hv-s-f"><span>{{ L(curHandover.zhangText||'张') }}</span><a @click="posTip(curHandover.failTip||'跳到失败清单，逐张处理')">{{ L(curHandover.goFixText||'去处理') }}</a></div></div>
+                  <div class="hv-s"><div class="hv-s-l">{{ L(curHandover.failText) }}</div><div class="hv-s-v bad">{{ curHandover.nfce.fail }}</div><div class="hv-s-f"><span>{{ L(curHandover.zhangText||'张') }}</span><a @click="hvFix()">{{ L(curHandover.goFixText||'去处理') }}</a></div></div>
                   <div class="hv-s"><div class="hv-s-l">{{ L(curHandover.pendText||'离线待补传') }}</div><div class="hv-s-v" :class="{warn:hvPend>0}">{{ hvPend }}</div><div class="hv-s-f"><span>{{ L(curHandover.zhangText||'张') }}</span><a v-if="hvPend>0" @click="hvUpload()">{{ L(curHandover.uploadText||'立即补传') }}</a></div></div>
                 </div>
               </template>
@@ -7010,9 +7011,26 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       const hvPendDone = ref(false);
       const hvPend = computed(()=> hvPendDone.value ? 0
         : (+((curHandover.value||{}).nfce||{}).pending || 0));
+      /* §v8.56 交班【去处理】【去上传】跳收银台 › 订单管理并预选筛选：failGoto / pendGoto = 页 id，
+         failFilter / pendFilter = {title:筛选组名, chip:胶囊文字}（如 {title:'开票状态', chip:'开票失败'}）；不配 failGoto 时【去处理】照旧只弹 failTip */
+      function hvGoFilter(pg, f){
+        go(pg);
+        Object.keys(poFilterSel).forEach(k=>delete poFilterSel[k]); poSel.value=0; poQ.value=''; poQApplied.value='';
+        if(!f) return;
+        const z = x => String((x && typeof x==='object') ? (x.zh||L(x)) : (x||''));
+        const fs = (curPosOrder.value||{}).filters||[];
+        const si = fs.findIndex(s=>s && z(s.title)===z(f.title)); if(si<0) return;
+        const ci = (fs[si].chips||[]).findIndex(c=>z(c)===z(f.chip)); if(ci<0) return;
+        poFilterSel[si]=ci;
+      }
+      function hvFix(){
+        const h=curHandover.value||{};
+        if(h.failGoto){ hvGoFilter(h.failGoto, h.failFilter); return; }
+        posTip(h.failTip||'跳到失败清单，逐张处理');
+      }
       function hvUpload(){
         /* §v6.14 pendGoto:'页id' → 「去补开」直接跳到那一页（收银台 › 订单管理 补开开票失败的单），不再模拟补传 */
-        const hg=(curHandover.value||{}).pendGoto; if(hg){ go(hg); return; }
+        const hg=(curHandover.value||{}).pendGoto; if(hg){ hvGoFilter(hg,(curHandover.value||{}).pendFilter); return; }
         posTip(L((curHandover.value&&curHandover.value.uploadingMsg))||'正在补传…');
         setTimeout(()=>{ hvPendDone.value=true;
           posTip(L((curHandover.value&&curHandover.value.uploadedMsg))); }, 900);
@@ -10490,7 +10508,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       afTb,afSel,afQ,afCfg,afRows,afDlgOpen,afConflict,afConfirm,                       /* §v6.5 从清单里挑（关联门店） */
       posAdOpen,posAd,posAdErr,posAdSave,
       posNfe,posIsCnpj,posDocName,posIssued,posVoidOpen,posVoidWhy,posVoidErr,posVoidDo,posRedeem,
-      curHandover,hvTab,hvNote,hvPend,hvUpload,
+      curHandover,hvTab,hvNote,hvPend,hvUpload,hvFix,
       hvDate,hvDaily,hvStats,hvRecOpen,hvRecTab,hvRecSel,hvDetail,hvOpenDetail,   /* §v6.2 日结页/交班记录/明细 */
       isPosPage,posHead,posNav,posNavOpen,posNavItems,posNavIcon,posNavGo,posNavBack,posStores,posStoreName,posPickStore,   /* §v6.0 收银台模块切换抽屉 */
       sgdOpen,posNoteOpen,posNote,posCancelOpen,posCancelDo,posCustOpen,posCustPhone,posCustKeys,posCustKey,posScOn,  /* §v6.1 单栏布局四面板 */
