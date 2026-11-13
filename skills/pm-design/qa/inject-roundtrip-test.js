@@ -29,6 +29,10 @@ if (!PROTO) {
   _tmpAssembled = path.join(os.tmpdir(), "roundtrip_asm_" + process.pid + ".html");
   try { execFileSync("node", [ASM, DATA, _tmpAssembled], { stdio: "pipe", timeout: 120000 }); PROTO = _tmpAssembled; }
   catch (e) { console.log("✗ 装配回路测试原型失败:", String(e.message || e).split("\n")[0]); process.exit(1); }
+  /* 2026-10-28：unpkg 连不上时 Vue 加载不到 → 标注层永远挂不上 → 本闸假红（与改动无关）。
+     与其它闸一致：CDN 换成随包 vendor，headless 秒加载·不依赖网络 */
+  try { const { localize, copyVendorInto } = require("./_gate-vendor");
+    fs.writeFileSync(_tmpAssembled, localize(fs.readFileSync(_tmpAssembled, "utf8")), "utf8"); copyVendorInto(path.dirname(_tmpAssembled)); } catch (e) {}
 }
 const CHROME = process.env.CHROME_PATH || findChrome();
 const ROOT = PROTO ? path.dirname(PROTO) : "";

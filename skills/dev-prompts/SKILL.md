@@ -26,12 +26,14 @@ description: 根据 pm-design 生成的原型 + prd-data.json + 技术概要设�
 | 显式指令 | "让 AI 帮研发写代码的提示词" / "生成给 AI 工具用的提示词" |
 | 同步更新 | "原型改了，研发提示词同步更新" |
 
-## 输入（单一真理源）
+## 输入（两档·有无 PRD 都能出）
 
-1. **prd-data.json**（字段规范 + 用例规则 + 菜单）
-2. **原型 HTML**（视觉参考）
-3. **技术概要设计**（架构 / 数据模型 / 接口契约）
+1. **prd-data.json**（字段规范 + 用例规则 + 菜单）（**可选增强·首选**）
+2. **原型 HTML**（视觉参考 + **始终可用的兜底数据源**；没 PRD 时改读原型 `PAGECFG` + 页面菜单出基线提示词）
+3. **技术概要设计**（架构 / 数据模型 / 接口契约·**可选**，tech-design 无 PRD 也能出，见其解耦铁律）
 4. **可选**：用户的技术栈约束（如 Spring Boot 3 / Vue 3 / MySQL 8）
+
+> 🏛 **解耦铁律**：生成研发提示词**不依赖是否生成过 PRD、是否圈选/点选过功能**——有原型即出，没 PRD 不停。取数两档与诚实标注见 [../_shared/downstream-skill-conventions.md §5](../_shared/downstream-skill-conventions.md)。
 
 ## 输出
 
@@ -195,4 +197,4 @@ AI 按用户的技术栈生成对应提示词。如未指定 → 默认 Spring B
 
 ## 规范遵守
 
-遵守 [pm-design/v1-master-spec.md](../pm-design/v1-master-spec.md) 的**单一真理源原则**——所有提示词以 prd-data.json 为数据源，禁止脱离数据源凭空写。
+遵守 [pm-design/v1-master-spec.md](../pm-design/v1-master-spec.md) 的**单一真理源原则**——所有提示词以**真实数据源**为准：有 PRD 时以 prd-data.json 为准，没 PRD 时以原型结构（PAGECFG + 页面菜单）为准（见 [../_shared/downstream-skill-conventions.md §5](../_shared/downstream-skill-conventions.md)）。**禁止脱离数据源凭空写**——但「没 PRD」不等于「没数据源」，原型本身就是数据源。

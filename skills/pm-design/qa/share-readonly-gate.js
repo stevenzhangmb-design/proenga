@@ -59,7 +59,7 @@ else {
 const srvCands = [
   path.join(__dirname, '..', '..', '..', '..', 'anno-server', 'server.js'),
   path.join(__dirname, '..', '..', '..', 'anno-server', 'server.js'),
-  'D:/AI/anno-server/server.js',
+  require('path').resolve(__dirname, '../../../anno-server/server.js'),
 ];
 const srv = srvCands.find(p => { try { return fs.existsSync(p); } catch (_) { return false; } });
 if (!srv) console.log('  … anno-server 不在预期位置,跳过导出函数检查(不影响标准件层判定)');

@@ -35,22 +35,47 @@ New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 # Fixed versions. Sync with prototype-template.md when bumping.
 $resources = @(
   @{ key='vue';       url='https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js';                    file='vue.js'    }
-  @{ key='ep_css';    url='https://unpkg.com/element-plus@2.4.4/dist/index.css';                    file='ep.css'    }
-  @{ key='ep_js';     url='https://unpkg.com/element-plus@2.4.4/dist/index.full.min.js';            file='ep.js'     }
+  @{ key='ep_css';    url='https://unpkg.com/element-plus@2.6.3/dist/index.css';                    file='ep.css'    }
+  @{ key='ep_js';     url='https://unpkg.com/element-plus@2.6.3/dist/index.full.min.js';            file='ep.js'     }
   @{ key='icons';     url='https://unpkg.com/@element-plus/icons-vue@2.3.1/dist/index.iife.min.js'; file='icons.js'  }
-  @{ key='ep_locale'; url='https://unpkg.com/element-plus@2.4.4/dist/locale/zh-cn.min.js';          file='eploc.js'  }
+  @{ key='ep_locale'; url='https://unpkg.com/element-plus@2.6.3/dist/locale/zh-cn.min.js';          file='eploc.js'  }
 )
 
-Write-Output "=== Downloading 4 CDN resources ==="
+# These files never change for a fixed version, yet re-downloading them on every rebuild cost ~190s
+# on a slow link (measured 2026-09-16) - that was 95% of the whole rebuild, regardless of what changed.
+# So they are SHIPPED in vendor/ (in the repo, ~1.75 MB) and read from there: a fresh install is fast
+# on the very first run and works with no network at all. Keyed by URL via a "<file>.url" marker -
+# bumping a version changes the URL, the marker mismatches, and the file is re-downloaded into vendor/.
+$vendorCache = Join-Path $PSScriptRoot "vendor"
+New-Item -ItemType Directory -Force -Path $vendorCache | Out-Null
+
+Write-Output "=== Collecting 5 CDN resources (local cache first) ==="
 $contents = @{}
+$hit = 0
 foreach ($r in $resources) {
   $localPath = Join-Path $tmp $r.file
+  $cached    = Join-Path $vendorCache $r.file
+  $marker    = "$cached.url"
+  $cachedUrl = ''
+  if (Test-Path $marker) { $cachedUrl = (Get-Content -Raw -Encoding UTF8 $marker).Trim() }
+  $usable = (Test-Path $cached) -and ((Get-Item $cached).Length -gt 1000) -and ($cachedUrl -eq $r.url)
   try {
-    Invoke-WebRequest -Uri $r.url -UseBasicParsing -OutFile $localPath -TimeoutSec 60
-    $bytes = [System.IO.File]::ReadAllBytes($localPath)
-    $contents[$r.key] = [System.Text.Encoding]::UTF8.GetString($bytes)
-    $size_kb = [math]::Round($bytes.Length / 1KB, 1)
-    Write-Output ("  OK " + $r.key + ": " + $size_kb + " KB")
+    if ($usable) {
+      $bytes = [System.IO.File]::ReadAllBytes($cached)
+      $contents[$r.key] = [System.Text.Encoding]::UTF8.GetString($bytes)
+      $size_kb = [math]::Round($bytes.Length / 1KB, 1)
+      Write-Output ("  CACHE " + $r.key + ": " + $size_kb + " KB")
+      $hit++
+    } else {
+      Invoke-WebRequest -Uri $r.url -UseBasicParsing -OutFile $localPath -TimeoutSec 60
+      $bytes = [System.IO.File]::ReadAllBytes($localPath)
+      $contents[$r.key] = [System.Text.Encoding]::UTF8.GetString($bytes)
+      $size_kb = [math]::Round($bytes.Length / 1KB, 1)
+      Write-Output ("  DOWNLOAD " + $r.key + ": " + $size_kb + " KB")
+      # Save into the shared cache so the next rebuild (and the QA gates) skip the network
+      Copy-Item $localPath $cached -Force
+      Set-Content -Path $marker -Value $r.url -Encoding UTF8 -NoNewline
+    }
   } catch {
     Write-Error ("Download failed: " + $r.url + " - " + $_.Exception.Message)
     Get-ChildItem $tmp -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
@@ -71,15 +96,15 @@ Write-Output ("  Original size: " + $origSize_kb + " KB")
 $markers = @(
   @{ key='vue';       olds=@('<script src="https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js"></script>',
                              '<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>')                        }
-  @{ key='ep_css';    olds=@('<link rel="stylesheet" href="https://unpkg.com/element-plus@2.4.4/dist/index.css">',
-                             '<link rel="stylesheet" href="https://unpkg.com/element-plus@2.4.4/dist/index.css" />',
+  @{ key='ep_css';    olds=@('<link rel="stylesheet" href="https://unpkg.com/element-plus@2.6.3/dist/index.css">',
+                             '<link rel="stylesheet" href="https://unpkg.com/element-plus@2.6.3/dist/index.css" />',
                              '<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">',
                              '<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />')                 }
-  @{ key='ep_js';     olds=@('<script src="https://unpkg.com/element-plus@2.4.4/dist/index.full.min.js"></script>',
+  @{ key='ep_js';     olds=@('<script src="https://unpkg.com/element-plus@2.6.3/dist/index.full.min.js"></script>',
                              '<script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>')                  }
   @{ key='icons';     olds=@('<script src="https://unpkg.com/@element-plus/icons-vue@2.3.1/dist/index.iife.min.js"></script>',
                              '<script src="https://unpkg.com/@element-plus/icons-vue"></script>')                              }
-  @{ key='ep_locale'; olds=@('<script src="https://unpkg.com/element-plus@2.4.4/dist/locale/zh-cn.min.js"></script>',
+  @{ key='ep_locale'; olds=@('<script src="https://unpkg.com/element-plus@2.6.3/dist/locale/zh-cn.min.js"></script>',
                              '<script src="https://unpkg.com/element-plus/dist/locale/zh-cn.min.js"></script>')                }
 )
 

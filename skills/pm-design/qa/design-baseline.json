@@ -1,0 +1,21 @@
+{
+  "_note": "某 OMS 默认皮·computed 样式逐值基线（2026-09-15 登录真系统实测）。computed-style-gate.js 渲染原型(headless·DPR=1)后逐元素逐属性 diff：任一不等=红。值为 getComputedStyle 原文(rgb/px)。EP 版本差异项(下拉内框 el-select__wrapper vs el-input__inner)暂列 _tolerant 不判红。",
+  "elements": {
+    "表头th": { "sel": ".gl-table .el-table__header th.el-table__cell", "props": { "backgroundColor": "rgb(247, 248, 250)", "color": "rgb(153, 153, 153)" } },
+    "表头文字": { "sel": ".gl-table .el-table__header th.el-table__cell .cell", "props": { "fontSize": "14px", "fontWeight": "600" } },
+    "行文字": { "sel": ".gl-table .el-table__body td .cell", "props": { "color": "rgb(68, 68, 68)" } },
+    "工具条主按钮": { "sel": ".sel-toolbar .el-button--primary", "props": { "height": "32px", "minWidth": "80px", "borderRadius": "4px", "fontSize": "14px", "padding": "8px 15px" } },
+    "工具条次按钮": { "sel": ".sel-toolbar .el-button:not(.el-button--primary)", "props": { "height": "32px", "minWidth": "80px", "borderRadius": "4px" } },
+    "查询按钮": { "sel": ".search-box .el-button--primary", "props": { "height": "32px", "minWidth": "80px", "borderRadius": "4px" } },
+    "重置按钮": { "sel": ".search-box .el-button:not(.el-button--primary)", "props": { "height": "32px", "minWidth": "80px", "borderRadius": "4px" } },
+    "状态页签": { "sel": ".status-tabs .stab", "props": { "height": "40px", "padding": "0px 20px", "fontSize": "14px", "fontWeight": "500", "color": "rgb(48, 49, 51)" } },
+    "状态页签选中": { "sel": ".status-tabs .stab.on", "props": { "backgroundColor": "rgb(242, 242, 242)", "color": "rgb(51, 99, 255)", "borderRadius": "8px 8px 0px 0px" } },
+    "筛选下拉": { "sel": ".search-box .el-select__wrapper", "props": { "height": "32px", "borderRadius": "4px" } },
+    "筛选输入底色": { "sel": ".search-box .el-input__wrapper", "props": { "backgroundColor": "rgb(255, 255, 255)", "borderRadius": "4px" } },
+    "body": { "sel": "body", "props": { "fontSize": "14px", "color": "rgb(51, 51, 51)" } }
+  },
+  "_tolerant": {
+    "_why": "以下差异源于 DPR 舍入或设计取舍·非骨架能改·gate 不判红（原 EP 版本差已于 2026-09-15 升级 EP 2.6.3 消除·筛选下拉已转强制 32/4）：",
+    "items": ["边框 0.8px vs 1px(DPR1.25舍入)", "body 背景 白 vs #f2f3f5(spec 定为内容区灰·body 被内容覆盖·视觉无差)", "字体族 Noto Sans SC vs Helvetica 栈(系统按语言不同·跨地区保留栈)"]
+  }
+}

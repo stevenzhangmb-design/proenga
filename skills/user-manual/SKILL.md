@@ -13,10 +13,12 @@ description: 根据 pm-design 生成的原型 + prd-data.json 输出"操作手�
 | 显式指令 | "生成操作手册 / 出用户手册 / 写操作指南 / 给最终用户的文档" |
 | 同步更新 | "原型改了，操作手册更新一下" |
 
-## 输入（单一真理源）
+## 输入（两档·有无 PRD 都能出）
 
-1. **prd-data.json** —— 菜单 + 字段 + 用例规则
-2. **原型 HTML**（截图占位参考）
+1. **prd-data.json** —— 菜单 + 字段 + 用例规则（**可选增强·首选**）
+2. **原型 HTML**（**始终可用的兜底数据源**；没 PRD 时改读原型 `PAGECFG` 页面结构/列/按钮 + 页面菜单直接出基线手册）
+
+> 🏛 **解耦铁律**：生成操作手册**不依赖是否生成过 PRD、是否圈选/点选过功能**——有原型即出，没 PRD 不停。取数两档与诚实标注见 [../_shared/downstream-skill-conventions.md §5](../_shared/downstream-skill-conventions.md)。
 
 ## 输出
 

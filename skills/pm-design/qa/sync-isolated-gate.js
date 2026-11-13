@@ -19,7 +19,7 @@ const QA = __dirname;
 const SERVER = [
   path.join(QA, '..', '..', '..', '..', 'anno-server', 'server.js'),
   path.join(QA, '..', '..', '..', 'anno-server', 'server.js'),
-  'D:/AI/anno-server/server.js',
+  require('path').resolve(__dirname, '../../../anno-server/server.js'),
 ].find(p => { try { return fs.existsSync(p); } catch (_) { return false; } });
 const APORT = 3810, WPORT = 8974, DPORT = 9474, NEWNAME = '改名-隔离测试X';
 

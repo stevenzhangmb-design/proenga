@@ -27,11 +27,13 @@ description: 根据 pm-design 生成的原型 + prd-data.json 输出"技术概�
 | 显式指令 | "生成技术设计 / 写技术方案 / 出技术概要 / 给开发的设计文档" |
 | 同步更新 | "原型改了，技术设计同步更新一下" |
 
-## 输入（单一真理源）
+## 输入（两档·有无 PRD 都能出）
 
-1. **prd-data.json**（pm-design 生成的）—— 字段规范 + 用例规则 + 菜单 + 功能点
-2. **原型 HTML**（视觉参考）
+1. **prd-data.json**（pm-design 生成的）—— 字段规范 + 用例规则 + 菜单 + 功能点（**可选增强·首选**）
+2. **原型 HTML**（视觉参考 + **始终可用的兜底数据源**；没 PRD 时改读原型 `PAGECFG` 列/筛选/样例值 + 页面菜单推基线数据模型/接口/DDL）
 3. **可选**：用户补充的技术约束（DB 选型 / 框架 / 部署环境）
+
+> 🏛 **解耦铁律**：生成技术设计**不依赖是否生成过 PRD、是否圈选/点选过功能**——有原型即出，没 PRD 不停。取数两档与诚实标注见 [../_shared/downstream-skill-conventions.md §5](../_shared/downstream-skill-conventions.md)；DDL/data_model 可复用 `../dev-codegen/codegen/derive-from-prototype.js` 的推导结果。
 
 ## 输出
 

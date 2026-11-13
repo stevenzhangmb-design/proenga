@@ -20,7 +20,7 @@ function extractFn(name) {
   return src.slice(start + 1, end + 2); // 含末行 "}"
 }
 
-const NAMES = ["parseFpKey", "mergePinIntoPrd", "prdHeader", "fpMeta", "renderFp", "renderMenuTree", "buildFpSections", "generatePrdMd"];
+const NAMES = ["parseFpKey", "mergePinIntoPrd", "prdHeader", "fpMeta", "draftToMd", "hardWrapForPandoc", "renderFp", "renderMenuTree", "buildFpSections", "normalizePrdMd", "generatePrdMd"];
 const bodies = NAMES.map(extractFn).join("\n\n");
 const out = `/* ⚠ 自动生成，请勿手改！源 = anno-server/server.js，由 build-shared-generator.js 派生。
    共享 PRD 生成器（isomorphic：node + 浏览器都跑，单一来源）。改生成器请改 server.js 后重跑 build。 */

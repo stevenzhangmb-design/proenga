@@ -20,6 +20,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+require('../../_shared/qa/_tmp-sandbox'); // 临时文件进沙盒·退出自动删（铁律·见 _tmp-sandbox.js）
 const { execFileSync } = require('child_process');
 
 const QA = __dirname;

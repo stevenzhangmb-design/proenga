@@ -32,11 +32,13 @@ description: 根据原型 + PRD 输出"售前产品方案介绍"（PPT 大纲式
 - 操作手册的"业务术语 + 场景"会成为售前方案"业务对象命名"的来源
 - 售前方案的"功能亮点"需要操作手册级别的细节支持
 
-## 输入
+## 输入（两档·有无 PRD 都能出）
 
-1. **prd-data.json**（菜单 + 功能点）
-2. **原型 HTML**（截图素材）
-3. **PRD .md**（业务理解）
+1. **prd-data.json**（菜单 + 功能点）（**可选增强·首选**）
+2. **原型 HTML**（截图素材 + **始终可用的兜底数据源**；没 PRD 时改读原型 `PAGECFG` + 页面菜单直接出基线方案）
+3. **PRD .md**（业务理解·**可选**，无则从原型结构理解业务）
+
+> 🏛 **解耦铁律**：生成售前方案**不依赖是否生成过 PRD、是否圈选/点选过功能**——有原型即出，没 PRD 不停。取数两档与诚实标注见 [../_shared/downstream-skill-conventions.md §5](../_shared/downstream-skill-conventions.md)。（与 user-manual 的先后约束不变。）
 4. **可选**：[learned-specs/saas-product-pitch-style.md](../pm-design/learned-specs/saas-product-pitch-style.md)（标杆样本）+ 公司信息（成立时间 / 融资 / 荣誉 / 客户数等）
 
 ## 输出

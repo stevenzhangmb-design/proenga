@@ -16,11 +16,12 @@
    ════════════════════════════════════════════════════════════════════════ */
 'use strict';
 const http = require('http'), fs = require('fs'), path = require('path'), os = require('os'), { spawn, execFileSync } = require('child_process');
+require('../../_shared/qa/_tmp-sandbox'); // 临时文件进沙盒·退出自动删（铁律·见 _tmp-sandbox.js）
 const QA = __dirname;
 const SERVER = [
   path.join(QA, '..', '..', '..', '..', 'anno-server', 'server.js'),
   path.join(QA, '..', '..', '..', 'anno-server', 'server.js'),
-  'D:/AI/anno-server/server.js',
+  require('path').resolve(__dirname, '../../../anno-server/server.js'),
 ].find(p => { try { return fs.existsSync(p); } catch (_) { return false; } });
 const APORT = 3811;                 // 与 ㉕(3810) 错开，避免并行串口
 const FP_KEY = 'OMS.删除同步测试项';

@@ -17,7 +17,7 @@ const fs = require('fs'), path = require('path'), http = require('http');
 function findFile(name) {
   const c = [
     path.join(__dirname, '..', '..', '..', '..', 'anno-server', name),   // ai-rules 同级
-    path.join('D:/AI/anno-server', name),
+    path.join(require('path').resolve(__dirname, '../../../anno-server'), name),
     path.join(process.env.CODEGEN_DIR || '', '..', 'anno-server', name),
   ];
   for (const p of c) { try { if (p && fs.existsSync(p)) return p; } catch (e) {} }

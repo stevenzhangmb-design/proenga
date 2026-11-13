@@ -445,26 +445,26 @@ function print() { __p += __j.call(arguments, '') }
 
   <style>
     :root {
-      /* 主色 — 实测 TF WMS #3363FF */
+      /* 主色 — 实测 某 WMS #3363FF */
       --primary:       #3363FF;
       --primary-80:    rgba(51,99,255,0.8);   /* 操作图标色（实测） */
       --primary-light: rgba(51,99,255,0.08);  /* 图标 hover 底色 */
       --primary-bg:    rgba(51,99,255,0.06);  /* 选中行/激活浅底 */
-      /* 状态色 — 实测 TF WMS */
+      /* 状态色 — 实测 某 WMS */
       --success:       #67C23A;
       --danger:        #F56C6C;
       --warning:       #F2AC3A;              /* 实测 #F2AC3A，非 EP 默认 #E6A23C */
-      /* 文字 — 实测 TF WMS */
+      /* 文字 — 实测 某 WMS */
       --text-1:        #444444;              /* 表格正文 rgb(68,68,68) */
       --text-2:        #606266;
       --text-3:        #999999;              /* 表头文字 rgb(153,153,153) */
       --text-link:     #3363FF;              /* 充值编号等蓝色链接 */
-      /* 背景 — 实测 TF WMS */
+      /* 背景 — 实测 某 WMS */
       --bg:            #F2F3F5;              /* 页面背景 rgb(242,243,245) */
       --bg-card:       #FFFFFF;
       --bg-table-hd:   #F7F8FA;              /* 表头背景 rgb(247,248,250) */
       --border:        #E4E7ED;
-      /* 导航 — 实测 TF WMS */
+      /* 导航 — 实测 某 WMS */
       --nav-bg:        #122041;              /* rgb(18,32,65) — 实测更深 */
       --nav-h:         50px;                 /* 实测 50px */
     }
@@ -491,7 +491,7 @@ function print() { __p += __j.call(arguments, '') }
       border-radius:4px; padding:3px 10px;
     }
 
-    /* ── Top Nav（实测 TF WMS：50px 高，#122041 底色）── */
+    /* ── Top Nav（实测 某 WMS：50px 高，#122041 底色）── */
     .top-nav {
       position:fixed; top:44px; left:0; right:0; z-index:900;
       height: 50px;             /* 实测 50px */
@@ -540,7 +540,7 @@ function print() { __p += __j.call(arguments, '') }
     .nav-right span { cursor:pointer; }
     .nav-right span:hover { color:#fff; }
 
-    /* ── Page Tabs Bar（实测 TF WMS：tab 40px 高，圆角顶部）── */
+    /* ── Page Tabs Bar（实测 某 WMS：tab 40px 高，圆角顶部）── */
     .page-tabs {
       position:fixed; top:94px; left:0; right:0; z-index:800;
       height:40px; background:#F2F2F2; border-bottom:1px solid var(--border);
@@ -556,7 +556,7 @@ function print() { __p += __j.call(arguments, '') }
       min-width:80px;
     }
     .ptab:hover { color:var(--primary); background:#EBEBEB; }
-    /* 激活 tab：灰底蓝字 fontWeight500（实测 TF WMS/OMS 2026-06-10）*/
+    /* 激活 tab：灰底蓝字 fontWeight500（实测 某 WMS/OMS 2026-06-10）*/
     .ptab.active { color:var(--primary); font-weight:500; background:#F2F2F2; border-radius:4px 4px 0 0; }
     .ptab-close {
       width:16px; height:16px; border-radius:50%; display:flex;
@@ -602,7 +602,7 @@ function print() { __p += __j.call(arguments, '') }
     /* 仅网格直接子元素铺满；.ff 内的控件交给 flex，避免 width:100% 与 flex 冲突 */
     .filter-grid > .el-select,
     .filter-grid > .el-input { width:100%; }
-    /* 筛选区所有控件高度统一 36px（来自 TF OMS 截图；不依赖 --small 后缀）*/
+    /* 筛选区所有控件高度统一 36px（来自 某 OMS 截图；不依赖 --small 后缀）*/
     .filter-grid .el-input__wrapper,
     .filter-grid .el-select__wrapper,
     .filter-grid .el-date-editor { min-height:36px !important; height:36px !important; }
@@ -614,7 +614,7 @@ function print() { __p += __j.call(arguments, '') }
     .ff-label { font-size:13px; color:var(--text-2); white-space:nowrap; }
     .ff > .el-date-editor,
     .ff > .el-input { flex:1; min-width:0; width:auto; }
-    /* 查询/重置按钮：在 grid 内最后一行，右对齐（来自 TF OMS 截图） */
+    /* 查询/重置按钮：在 grid 内最后一行，右对齐（来自 某 OMS 截图） */
     .filter-actions { display:flex; gap:8px; align-items:center; justify-content:flex-end; }
 
     /* ── 自定义多选下拉（搜索 + 全选 + 取消/确认），见 §15.2 要点10 ── */
@@ -674,14 +674,14 @@ function print() { __p += __j.call(arguments, '') }
       padding:10px 16px; border-bottom:1px solid var(--border);
     }
 
-    /* ── Op icon buttons + hover tooltip（实测 TF WMS）── */
+    /* ── Op icon buttons + hover tooltip（实测 某 WMS）── */
     /* 所有操作图标统一用主色80%透明，无红/橙色区分（实测）*/
     .op-cell { display:flex; gap:4px; align-items:center; flex-wrap:nowrap; }
     .op-icon {
       position:relative;
       display:inline-flex; align-items:center; justify-content:center;
       width:26px; height:26px; border-radius:4px; cursor:pointer;
-      color: var(--primary-80);   /* rgba(51,99,255,0.8) — 实测 TF WMS */
+      color: var(--primary-80);   /* rgba(51,99,255,0.8) — 实测 某 WMS */
       font-size:16px; transition:all .15s;
     }
     .op-icon svg { width:18px; height:18px; display:block; pointer-events:none; }
@@ -731,7 +731,7 @@ function print() { __p += __j.call(arguments, '') }
 
     /* ── Order link ── */
     .order-link {
-      color: var(--text-link);   /* #3363FF 实测 TF WMS rgb(51,99,255) */
+      color: var(--text-link);   /* #3363FF 实测 某 WMS rgb(51,99,255) */
       font-weight: 400; cursor:pointer; font-size:14px;
       font-family:'Courier New',monospace;
     }
@@ -748,7 +748,7 @@ function print() { __p += __j.call(arguments, '') }
     .dot-appr { background:#52C41A; }
     .dot-rej  { background:#FF4D4F; }
 
-    /* ── Source tag 来源标签 — 实测 TF WMS: #EEEEEE bg, #444 text, 0px radius ── */
+    /* ── Source tag 来源标签 — 实测 某 WMS: #EEEEEE bg, #444 text, 0px radius ── */
     .src-tag { display:inline-block; padding:1px 10px; border-radius:0; font-size:14px; background:#EEEEEE; color:#444444; }
     /* 平台状态标签 — 实测 OMS: 红色边框+极淡红底 */
     .platform-status { display:inline-block; font-size:12px; border-radius:2px; padding:0 8px; border:1px solid #E61F11; background:rgba(230,31,17,0.06); color:#E61F11; }
@@ -798,7 +798,7 @@ function print() { __p += __j.call(arguments, '') }
     .fm-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:2px 28px; }
     .fm-grid .el-form-item { margin-bottom:20px; }
     .fm-grid .el-form-item__label { font-size:13px; color:var(--text-2); padding-bottom:6px !important; }
-    /* 表单区输入框高度 38px（来自 TF OMS 创建页截图，比筛选区略高）*/
+    /* 表单区输入框高度 38px（来自 某 OMS 创建页截图，比筛选区略高）*/
     .fm-grid .el-input__wrapper,
     .fm-grid .el-select__wrapper { min-height:38px !important; }
     .fm-grid .el-textarea__inner { min-height:80px !important; }
@@ -878,7 +878,7 @@ function print() { __p += __j.call(arguments, '') }
     }
 
     /* ── Plain table（替代 el-table，彻底避免多级表头）── */
-    /* 表格样式 — 实测 TF WMS */
+    /* 表格样式 — 实测 某 WMS */
     .pt { width:100%; border-collapse:collapse; font-size:13px; table-layout:auto; }
     .pt th {
       background: var(--bg-table-hd);   /* #F7F8FA 实测 */
@@ -890,7 +890,7 @@ function print() { __p += __j.call(arguments, '') }
     .pt td {
       padding:8px 12px; border-bottom:1px solid var(--border);
       color: var(--text-1);             /* #444444 实测 rgb(68,68,68) */
-      font-size:12px;                   /* 实测 TF WMS/OMS — 行文字12px */
+      font-size:12px;                   /* 实测 某 WMS/OMS — 行文字12px */
       vertical-align:middle; white-space:nowrap;
     }
     .pt tr:last-child td { border-bottom:none; }
@@ -1787,7 +1787,7 @@ function print() { __p += __j.call(arguments, '') }
               </el-select>
               <el-input v-model="fFlowNo" placeholder="请输入" size="small" clearable/>
             </div>
-            <!-- 按钮：跨满整行，右对齐（来自 TF OMS 截图） -->
+            <!-- 按钮：跨满整行，右对齐（来自 某 OMS 截图） -->
             <div class="filter-actions" style="grid-column:1/-1">
               <el-button type="primary" size="small" :icon="Search" @click="ElMessage.success('查询完成')">查询</el-button>
               <el-button size="small" :icon="RefreshLeft" @click="resetFlowFilter">重置</el-button>
@@ -1894,7 +1894,7 @@ function print() { __p += __j.call(arguments, '') }
               <span class="ff-label">充值单号</span>
               <el-input v-model="fNo" placeholder="请输入" size="small" clearable/>
             </div>
-            <!-- row3: 时间(span2) | 按钮（右对齐，来自 TF OMS 截图） -->
+            <!-- row3: 时间(span2) | 按钮（右对齐，来自 某 OMS 截图） -->
             <div class="ff" style="grid-column:span 2">
               <el-select v-model="fTimeField" size="small" style="width:120px;flex:none">
                 <el-option label="创建时间" value="创建时间"></el-option>
@@ -1946,7 +1946,7 @@ function print() { __p += __j.call(arguments, '') }
               <el-date-picker v-model="fDate" type="daterange" range-separator="至"
                 start-placeholder="开始日期" end-placeholder="结束日期" size="small"/>
             </div>
-            <!-- 按钮：跨满整行，右对齐（来自 TF OMS 截图） -->
+            <!-- 按钮：跨满整行，右对齐（来自 某 OMS 截图） -->
             <div class="filter-actions" style="grid-column:1/-1">
               <el-button type="primary" size="small" :icon="Search" @click="ElMessage.success('查询完成')">查询</el-button>
               <el-button size="small" :icon="RefreshLeft" @click="resetFilter">重置</el-button>

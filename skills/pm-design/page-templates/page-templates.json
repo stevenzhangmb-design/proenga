@@ -1,0 +1,1311 @@
+{
+  "抽取时间": "2026-11-04",
+  "样本总数": 344,
+  "页型分布": {
+    "其它": 23,
+    "列表页": 162,
+    "整页表单": 108,
+    "详情/查看页": 31,
+    "弹窗表单": 20
+  },
+  "模板": {
+    "列表页": {
+      "样本": 206,
+      "筛选区": [
+        {
+          "项": "筛选区行数",
+          "众数": 1,
+          "样本": 191,
+          "一致率": 43,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": 2,
+              "次数": 73,
+              "出处": [
+                "OMS-data-statistics-platformStockGoods-01-导出",
+                "OMS-distribution-buyBreakManage-buyBreakApplication-02-导出",
+                "OMS-distribution-buyBreakManage-buyBreakReturn-02-导出",
+                "OMS-finance-costManagement-businessFeeList-01-导出"
+              ]
+            },
+            {
+              "值": 3,
+              "次数": 32,
+              "出处": [
+                "OMS-goods-goodsManage-02-停用",
+                "OMS-goods-goodsManage-03-标记",
+                "OMS-goods-goodsManage-05-打印标签",
+                "OMS-goods-goodsManage-06-导入"
+              ]
+            },
+            {
+              "值": 4,
+              "次数": 4,
+              "出处": [
+                "WMS-outWarehouse-outWarehouseOrder-02-标记",
+                "WMS-outWarehouse-outWarehouseOrder-04-图标1",
+                "WMS-outWarehouse-outWarehouseOrder-06-图标3",
+                "WMS-outWarehouse-outWarehouseOrder-07-图标4"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "筛选控件个数",
+          "众数": 6,
+          "样本": 191,
+          "一致率": 14,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": 4,
+              "次数": 24,
+              "出处": [
+                "OMS-data-InventoryAging-boxAge-01-导出",
+                "OMS-data-InventoryAging-goodsAge-01-导出",
+                "OMS-data-InventoryAging-goodsAge-02-SKU编号_00071785商品",
+                "OMS-data-statistics-goodsInventory-01-导出"
+              ]
+            },
+            {
+              "值": 1,
+              "次数": 18,
+              "出处": [
+                "OMS-settings-LogisticsSettings-pickupAddress-01-图标1",
+                "OMS-settings-LogisticsSettings-pickupAddress-02-图标2",
+                "OMS-settings-LogisticsSettings-pickupMethod-02-图标1",
+                "OMS-settings-LogisticsSettings-pickupMethod-03-图标2"
+              ]
+            },
+            {
+              "值": 5,
+              "次数": 17,
+              "出处": [
+                "OMS-distribution-distributionManage-distributionManageGoods-01-导出",
+                "OMS-settings-systemManagement-dptManage-01-新增",
+                "OMS-settings-systemManagement-dptManage-04-图标1",
+                "OMS-settings-systemManagement-dptManage-05-图标2"
+              ]
+            },
+            {
+              "值": 12,
+              "次数": 17,
+              "出处": [
+                "OMS-goods-goodsManage-02-停用",
+                "OMS-goods-goodsManage-03-标记",
+                "OMS-goods-goodsManage-05-打印标签",
+                "OMS-goods-goodsManage-06-导入"
+              ]
+            },
+            {
+              "值": 3,
+              "次数": 15,
+              "出处": [
+                "OMS-data-statistics-salesDetailReport-01-导出",
+                "OMS-finance-invoiceManage-invoiceAccount-01-新增",
+                "OMS-settings-Inventory-InventorySyncRecord-03-图标2",
+                "OMS-settings-Inventory-InventorySyncRecord-04-图标3"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "查询/重置的位置",
+          "众数": "与末行筛选同行",
+          "样本": 188,
+          "一致率": 82,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": "单独一行",
+              "次数": 34,
+              "出处": [
+                "OMS-settings-AuthorizationCenter-storeAuth-storeTransfer-01-新增授权",
+                "OMS-settings-AuthorizationCenter-storeAuth-storeTransfer-02-启用",
+                "OMS-settings-AuthorizationCenter-storeAuth-storeTransfer-03-停用",
+                "OMS-settings-AuthorizationCenter-storeAuth-storeTransfer-04-图标1"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "有没有展开/收起",
+          "众数": false,
+          "样本": 191,
+          "一致率": 100,
+          "直接可用": true,
+          "分歧": null
+        }
+      ],
+      "列表": [
+        {
+          "项": "表格实现",
+          "众数": "EP表(el-table)",
+          "样本": 206,
+          "一致率": 91,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": "原生手写表",
+              "次数": 18,
+              "出处": [
+                "WMS-outWarehouse-abnormal-abnormalOrder-02-重启作业",
+                "WMS-outWarehouse-abnormal-abnormalOrder-03-确认异常",
+                "WMS-outWarehouse-abnormal-abnormalOrder-04-图标1",
+                "WMS-outWarehouse-abnormal-abnormalOrder-06-图标3"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "勾选列位置",
+          "众数": "第1列",
+          "样本": 206,
+          "一致率": 83,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": "无",
+              "次数": 32,
+              "出处": [
+                "OMS-finance-costManagement-businessFeeList-02-图标1",
+                "OMS-finance-costManagement-businessFeeList-03-图标2",
+                "OMS-settings-Inventory-InventorySyncRecord-02-图标1",
+                "OMS-settings-Inventory-InventorySyncRecord-03-图标2"
+              ]
+            },
+            {
+              "值": "第2列",
+              "次数": 2,
+              "出处": [
+                "OMS-settings-businessSettings-automaticWarehousing-05-图标3",
+                "OMS-settings-Inventory-InventorySyncRules-02-启用"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "操作列位置",
+          "众数": "最后一列",
+          "样本": 206,
+          "一致率": 74,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": "无独立操作列",
+              "次数": 47,
+              "出处": [
+                "OMS-data-InventoryAging-boxAge-01-导出",
+                "OMS-data-InventoryAging-goodsAge-01-导出",
+                "OMS-data-InventoryAging-goodsAge-02-SKU编号_00071785商品",
+                "OMS-data-statistics-boxInventory-01-导出"
+              ]
+            },
+            {
+              "值": "第6/8列",
+              "次数": 2,
+              "出处": [
+                "OMS-task-center-list-01-图标1",
+                "OMS-task-center-list-02-图标2"
+              ]
+            },
+            {
+              "值": "第7/9列",
+              "次数": 2,
+              "出处": [
+                "WMS-task-center-list-01-图标1",
+                "WMS-task-center-list-02-图标2"
+              ]
+            },
+            {
+              "值": "第8/15列",
+              "次数": 1,
+              "出处": [
+                "WMS-data-jobStatistics-packStatistics-01-导出"
+              ]
+            },
+            {
+              "值": "第9/16列",
+              "次数": 1,
+              "出处": [
+                "WMS-data-jobStatistics-pickingStatistics-01-导出"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "行操作形态",
+          "众数": "图标 ×2",
+          "样本": 182,
+          "一致率": 33,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": "无",
+              "次数": 42,
+              "出处": [
+                "OMS-data-InventoryAging-boxAge-01-导出",
+                "OMS-data-InventoryAging-goodsAge-01-导出",
+                "OMS-data-InventoryAging-goodsAge-02-SKU编号_00071785商品",
+                "OMS-data-statistics-boxInventory-01-导出"
+              ]
+            },
+            {
+              "值": "图标 ×4",
+              "次数": 35,
+              "出处": [
+                "OMS-settings-AuthorizationCenter-storeAuth-storeTransfer-01-新增授权",
+                "OMS-settings-AuthorizationCenter-storeAuth-storeTransfer-02-启用",
+                "OMS-settings-AuthorizationCenter-storeAuth-storeTransfer-03-停用",
+                "OMS-settings-AuthorizationCenter-storeAuth-storeTransfer-04-图标1"
+              ]
+            },
+            {
+              "值": "图标 ×1",
+              "次数": 24,
+              "出处": [
+                "OMS-distribution-buyBreakManage-buyBreakApplication-02-导出",
+                "OMS-distribution-buyBreakManage-buyBreakReturn-02-导出",
+                "OMS-distribution-distributionManage-distributionManageGoods-01-导出",
+                "OMS-finance-costManagement-businessFeeList-01-导出"
+              ]
+            },
+            {
+              "值": "图标 ×3",
+              "次数": 14,
+              "出处": [
+                "OMS-goods-comboRandomGoods-02-导入",
+                "OMS-goods-goodsManage-02-停用",
+                "OMS-goods-goodsManage-03-标记",
+                "OMS-goods-goodsManage-05-打印标签"
+              ]
+            },
+            {
+              "值": "图标 ×6",
+              "次数": 7,
+              "出处": [
+                "WMS-basicSettings-smartStrategy-waveStrategy-07-图标3",
+                "WMS-basicSettings-smartStrategy-waveStrategy-10-图标6",
+                "WMS-basicSettings-smartStrategy-waveStrategy-11-图标7",
+                "WMS-basicSettings-smartStrategy-waveStrategyAdd-01-取消"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "行高",
+          "众数": 41,
+          "样本": 182,
+          "一致率": 17,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": 43,
+              "次数": 27,
+              "出处": [
+                "OMS-settings-systemManagement-accountList-01-新增",
+                "OMS-settings-systemManagement-accountList-05-图标1",
+                "OMS-settings-systemManagement-accountList-06-图标2",
+                "OMS-settings-systemManagement-accountList-07-图标3"
+              ]
+            },
+            {
+              "值": 63,
+              "次数": 26,
+              "出处": [
+                "OMS-data-InventoryAging-boxAge-01-导出",
+                "OMS-finance-financeManage-rechargeList-01-充值",
+                "OMS-finance-financeManage-rechargeList-02-导出",
+                "OMS-settings-businessSettings-automaticWarehousing-05-图标3"
+              ]
+            },
+            {
+              "值": 40,
+              "次数": 17,
+              "出处": [
+                "WMS-outWarehouse-abnormal-abnormalOrder-02-重启作业",
+                "WMS-outWarehouse-abnormal-abnormalOrder-03-确认异常",
+                "WMS-outWarehouse-abnormal-abnormalOrder-04-图标1",
+                "WMS-outWarehouse-abnormal-abnormalOrder-06-图标3"
+              ]
+            },
+            {
+              "值": 109,
+              "次数": 9,
+              "出处": [
+                "OMS-finance-financeManage-transactionDetails-01-导出",
+                "OMS-settings-AuthorizationCenter-storeAuth-storeTransfer-01-新增授权",
+                "OMS-settings-AuthorizationCenter-storeAuth-storeTransfer-02-启用",
+                "OMS-settings-AuthorizationCenter-storeAuth-storeTransfer-03-停用"
+              ]
+            },
+            {
+              "值": 178,
+              "次数": 9,
+              "出处": [
+                "OMS-data-InventoryAging-goodsAge-01-导出",
+                "OMS-data-InventoryAging-goodsAge-02-SKU编号_00071785商品",
+                "OMS-data-statistics-goodsInventory-01-导出",
+                "WMS-afterSales-afterSalesManage-returnManage-01-标记"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "分页对齐",
+          "众数": "flex-end",
+          "样本": 182,
+          "一致率": 100,
+          "直接可用": true,
+          "分歧": null
+        }
+      ],
+      "列数分布": [
+        "9 列 ×31",
+        "11 列 ×27",
+        "8 列 ×24",
+        "14 列 ×19",
+        "6 列 ×17",
+        "10 列 ×15",
+        "13 列 ×15",
+        "12 列 ×13"
+      ],
+      "状态页签": [
+        {
+          "项": "页签形态",
+          "众数": "卡片式",
+          "样本": 92,
+          "一致率": 95,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": "下划线式",
+              "次数": 5,
+              "出处": [
+                "WMS-afterSales-afterSalesManage-receiveManage-01-图标1",
+                "WMS-afterSales-afterSalesManage-returnManage-03-图标1",
+                "WMS-afterSales-afterSalesManage-returnManage-04-图标2",
+                "WMS-afterSales-afterSalesManage-shelfManage-01-图标1"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "页签位置",
+          "众数": "列表上方（状态筛选用）",
+          "样本": 92,
+          "一致率": 93,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": "页内",
+              "次数": 6,
+              "出处": [
+                "WMS-outWarehouse-B2B-outWarehouse-02-标记",
+                "WMS-outWarehouse-B2B-outWarehouse-06-图标3",
+                "WMS-outWarehouse-outWarehouseOrder-02-标记",
+                "WMS-outWarehouse-outWarehouseOrder-04-图标1"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "页签个数",
+          "众数": 2,
+          "样本": 92,
+          "一致率": 40,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": 4,
+              "次数": 17,
+              "出处": [
+                "OMS-finance-financeManage-rechargeList-01-充值",
+                "OMS-finance-financeManage-rechargeList-02-导出",
+                "WMS-data-InboundOutbound-outboundStatistics-01-导出",
+                "WMS-distribution-buyOutManage-buyOutApplication-01-导出"
+              ]
+            },
+            {
+              "值": 3,
+              "次数": 12,
+              "出处": [
+                "WMS-basicSettings-deviceManage-pickingCart-01-新增",
+                "WMS-basicSettings-deviceManage-pickingCart-02-打印标签",
+                "WMS-basicSettings-deviceManage-pickingCart-03-图标1",
+                "WMS-basicSettings-smartStrategy-waveStrategy-07-图标3"
+              ]
+            },
+            {
+              "值": 5,
+              "次数": 12,
+              "出处": [
+                "OMS-distribution-buyBreakManage-buyBreakApplication-02-导出",
+                "OMS-distribution-buyBreakManage-buyBreakReturn-02-导出",
+                "OMS-distribution-distributionManage-distributionManageGoods-01-导出",
+                "OMS-settings-Inventory-InventorySyncRecord-01-导出"
+              ]
+            },
+            {
+              "值": 8,
+              "次数": 5,
+              "出处": [
+                "OMS-finance-costManagement-businessFeeList-01-导出",
+                "WMS-finance-costManagement-businessFeeList-02-导出",
+                "WMS-finance-costManagement-profitCalc-02-重算成本",
+                "WMS-finance-costManagement-profitCalc-03-导出"
+              ]
+            },
+            {
+              "值": 6,
+              "次数": 4,
+              "出处": [
+                "WMS-customer-customerManage-03-停用",
+                "WMS-customer-customerManage-07-批量管理",
+                "WMS-customer-customerManage-08-导出",
+                "WMS-customer-customerManage-11-图标3"
+              ]
+            }
+          ]
+        }
+      ],
+      "有状态页签的页": "92/206",
+      "工具条按钮词频": [
+        "重置 ×188",
+        "查询 ×187",
+        "导出 ×98",
+        "新增 ×84",
+        "停用 ×70",
+        "删除 ×67",
+        "启用 ×52",
+        "标记 ×29",
+        "导入 ×21",
+        "打印标签 ×18",
+        "返回 ×9",
+        "执行记录 ×7",
+        "设置打包机商品 ×7",
+        "税务信息 ×6",
+        "分类设置 ×6",
+        "新增授权 ×5",
+        "选择商品 ×5",
+        "充值 ×4",
+        "审核通过 ×4",
+        "审核不通过 ×4"
+      ],
+      "右端图标": []
+    },
+    "整页表单（新增/编辑）": {
+      "样本": 108,
+      "结构": [
+        {
+          "项": "几列",
+          "众数": 3,
+          "样本": 108,
+          "一致率": 74,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": 2,
+              "次数": 11,
+              "出处": [
+                "OMS-finance-invoiceManage-invoiceAccount-02-图标1",
+                "OMS-finance-invoiceManage-taxation-01-新增",
+                "OMS-finance-invoiceManage-taxation-02-新增样品_赠品税种",
+                "OMS-finance-invoiceManage-taxation-03-图标1"
+              ]
+            },
+            {
+              "值": 4,
+              "次数": 7,
+              "出处": [
+                "OMS-settings-businessSettings-automaticWarehousing-04-图标2",
+                "WMS-distribution-distributionManage-distributeGoods-06-图标2",
+                "WMS-outWarehouse-abnormal-abnormalOrder-05-图标2",
+                "WMS-outWarehouse-abnormal-cutOffOrder-02-图标2"
+              ]
+            },
+            {
+              "值": 1,
+              "次数": 4,
+              "出处": [
+                "OMS-settings-systemManagement-roleList-01-新增",
+                "OMS-user-center-my-center-edit-01-取消",
+                "WMS-outWarehouse-waveIssued-02-波次下发",
+                "WMS-user-center-my-center-edit-01-取消"
+              ]
+            },
+            {
+              "值": 5,
+              "次数": 4,
+              "出处": [
+                "OMS-goods-goodsManage-01-新增",
+                "OMS-goods-goodsManage-09-图标2",
+                "WMS-goods-goodsManage-01-新增",
+                "WMS-outWarehouse-outWarehouseOrder-RestockOrderDialog-02-创建移库单"
+              ]
+            },
+            {
+              "值": 6,
+              "次数": 1,
+              "出处": [
+                "WMS-basicSettings-basicSettings-locationManage-02-批量添加"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "label 位置",
+          "众数": "label在上(label-top)",
+          "样本": 108,
+          "一致率": 96,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": "label在左",
+              "次数": 4,
+              "出处": [
+                "OMS-settings-systemManagement-roleList-01-新增",
+                "OMS-user-center-my-center-edit-01-取消",
+                "WMS-outWarehouse-waveIssued-02-波次下发",
+                "WMS-user-center-my-center-edit-01-取消"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "字段行距",
+          "众数": "72px（2 次·共 2 个间隔）",
+          "样本": 100,
+          "一致率": 23,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": "82px（1 次·共 2 个间隔）",
+              "次数": 6,
+              "出处": [
+                "OMS-goods-comboRandomGoods-01-新增",
+                "WMS-finance-costManagement-businessFeeList-01-手动扣费",
+                "WMS-finance-costManagement-profitCalc-01-手动扣费",
+                "WMS-finance-financeManage-manualCharge-01-新增"
+              ]
+            },
+            {
+              "值": "72px（4 次·共 5 个间隔）",
+              "次数": 4,
+              "出处": [
+                "OMS-finance-financeManage-rechargeList-03-图标1",
+                "OMS-finance-financeManage-rechargeList-04-图标2",
+                "OMS-finance-financeManage-rechargeList-05-图标3",
+                "OMS-finance-financeManage-rechargeList-06-RKFX2610160005"
+              ]
+            },
+            {
+              "值": "82px（2 次·共 4 个间隔）",
+              "次数": 4,
+              "出处": [
+                "WMS-basicSettings-smartStrategy-waveStrategy-01-新增",
+                "WMS-basicSettings-smartStrategy-waveStrategy-05-图标1",
+                "WMS-basicSettings-smartStrategy-waveStrategy-08-图标4",
+                "WMS-basicSettings-smartStrategy-waveStrategy-09-图标5"
+              ]
+            },
+            {
+              "值": "82px（2 次·共 2 个间隔）",
+              "次数": 4,
+              "出处": [
+                "WMS-finance-billingItem-warehouseRent-01-新增",
+                "WMS-finance-billingItem-warehouseRent-02-图标2",
+                "WMS-finance-billingItem-warehouseRent-copy-02-取消",
+                "WMS-logistics-logisticsManagement-logisticsModel-01-新增"
+              ]
+            },
+            {
+              "值": "82px（17 次·共 30 个间隔）",
+              "次数": 3,
+              "出处": [
+                "OMS-finance-invoiceManage-taxation-01-新增",
+                "OMS-finance-invoiceManage-taxation-02-新增样品_赠品税种",
+                "OMS-finance-invoiceManage-taxation-03-图标1"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "必填星号",
+          "众数": "伪元素::before \"*\" 色 rgb(245, 108, 108)",
+          "样本": 108,
+          "一致率": 55,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": "无",
+              "次数": 47,
+              "出处": [
+                "OMS-distribution-buyBreakManage-buyBreakApplication-03-图标1",
+                "OMS-distribution-buyBreakManage-buyBreakApplication-04-图标2",
+                "OMS-distribution-buyBreakManage-buyBreakApplication-05-BOKFX2609150001",
+                "OMS-distribution-distributionManage-distributionManageGoods-02-图标1"
+              ]
+            },
+            {
+              "值": "行内",
+              "次数": 2,
+              "出处": [
+                "WMS-basicSettings-basicSettings-locationManage-07-图标1",
+                "WMS-basicSettings-basicSettings-locationManage-09-图标3"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "页脚按钮对齐",
+          "众数": "居中",
+          "样本": 106,
+          "一致率": 85,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": "左对齐",
+              "次数": 14,
+              "出处": [
+                "OMS-goods-comboRandomGoods-01-新增",
+                "OMS-goods-comboRandomGoods-03-图标2",
+                "OMS-goods-goodsManage-01-新增",
+                "OMS-goods-goodsManage-09-图标2"
+              ]
+            },
+            {
+              "值": "右对齐",
+              "次数": 2,
+              "出处": [
+                "WMS-outWarehouse-waveIssuedManagement-04-图标1",
+                "WMS-outWarehouse-waveIssuedManagement-06-W120261029310509"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "页脚是否固定",
+          "众数": "固定在视口底部（长表单滚动时常驻）",
+          "样本": 108,
+          "一致率": 97,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": "随内容流",
+              "次数": 3,
+              "出处": [
+                "OMS-user-center-my-center-edit-01-取消",
+                "WMS-outWarehouse-waveIssued-02-波次下发",
+                "WMS-user-center-my-center-edit-01-取消"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "label 字号",
+          "众数": "14px",
+          "样本": 108,
+          "一致率": 98,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": "16px",
+              "次数": 2,
+              "出处": [
+                "OMS-user-center-my-center-edit-01-取消",
+                "WMS-user-center-my-center-edit-01-取消"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "label 颜色",
+          "众数": "rgb(144, 147, 153)",
+          "样本": 108,
+          "一致率": 84,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": "rgb(51, 51, 51)",
+              "次数": 15,
+              "出处": [
+                "OMS-finance-invoiceManage-invoiceAccount-02-图标1",
+                "OMS-finance-invoiceManage-taxation-01-新增",
+                "OMS-finance-invoiceManage-taxation-02-新增样品_赠品税种",
+                "OMS-finance-invoiceManage-taxation-03-图标1"
+              ]
+            },
+            {
+              "值": "rgb(96, 98, 102)",
+              "次数": 2,
+              "出处": [
+                "OMS-settings-businessSettings-automaticWarehousing-01-新增",
+                "OMS-settings-businessSettings-automaticWarehousing-04-图标2"
+              ]
+            }
+          ]
+        }
+      ],
+      "分组": [
+        {
+          "项": "分组卡片数",
+          "众数": 1,
+          "样本": 108,
+          "一致率": 40,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": 2,
+              "次数": 28,
+              "出处": [
+                "OMS-finance-financeManage-rechargeList-03-图标1",
+                "OMS-finance-financeManage-rechargeList-04-图标2",
+                "OMS-finance-financeManage-rechargeList-05-图标3",
+                "OMS-finance-financeManage-rechargeList-06-RKFX2610160005"
+              ]
+            },
+            {
+              "值": 0,
+              "次数": 13,
+              "出处": [
+                "OMS-settings-systemManagement-roleList-01-新增",
+                "OMS-user-center-my-center-edit-01-取消",
+                "WMS-afterSales-afterSalesManage-receiveManage-02-图标2",
+                "WMS-finance-chargingManagement-expenseTemplate-01-新增"
+              ]
+            },
+            {
+              "值": 3,
+              "次数": 10,
+              "出处": [
+                "WMS-basicSettings-smartStrategy-waveStrategy-01-新增",
+                "WMS-basicSettings-smartStrategy-waveStrategy-05-图标1",
+                "WMS-basicSettings-smartStrategy-waveStrategy-06-图标2",
+                "WMS-basicSettings-smartStrategy-waveStrategy-08-图标4"
+              ]
+            },
+            {
+              "值": 4,
+              "次数": 9,
+              "出处": [
+                "OMS-goods-goodsManage-01-新增",
+                "OMS-goods-goodsManage-08-图标1",
+                "OMS-goods-goodsManage-09-图标2",
+                "WMS-goods-goodsManage-01-新增"
+              ]
+            },
+            {
+              "值": 6,
+              "次数": 3,
+              "出处": [
+                "OMS-finance-invoiceManage-taxation-01-新增",
+                "OMS-finance-invoiceManage-taxation-02-新增样品_赠品税种",
+                "OMS-finance-invoiceManage-taxation-03-图标1"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "有没有左侧锚点侧栏",
+          "众数": false,
+          "样本": 108,
+          "一致率": 94,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": true,
+              "次数": 6,
+              "出处": [
+                "OMS-finance-invoiceManage-taxation-01-新增",
+                "OMS-finance-invoiceManage-taxation-02-新增样品_赠品税种",
+                "OMS-finance-invoiceManage-taxation-03-图标1",
+                "WMS-basicSettings-system-roleList-02-图标1"
+              ]
+            }
+          ]
+        }
+      ],
+      "字段数分布": [
+        "6-10 个 ×42",
+        "1-5 个 ×26",
+        "20+ 个 ×24",
+        "11-20 个 ×16"
+      ],
+      "页脚按钮词频": [
+        "取消 ×63",
+        "提交 ×57",
+        "返回 ×42",
+        "确定 ×5",
+        "选择产品 ×4",
+        "选择商品标记 ×4",
+        "上传 ×3",
+        "标记异常 ×2"
+      ]
+    },
+    "弹窗表单": {
+      "样本": 20,
+      "结构": [
+        {
+          "项": "几列",
+          "众数": 1,
+          "样本": 20,
+          "一致率": 70,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": 2,
+              "次数": 4,
+              "出处": [
+                "OMS-goods-goodsManage-05-打印标签",
+                "OMS-goods-goodsManage-11-图标4",
+                "WMS-basicSettings-basicSettings-locationManage-03-打印标签",
+                "WMS-goods-goodsManage-10-图标3"
+              ]
+            },
+            {
+              "值": 3,
+              "次数": 2,
+              "出处": [
+                "WMS-distribution-distributionManage-distributeGoods-01-选择商品",
+                "WMS-goods-goodsManage-05-设置打包机商品"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "label 位置",
+          "众数": "label在上(label-top)",
+          "样本": 14,
+          "一致率": 100,
+          "直接可用": true,
+          "分歧": null
+        },
+        {
+          "项": "字段行距",
+          "众数": "80px（5 次·共 5 个间隔）",
+          "样本": 18,
+          "一致率": 28,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": "74px（1 次·共 2 个间隔）",
+              "次数": 2,
+              "出处": [
+                "OMS-goods-goodsManage-05-打印标签",
+                "OMS-goods-goodsManage-11-图标4"
+              ]
+            },
+            {
+              "值": "80px（6 次·共 7 个间隔）",
+              "次数": 2,
+              "出处": [
+                "OMS-settings-systemManagement-accountList-05-图标1",
+                "OMS-settings-systemManagement-accountList-07-图标3"
+              ]
+            },
+            {
+              "值": "80px（6 次·共 6 个间隔）",
+              "次数": 2,
+              "出处": [
+                "OMS-settings-systemManagement-staffManage-01-新增",
+                "WMS-basicSettings-departmentStaff-staffManage-01-新增"
+              ]
+            },
+            {
+              "值": "75px（1 次·共 2 个间隔）",
+              "次数": 2,
+              "出处": [
+                "WMS-basicSettings-basicSettings-locationManage-03-打印标签",
+                "WMS-goods-goodsManage-10-图标3"
+              ]
+            },
+            {
+              "值": "80px（3 次·共 4 个间隔）",
+              "次数": 1,
+              "出处": [
+                "OMS-finance-financeManage-rechargeList-01-充值"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "必填星号",
+          "众数": "伪元素::before \"*\" 色 rgb(245, 108, 108)",
+          "样本": 20,
+          "一致率": 50,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": "无",
+              "次数": 10,
+              "出处": [
+                "OMS-goods-goodsManage-05-打印标签",
+                "OMS-goods-goodsManage-11-图标4",
+                "OMS-settings-systemManagement-accountList-05-图标1",
+                "OMS-settings-systemManagement-accountList-07-图标3"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "页脚按钮对齐",
+          "众数": "right/normal",
+          "样本": 20,
+          "一致率": 100,
+          "直接可用": true,
+          "分歧": null
+        },
+        {
+          "项": "页脚是否固定",
+          "众数": "固定在视口底部（长表单滚动时常驻）",
+          "样本": 20,
+          "一致率": 100,
+          "直接可用": true,
+          "分歧": null
+        },
+        {
+          "项": "label 字号",
+          "众数": "14px",
+          "样本": 14,
+          "一致率": 100,
+          "直接可用": true,
+          "分歧": null
+        },
+        {
+          "项": "label 颜色",
+          "众数": "rgb(51, 51, 51)",
+          "样本": 14,
+          "一致率": 100,
+          "直接可用": true,
+          "分歧": null
+        }
+      ],
+      "分组": [
+        {
+          "项": "分组卡片数",
+          "众数": 0,
+          "样本": 20,
+          "一致率": 100,
+          "直接可用": true,
+          "分歧": null
+        },
+        {
+          "项": "有没有左侧锚点侧栏",
+          "众数": false,
+          "样本": 20,
+          "一致率": 100,
+          "直接可用": true,
+          "分歧": null
+        }
+      ],
+      "字段数分布": [
+        "6-10 个 ×15",
+        "1-5 个 ×5"
+      ],
+      "页脚按钮词频": [
+        "取消 ×16",
+        "提交 ×9",
+        "打印 ×4",
+        "关闭 ×4",
+        "确定 ×3"
+      ],
+      "宽度分布": [
+        "536px ×6",
+        "580px ×5",
+        "1100px ×3",
+        "1200px ×2",
+        "460px ×1",
+        "520px ×1"
+      ]
+    },
+    "详情/查看页": {
+      "样本": 99,
+      "结构": [
+        {
+          "项": "实现形态",
+          "众数": "只读表单(el-form 禁用态)",
+          "样本": 99,
+          "一致率": 89,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": "el-descriptions 描述列表",
+              "次数": 11,
+              "出处": [
+                "OMS-settings-systemManagement-roleList-02-图标1",
+                "OMS-settings-systemManagement-roleList-03-图标2",
+                "OMS-settings-systemManagement-roleList-04-图标3",
+                "OMS-settings-systemManagement-staffManage-04-图标1"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "几栏",
+          "众数": 3,
+          "样本": 99,
+          "一致率": 74,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": 1,
+              "次数": 14,
+              "出处": [
+                "OMS-settings-systemManagement-accountList-05-图标1",
+                "OMS-settings-systemManagement-accountList-07-图标3",
+                "OMS-settings-systemManagement-dptManage-04-图标1",
+                "OMS-settings-systemManagement-dptManage-05-图标2"
+              ]
+            },
+            {
+              "值": 2,
+              "次数": 9,
+              "出处": [
+                "OMS-settings-systemManagement-staffManage-04-图标1",
+                "OMS-settings-systemManagement-staffManage-05-图标2",
+                "OMS-settings-systemManagement-staffManage-06-图标3",
+                "WMS-basicSettings-departmentStaff-staffManage-04-图标1"
+              ]
+            },
+            {
+              "值": 4,
+              "次数": 3,
+              "出处": [
+                "WMS-outWarehouse-abnormal-abnormalOrder-05-图标2",
+                "WMS-outWarehouse-abnormal-cutOffOrder-02-图标2",
+                "WMS-outWarehouse-outWarehouseOrder-05-图标2"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "页内页签数",
+          "众数": 142,
+          "样本": 99,
+          "一致率": 16,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": 155,
+              "次数": 13,
+              "出处": [
+                "WMS-basicSettings-basicSettings-warehouseManage-06-图标2",
+                "WMS-basicSettings-basicSettings-warehouseManage-07-图标3",
+                "WMS-basicSettings-basicSettings-warehouseManage-08-图标4",
+                "WMS-basicSettings-basicSettings-warehouseManage-09-图标5"
+              ]
+            },
+            {
+              "值": 143,
+              "次数": 11,
+              "出处": [
+                "WMS-afterSales-afterSalesManage-receiveManage-01-图标1",
+                "WMS-afterSales-afterSalesManage-returnManage-03-图标1",
+                "WMS-afterSales-afterSalesManage-returnManage-04-图标2",
+                "WMS-afterSales-afterSalesManage-shelfManage-01-图标1"
+              ]
+            },
+            {
+              "值": 69,
+              "次数": 8,
+              "出处": [
+                "OMS-distribution-buyBreakManage-buyBreakApplication-03-图标1",
+                "OMS-distribution-buyBreakManage-buyBreakApplication-04-图标2",
+                "OMS-distribution-buyBreakManage-buyBreakApplication-05-BOKFX2609150001",
+                "OMS-distribution-buyBreakManage-buyBreakReturn-03-图标1"
+              ]
+            },
+            {
+              "值": 141,
+              "次数": 8,
+              "出处": [
+                "WMS-afterSales-afterSalesManage-receiveManage-02-图标2",
+                "WMS-customer-customerManage-10-图标2",
+                "WMS-goods-goodsManage-08-图标1",
+                "WMS-goods-goodsManage-09-图标2"
+              ]
+            },
+            {
+              "值": 81,
+              "次数": 7,
+              "出处": [
+                "OMS-settings-systemManagement-accountList-05-图标1",
+                "OMS-settings-systemManagement-accountList-07-图标3",
+                "OMS-settings-systemManagement-dptManage-04-图标1",
+                "OMS-settings-systemManagement-dptManage-05-图标2"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "有没有内嵌明细表",
+          "众数": true,
+          "样本": 99,
+          "一致率": 64,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": false,
+              "次数": 36,
+              "出处": [
+                "OMS-distribution-distributionManage-distributionManageGoods-02-图标1",
+                "OMS-distribution-distributionManage-distributionManageGoods-03-图标2",
+                "OMS-finance-financeManage-rechargeList-03-图标1",
+                "OMS-finance-financeManage-rechargeList-04-图标2"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "全局框架": {
+      "样本": 344,
+      "导航": [
+        {
+          "项": "导航形态",
+          "众数": "顶栏横向导航（无侧边树）",
+          "样本": 344,
+          "一致率": 97,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": "顶栏 + 侧边树",
+              "次数": 7,
+              "出处": [
+                "WMS-basicSettings-systemManagement-systemSettings-insideWarehouseSettings-01-设置模板",
+                "WMS-basicSettings-systemManagement-systemSettings-locationSettings-01-设置模板",
+                "WMS-basicSettings-systemManagement-systemSettings-outboundSettings-01-设置模板",
+                "WMS-basicSettings-systemManagement-systemSettings-outboundSettings-cutoffException-01-设置模板"
+              ]
+            },
+            {
+              "值": "没抓到导航",
+              "次数": 3,
+              "出处": [
+                "OMS-settings-Inventory-InventorySyncRecord-productRecord-01-返回",
+                "WMS-finance-financeManage-transactionDetails-import-01-返回",
+                "WMS-outWarehouse-ReviewPacking-04-返回(Q)"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "顶栏实现",
+          "众数": "el-menu--horizontal",
+          "样本": 344,
+          "一致率": 99,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": "无",
+              "次数": 3,
+              "出处": [
+                "OMS-settings-Inventory-InventorySyncRecord-productRecord-01-返回",
+                "WMS-finance-financeManage-transactionDetails-import-01-返回",
+                "WMS-outWarehouse-ReviewPacking-04-返回(Q)"
+              ]
+            }
+          ]
+        },
+        {
+          "项": "顶栏一级菜单数",
+          "众数": 13,
+          "样本": 344,
+          "一致率": 69,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": 12,
+              "次数": 103,
+              "出处": [
+                "OMS-basicConfig-erpAuth-01-解除授权",
+                "OMS-data-InventoryAging-boxAge-01-导出",
+                "OMS-data-InventoryAging-goodsAge-01-导出",
+                "OMS-data-InventoryAging-goodsAge-02-SKU编号_00071785商品"
+              ]
+            },
+            {
+              "值": 0,
+              "次数": 3,
+              "出处": [
+                "OMS-settings-Inventory-InventorySyncRecord-productRecord-01-返回",
+                "WMS-finance-financeManage-transactionDetails-import-01-返回",
+                "WMS-outWarehouse-ReviewPacking-04-返回(Q)"
+              ]
+            }
+          ]
+        }
+      ],
+      "多标签工作区": [
+        {
+          "项": "标签形态",
+          "众数": "卡片式",
+          "样本": 341,
+          "一致率": 100,
+          "直接可用": true,
+          "分歧": null
+        },
+        {
+          "项": "标签条高",
+          "众数": 48,
+          "样本": 341,
+          "一致率": 100,
+          "直接可用": true,
+          "分歧": null
+        },
+        {
+          "项": "可关闭比例",
+          "众数": "14/14",
+          "样本": 341,
+          "一致率": 37,
+          "直接可用": false,
+          "分歧": [
+            {
+              "值": "13/13",
+              "次数": 124,
+              "出处": [
+                "OMS-distribution-buyBreakManage-buyBreakReturn-03-图标1",
+                "OMS-distribution-buyBreakManage-buyBreakReturn-04-图标2",
+                "OMS-distribution-buyBreakManage-buyBreakReturn-05-BRKFX2609140002",
+                "OMS-distribution-distributionManage-distributionManageGoods-01-导出"
+              ]
+            },
+            {
+              "值": "15/15",
+              "次数": 37,
+              "出处": [
+                "OMS-goods-comboRandomGoods-01-新增",
+                "OMS-goods-goodsManage-01-新增",
+                "OMS-settings-businessSettings-automaticWarehousing-05-图标3",
+                "OMS-settings-systemManagement-staffManage-01-新增"
+              ]
+            },
+            {
+              "值": "12/12",
+              "次数": 36,
+              "出处": [
+                "OMS-finance-invoiceManage-invoiceAccount-02-图标1",
+                "OMS-finance-invoiceManage-taxation-01-新增",
+                "OMS-finance-invoiceManage-taxation-02-新增样品_赠品税种",
+                "OMS-finance-invoiceManage-taxation-03-图标1"
+              ]
+            },
+            {
+              "值": "11/11",
+              "次数": 17,
+              "出处": [
+                "OMS-settings-businessSettings-automaticWarehousing-01-新增",
+                "OMS-settings-businessSettings-automaticWarehousing-04-图标2",
+                "OMS-settings-Inventory-InventorySyncRules-05-图标2",
+                "OMS-settings-systemManagement-roleList-01-新增"
+              ]
+            }
+          ]
+        }
+      ],
+      "有多标签工作区的页": "341/344"
+    }
+  }
+}

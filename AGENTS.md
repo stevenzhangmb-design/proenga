@@ -24,6 +24,9 @@
 
 4. **生成后强制深检**：任何 PRD/原型生成或更新后，交付前必 ⑴ 全量通读规则原文 ⑵ 逐功能点对照每条规则全量深检、**细到标点、严禁抽检** ⑶ 机器闸全绿 ⑷ 判断类逐条人工核、不擅自主张。见 `skills/prd/_rules/prd-post-generation-deepcheck.mdc`。
 
+   - **PRD 的 md 和 Word 始终一致（随包·任何工具）**：用户在本地只改了 Word → 把 Word 的改动同步进 md，不动 Word；只改了 md → 用 md 重新生成 Word；在 AI 对话里让改 PRD → md 和 Word 同一轮一起改完（只改 md 不算做完）；两边都改过 → 合并，同一处不同时列原文问用户。动 PRD 前先跑 `node skills/prd/qa/docx-guard.js status <docx> <md>`（0=都没改、10=只改了 md、3=只改了 Word、4=都改了），差异用 `diff` 逐段列出；生成 Word 一律用 `skills/pm-design/make-doc.ps1`（用户改过 Word 时自动拦截、不覆盖）。细则见 `skills/prd/SKILL.md`“Word 优先铁律”。
+   - **写法和版式规则的适用范围**：中文书面用语、【】和“”、句末用句号、一段一件事的分段、无编号段落首行缩进 2 个字、Word 版式、md 和 Word 一致、字段规范无字段写“无。”、提示语写成 提示：“提示原文。”。（引号后用句号，后半句补主语单独成句；Word 里提示语深蓝加粗，由转换过滤器自动处理）——不管是谁使用、不管是否按标准 PRD 模板撰写，还是用户在对话框里按个人要求增加的文字，统一遵守。不按模板的文档由 `make-doc.ps1` 自动跑 `prd-structure-lint.js --writing-only` 检查。细则见 `skills/prd/SKILL.md`“适用范围铁律”。
+
 5. **交付前必跑机器闸（最硬的一条）**：
    ```bash
    node skills/pm-design/qa/deliver-gate.js

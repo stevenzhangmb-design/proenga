@@ -1,5 +1,6 @@
 /* 通用闸环境探测 · _gate-env.js · 让全套闸自动适配任何项目，不绑死示例(充值管理) */
 const fs = require('fs'), path = require('path'), os = require('os'), { execSync } = require('child_process');
+try { require('../../_shared/qa/_tmp-sandbox'); } catch (_) {} // 临时文件进沙盒·退出自动删（铁律·见 _tmp-sandbox.js）——引用本文件的闸全部自动生效；单拷 pm-design 时没有 _shared 就退回系统临时目录
 function findArchive() {
   const cands = [process.env.ARCHIVE_DIR, path.join(__dirname, '..', '..', '..', '..', 'archive'), path.join(process.cwd(), 'archive'), path.join(__dirname, '..', '..', '..', 'archive')];
   for (const c of cands) { if (c && fs.existsSync(c)) return c; }

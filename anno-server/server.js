@@ -94,6 +94,44 @@ function resolveArchiveDir() {
 }
 let ARCHIVE_DIR = resolveArchiveDir();  // 默认目录(无 systemName 的请求/启动用)；有 systemName 的请求会按项目自动切(useArchiveFor)
 
+/* PRD Word 默认版式（2026-11-05 用户定）：微软雅黑、正文五号。样式模板在 ai-rules/skills/prd/prd-reference.docx（单一真理源，make-doc.ps1 同用）；找不到就退回 pandoc 默认样式，不影响出 Word */
+/* 2026-11-05：服务由开机自启或监督器拉起时，环境变量里可能没有用户级 PATH（pandoc 默认装在 %LOCALAPPDATA%\\Pandoc），
+   直接调 'pandoc' 会找不到 → Word 不生成却提示“缺 pandoc”。这里按常见安装位置找到 pandoc 的完整路径再调用。 */
+let _pandocBin = null;
+function pandocBin() {
+  if (_pandocBin) return _pandocBin;
+  const env = process.env, cands = [env.PANDOC_PATH,
+    env.LOCALAPPDATA && path.join(env.LOCALAPPDATA, 'Pandoc', 'pandoc.exe'),
+    env.USERPROFILE && path.join(env.USERPROFILE, 'AppData', 'Local', 'Pandoc', 'pandoc.exe'),
+    'C:/Program Files/Pandoc/pandoc.exe', 'C:/Program Files (x86)/Pandoc/pandoc.exe'].filter(Boolean);
+  _pandocBin = cands.find(p => { try { return fs.existsSync(p); } catch (_) { return false; } }) || 'pandoc';
+  return _pandocBin;
+}
+let _pandocHl = null;
+function pandocNoHighlightArg() {   // pandoc 3.8 起 --no-highlight 改名为 --syntax-highlighting=none，旧版只认前者
+  if (_pandocHl === null) { try { _pandocHl = /syntax-highlighting/.test(require('child_process').execFileSync(pandocBin(), ['--help'], { timeout: 10000 }).toString()) ? '--syntax-highlighting=none' : '--no-highlight'; } catch (_) { _pandocHl = '--no-highlight'; } }
+  return _pandocHl;
+}
+/* Word 优先（2026-11-06 用户明令）：用户改过的 Word 以 Word 为准，不许被重新生成覆盖。
+   每次生成后在同目录记 .<文件名>.gen = 这份 Word 的 SHA-256；之后指纹不同 = 用户改过 Word → 不覆盖。
+   与 ai-rules/skills/prd/qa/docx-guard.js 同一套记录格式（make-doc.ps1 也用它）。 */
+function docxStampPath(docxPath) { return path.join(path.dirname(docxPath), '.' + path.basename(docxPath) + '.gen'); }
+function docxSha(f) { return require('crypto').createHash('sha256').update(fs.readFileSync(f)).digest('hex'); }
+function docxUserEdited(docxPath) {
+  try { const s = docxStampPath(docxPath); if (!fs.existsSync(docxPath) || !fs.existsSync(s)) return false; return fs.readFileSync(s, 'utf8').trim() !== docxSha(docxPath); } catch (_) { return false; }
+}
+function stampDocx(docxPath) {
+  try { const s = docxStampPath(docxPath); if (fs.existsSync(s)) fs.unlinkSync(s); fs.writeFileSync(s, docxSha(docxPath)); try { require('child_process').execFileSync('attrib', ['+h', s], { stdio: 'ignore' }); } catch (_) {} } catch (_) {}
+}
+function pandocDocxArgs(mdPath, outPath) {
+  const ref = [process.env.PRD_REFERENCE_DOCX,
+    path.join(__dirname, '..', 'ai-rules', 'skills', 'prd', 'prd-reference.docx'),
+    path.join(__dirname, '..', '..', 'ai-rules', 'skills', 'prd', 'prd-reference.docx'),
+    path.join(__dirname, 'prd-reference.docx')].find(p => p && fs.existsSync(p));
+  const noItalic = ref && path.join(path.dirname(ref), 'prd-no-italic.lua');   // 不许倾斜字体（2026-11-05 用户定）
+  return [mdPath, '-f', 'markdown+hard_line_breaks', '-o', outPath].concat(ref ? ['--reference-doc=' + ref] : [], noItalic && fs.existsSync(noItalic) ? ['--lua-filter=' + noItalic, pandocNoHighlightArg()] : []);   // 代码着色会带入斜体样式
+}
+
 /* ══ 生成研发代码（Route B·「导出研发版」引擎·2026-08-06）══
    接原型「导出研发版」按钮：收 prd-data → 桥(derive-datamodel)推 data_model → emit-all 出前后端代码
    → 写 <archive>/生成代码/<系统>/。codegen 脚本在 ai-rules/skills/pm-design/codegen(自动探测)。
@@ -110,59 +148,121 @@ function resolveCodegenDir() {
   for (const c of cands) { try { if (c && fs.existsSync(path.join(c, 'emit-all.js'))) return c; } catch (e) {} }
   return null;
 }
-function generateDevCode(systemName, prdData, fpFilter, feStack, beStack) {
+/* ══ 数据源两档桥（2026-09-09 解耦）：出料/出码与「是否生成过 PRD/圈选」无关 ══
+   有 PRD 字段规范 → derive-datamodel（精确）；否则从原型 PAGECFG → derive-from-prototype（基线·始终可用）。
+   两桥输出同结构({data_model,function_points})写入 dmFile。返回 {out, source}。 */
+function _hasPrdFieldSpecs(prdData) {
+  if (!prdData || !prdData.function_points) return false;
+  const fps = prdData.function_points;
+  return Object.keys(fps).length > 0 && Object.values(fps).some(fp => fp && (fp._draft_fieldSpecs || fp.fieldSpecs));
+}
+function buildDataModelFile(cg, prdData, pagecfg, fpFilter, dmFile) {
+  const { execFileSync } = require('child_process');
+  const os = require('os');
+  if (_hasPrdFieldSpecs(prdData)) {                                     // 精确档
+    const prdFile = path.join(os.tmpdir(), 'anno-prd-' + Date.now() + '.json');
+    fs.writeFileSync(prdFile, JSON.stringify(prdData));
+    const args = [path.join(cg, 'derive-datamodel.js'), prdFile, dmFile]; if (fpFilter) args.push(fpFilter);
+    const out = execFileSync('node', args, { encoding: 'utf8', timeout: 60000 });
+    try { fs.unlinkSync(prdFile); } catch (e) {}
+    return { out, source: 'prd' };
+  }
+  // 兜底档：从原型结构 PAGECFG 推基线（没 PRD / 没圈选也能出）
+  if (!pagecfg || typeof pagecfg !== 'object' || !Object.keys(pagecfg).length)
+    throw new Error('既无 PRD 字段规范、又无原型结构(PAGECFG)——无法出料/出码（请确认原型已内嵌 PAGECFG）');
+  const shim = path.join(os.tmpdir(), 'anno-proto-' + Date.now() + '.html');
+  fs.writeFileSync(shim, '<!doctype html><meta charset="utf-8"><script>\nconst PAGECFG=' + JSON.stringify(pagecfg) + ';\n<\/script>', 'utf8');
+  const out = execFileSync('node', [path.join(cg, 'derive-from-prototype.js'), shim, dmFile], { encoding: 'utf8', timeout: 60000 });
+  try { fs.unlinkSync(shim); } catch (e) {}
+  return { out, source: 'prototype' };
+}
+/* ══ 导出保存位置（2026-11-12 根治「导出没法选目录·写死 archive」）══
+   出料/出码【不再写死 <archive>/对接料|生成代码】。调用方必须二选一：
+     returnContent:true → 生成到临时目录 → 把全部文件(base64)返回给浏览器，由页面写进用户用 showDirectoryPicker 选的文件夹，临时目录随即删除；
+     targetDir:"<绝对路径>" → 浏览器不支持选文件夹框时，用户手填的目录；必须是绝对路径，不存在就创建。
+   两者都没给 = 400（禁止静默退回固定目录）。⛔ export-target-gate 静态断言：出料/出码函数里不得再出现 path.join(arch, '对接料'|'生成代码')。 */
+function _exportErr(msg) { const e = new Error(msg); e.status = 400; return e; }
+function validateExportDir(raw) {
+  const p = String(raw == null ? '' : raw).trim().replace(/^["']+|["']+$/g, '');
+  if (!p) throw _exportErr('请填写保存目录');
+  const isWin = process.platform === 'win32';
+  // Windows：只认「盘符:\」或「\\服务器\共享」；「\foo」「C:foo」这种相对当前盘/当前目录的写法不算完整路径
+  const abs = isWin ? /^([a-zA-Z]:[\\/]|\\\\[^\\/]+[\\/][^\\/]+)/.test(p) : path.isAbsolute(p);
+  if (!abs) throw _exportErr('保存目录必须是完整路径（' + (isWin ? '例如 D:\\导出 或 \\\\服务器\\共享' : '例如 /Users/你/导出') + '），你填的是：' + p);
+  const dir = path.resolve(p);
+  try { fs.mkdirSync(dir, { recursive: true }); } catch (e) { throw _exportErr('无法创建保存目录：' + dir + '（' + (e.code === 'EACCES' || e.code === 'EPERM' ? '没有写入权限' : e.code === 'ENOENT' ? '盘符或上级目录不存在' : (e.code || e.message)) + '）'); }
+  try { if (!fs.statSync(dir).isDirectory()) throw new Error('x'); } catch (e) { throw _exportErr('这个路径不是文件夹：' + dir); }
+  try { const t = path.join(dir, '.proenga-write-test-' + process.pid); fs.writeFileSync(t, ''); fs.unlinkSync(t); } catch (e) { throw _exportErr('这个文件夹没有写入权限：' + dir); }
+  return dir;
+}
+/* opts={returnContent,targetDir}；subName=要建的子文件夹名。返回 {outDir, finish(r)}：finish 把结果按模式整理(返回内容并删临时目录)。 */
+function resolveExportTarget(opts, subName) {
+  const os = require('os');
+  opts = opts || {};
+  if (opts.returnContent) {
+    const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'proenga-export-'));
+    const outDir = path.join(tmpRoot, subName);
+    fs.mkdirSync(outDir, { recursive: true });
+    return { outDir, finish(r) {
+      const contents = [];
+      (function walk(d) { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else contents.push({ path: path.relative(outDir, p).split(path.sep).join('/'), b64: fs.readFileSync(p).toString('base64') }); } })(outDir);
+      try { fs.rmSync(tmpRoot, { recursive: true, force: true }); } catch (e) {}
+      return Object.assign({}, r, { outDir: null, subName, contents, returned: true });
+    }, abort() { try { fs.rmSync(tmpRoot, { recursive: true, force: true }); } catch (e) {} } };
+  }
+  if (opts.targetDir) {
+    const base = validateExportDir(opts.targetDir);
+    const outDir = path.join(base, subName);
+    fs.mkdirSync(outDir, { recursive: true });
+    return { outDir, finish(r) { return Object.assign({}, r, { outDir, subName, baseDir: base }); }, abort() {} };
+  }
+  throw _exportErr('没有指定保存位置：请在原型上点导出按钮时选择文件夹（或填写保存目录）。');
+}
+function generateDevCode(systemName, prdData, fpFilter, feStack, beStack, pagecfg, target) {
   const { execFileSync } = require('child_process');
   const os = require('os');
   const cg = resolveCodegenDir();
-  if (!cg) throw new Error('找不到代码生成器目录(ai-rules/skills/pm-design/codegen)');
-  if (!prdData || !prdData.function_points) throw new Error('缺 prd-data(function_points)——原型未内嵌或未圈选生成');
+  if (!cg) throw new Error('找不到代码生成器目录(ai-rules/skills/dev-codegen/codegen)');
   const stack = (String(feStack || 'vue').toLowerCase() === 'react') ? 'react' : 'vue';   // 前端栈：vue(默认)|react·扇出多栈
   const beReq = String(beStack || 'java').toLowerCase();
   const beCode = (beReq === 'node' || beReq === 'python') ? beReq : 'java';  // 后端栈：java(默认)|node|python·扇出多栈
-  const arch = (typeof useArchiveFor === 'function' ? useArchiveFor(systemName) : ARCHIVE_DIR) || ARCHIVE_DIR;
   const safe = String(systemName || '未命名系统').replace(/[\\/:*?"<>|]/g, '_').slice(0, 40);
   const suffix = (stack === 'vue' && beCode === 'java') ? '' : '-' + stack + '-' + beCode;   // 只有默认栈(vue+java)不加后缀·其余(含python)都加·避免不同栈撞同一目录互相覆盖
-  const outDir = path.join(arch, '生成代码', safe + suffix);
+  const tgt = resolveExportTarget(target, safe + '-生成代码' + suffix);   // 保存位置由用户选（见 resolveExportTarget）·不再写死 archive
+  const outDir = tgt.outDir;
+  try {
   const tmp = os.tmpdir(), stamp = Date.now();
-  const prdFile = path.join(tmp, 'anno-prd-' + stamp + '.json');
   const dmFile = path.join(tmp, 'anno-dm-' + stamp + '.json');
-  fs.writeFileSync(prdFile, JSON.stringify(prdData));
-  const deriveArgs = [path.join(cg, 'derive-datamodel.js'), prdFile, dmFile];
-  if (fpFilter) deriveArgs.push(fpFilter);
-  const deriveOut = execFileSync('node', deriveArgs, { encoding: 'utf8', timeout: 60000 });
+  const { out: deriveOut, source } = buildDataModelFile(cg, prdData, pagecfg, fpFilter, dmFile);
   const emitOut = execFileSync('node', [path.join(cg, 'emit-all.js'), dmFile, outDir, 'com.tf.gen', stack, beCode], { encoding: 'utf8', timeout: 120000 });
-  try { fs.unlinkSync(prdFile); fs.unlinkSync(dmFile); } catch (e) {}
+  try { fs.unlinkSync(dmFile); } catch (e) {}
   const files = [];
   (function walk(d) { try { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else if (/\.(java|vue|tsx?|py|sql)$/.test(e.name)) files.push(path.relative(outDir, p)); } } catch (e) {} })(outDir);
   const summary = deriveOut.trim().split('\n').filter(l => /实体|列|枚举|⚠/.test(l)).join(' | ');
   const green = /全部通过静态校验|全部通过结构校验/.test(emitOut);
-  return { outDir, files, count: files.length, summary, staticGreen: green, stack, beStack: beCode };
+  return tgt.finish({ outDir, files, count: files.length, summary, staticGreen: green, stack, beStack: beCode, source });
+  } catch (e) { tgt.abort(); throw e; }
 }
 /* ══ 导出对接料（A·喂AI·不出码·2026-08-06）══
-   出料包：data_model + openapi + schema.sql + tokens + 提示词包 + README → 写 <archive>/对接料/<系统>/。
+   出料包：data_model + openapi + schema.sql + tokens + 提示词包 + README → 写进用户选的文件夹下的「<系统>-对接料」（见 resolveExportTarget）。
    栈无关——喂给用户自己的 AI 生成任意栈代码。Proenga 不碰代码。 */
-function generateDevKit(systemName, prdData, fpFilter) {
+function generateDevKit(systemName, prdData, fpFilter, pagecfg, target) {
   const { execFileSync } = require('child_process');
-  const os = require('os');
   const cg = resolveCodegenDir();
-  if (!cg) throw new Error('找不到代码生成器目录(ai-rules/skills/pm-design/codegen)');
-  if (!prdData || !prdData.function_points) throw new Error('缺 prd-data(function_points)——原型未内嵌或未圈选生成');
-  const arch = (typeof useArchiveFor === 'function' ? useArchiveFor(systemName) : ARCHIVE_DIR) || ARCHIVE_DIR;
+  if (!cg) throw new Error('找不到代码生成器目录(ai-rules/skills/dev-codegen/codegen)');
   const safe = String(systemName || '未命名系统').replace(/[\\/:*?"<>|]/g, '_').slice(0, 40);
-  const outDir = path.join(arch, '对接料', safe);
-  fs.mkdirSync(outDir, { recursive: true });
-  const prdFile = path.join(os.tmpdir(), 'anno-prd-' + Date.now() + '.json');
+  const tgt = resolveExportTarget(target, safe + '-对接料');   // 保存位置由用户选（见 resolveExportTarget）·不再写死 archive
+  const outDir = tgt.outDir;
+  try {
   const dmFile = path.join(outDir, 'data_model.json');
-  fs.writeFileSync(prdFile, JSON.stringify(prdData));
-  const dArgs = [path.join(cg, 'derive-datamodel.js'), prdFile, dmFile]; if (fpFilter) dArgs.push(fpFilter);
-  execFileSync('node', dArgs, { encoding: 'utf8', timeout: 60000 });
+  const { source } = buildDataModelFile(cg, prdData, pagecfg, fpFilter, dmFile);
   execFileSync('node', [path.join(cg, 'emit-contract.js'), dmFile, outDir], { encoding: 'utf8', timeout: 60000 });
   execFileSync('node', [path.join(cg, 'emit-tokens.js'), outDir], { encoding: 'utf8', timeout: 30000 });
   execFileSync('node', [path.join(cg, 'emit-prompts.js'), dmFile, outDir], { encoding: 'utf8', timeout: 30000 });
-  try { fs.unlinkSync(prdFile); } catch (e) {}
   const files = [];
   (function walk(d) { try { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else files.push(path.relative(outDir, p)); } } catch (e) {} })(outDir);
-  return { outDir, files, count: files.length };
+  return tgt.finish({ outDir, files, count: files.length, source });
+  } catch (e) { tgt.abort(); throw e; }
 }
 
 /* ══ 多项目·灵活输出目录 ══
@@ -585,16 +685,19 @@ function hardWrapForPandoc(md) {
 function renderFp(it, num) {
   const fp = it.fp;
   // 标题层级随编号深度（prd 铁律 §1.2：# 数 = 编号段数 + 1，markdown 封顶 6）
-  const h = '#'.repeat(Math.min(num.split('.').length + 1, 6));
-  let md = `\n${h} ${num} ${it.fpName}\n`;
+  /* 2026-11-13 用户：Word 左侧目录要显示全部章节 → 功能点和它下面的 位置/原型图/字段规范/用例规则 都写成真标题
+     （以前小节写成 **加粗文字**，Word 目录看不到）。markdown 只有 6 级，7～9 级用 pandoc custom-style 写 Word 标题。 */
+  const head = (lv, text) => lv <= 6 ? `\n${'#'.repeat(lv)} ${text}\n` : `\n::: {custom-style="Heading ${Math.min(lv, 9)}"}\n${text}\n:::\n`;
+  const lv = num.split('.').length + 1;
+  let md = head(lv, `${num} ${it.fpName}`);
   const loc = [it.sys, ...it.menuPath, it.fpName].join('-');
-  md += `\n**${num}.1 位置**\n\n${loc}\n`;
-  md += `\n**${num}.2 原型图**\n\n${(fp.img && String(fp.img).trim()) || '无'}\n`;
+  md += head(lv + 1, `${num}.1 位置`) + `\n${loc}\n`;
+  md += head(lv + 1, `${num}.2 原型图`) + `\n${(fp.img && String(fp.img).trim()) || '无'}\n`;
   const fs = hardWrapForPandoc(draftToMd(fp._draft_fieldSpecs).trim());
   const uc = hardWrapForPandoc(draftToMd(fp._draft_useCaseRules).trim());
   /* 无字段规范 → 该节写「无」（与原型图空值写「无」一致）；用例规则固定 .4，编号不再随有无字段规范挪动 */
-  md += `\n**${num}.3 字段规范**\n\n${fs || '无'}\n`;
-  md += `\n**${num}.4 用例规则**\n\n${uc || '（待生成）'}\n`;
+  md += head(lv + 1, `${num}.3 字段规范`) + `\n${fs || '无'}\n`;
+  md += head(lv + 1, `${num}.4 用例规则`) + `\n${uc || '（待生成）'}\n`;
   return md;
 }
 
@@ -614,8 +717,8 @@ function renderMenuTree(items, prefix, depth) {
     i++;
     const menuNum = `${prefix}.${i}`;
     // 标题层级随编号深度（prd 铁律 §1.2：# 数 = 编号段数 + 1，markdown 封顶 6）
-    const h = '#'.repeat(Math.min(menuNum.split('.').length + 1, 6));
-    md += `\n${h} ${menuNum} ${g.name}\n`;
+    const mlv = menuNum.split('.').length + 1;   /* 超过 6 级用 Word 7～9 级标题，目录才能逐级显示 */
+    md += mlv <= 6 ? `\n${'#'.repeat(mlv)} ${menuNum} ${g.name}\n` : `\n::: {custom-style="Heading ${Math.min(mlv, 9)}"}\n${menuNum} ${g.name}\n:::\n`;
     const deeper = g.items.filter(it => it.menuPath.length > depth + 1);
     const leaf   = g.items.filter(it => it.menuPath.length <= depth + 1);
     if (deeper.length) md += renderMenuTree(deeper, menuNum, depth + 1);
@@ -651,10 +754,129 @@ function buildFpSections(prdData) {
 /* ══════════════════════════════════════════════════
    生成完整 PRD Markdown
 ══════════════════════════════════════════════════ */
+/* 输出前统一按 PRD 规范 §0 收口（2026-10-28 用户：排版彻底解决、0 错误）：
+   自由文字（产品定义 / 产品框架等）里的「- 」行首列表符 → 「• 」，缩进的「- 」子项 → 「  1、2、…」，
+   行末补两个空格换行；表格前补空行（否则转 Word 后整张表成一串「｜」）。代码块内不动。 */
+function normalizePrdMd(md) {
+  let inCode = false, k = 0;
+  const out = [];
+  md.split('\n').forEach(l => {
+    if (/^```/.test(l)) { inCode = !inCode; k = 0; out.push(l); return; }
+    if (inCode) { out.push(l); return; }
+    let m;
+    if (/^- \S/.test(l)) { k = 0; l = '• ' + l.slice(2); if (!/  $/.test(l)) l = l.replace(/\s*$/, '') + '  '; }
+    else if ((m = l.match(/^[ \t]+- (\S.*)$/))) { k++; l = '  ' + k + '、' + m[1]; if (!/  $/.test(l)) l = l.replace(/\s*$/, '') + '  '; }
+    else k = 0;
+    if (/^\|/.test(l) && out.length && !/^\|/.test(out[out.length - 1]) && out[out.length - 1].trim() !== '') out.push('');
+    out.push(l);
+  });
+  return fixSentenceEnd(out.join('\n'));
+}
+
+/* 句末标点铁律（2026-11-06 用户明令，任何用户、任何文档结构统一适用；见 prd SKILL.md）：
+   一句话表达完用“。”结束。正文行句末的“；”改“。”；表格里完整句子（括号/引号/【】外有逗号或分号）补“。”。
+   名称、界面原文、日志示例、取值、章节引用类的列不补（与 prd-structure-lint.js、prd-generator.js 同一套判断）。 */
+function fixSentenceEnd(md) {
+  const SKIPCOL = /提示|格式|默认值|占位|通知内容|悬停|影响|示例|章节|位置|业务类型|三级|工具条|行操作|跳过的发票|字段名称|标题|来源|发票类型|单据|状态|时限|写法/;
+  const strip = c => c.replace(/（[^（）]*）/g, '').replace(/\([^()]*\)/g, '').replace(/“[^“”]*”/g, '').replace(/【[^【】]*】/g, '').replace(/\[[^\]]*\]\{[^}]*\}/g, '');
+  let inCode = false, hdr = null, prevT = false;
+  return md.split('\n').map(l => {
+    if (/^```/.test(l)) { inCode = !inCode; prevT = false; return l; }
+    if (inCode) return l;
+    const t = l.trim();
+    if (!/^\|.*\|$/.test(t)) {
+      prevT = false;
+      if (t && !/^(#|:::|!\[|<|---)/.test(t) && /；\s*$/.test(l)) return l.replace(/；(\s*)$/, '。$1');
+      return l;
+    }
+    if (!prevT) { hdr = t.split('|').map(x => x.trim().replace(/\*/g, '')); prevT = true; return l; }
+    if (/^\|[-:\s|]+\|$/.test(t)) return l;
+    const parts = l.split('|');
+    for (let k = 1; k < parts.length - 1; k++) {
+      const seg = parts[k], c = seg.trim();
+      if (c.length < 8 || /[。：！？；，、]$/.test(c) || /。[”）】]$/.test(c)) continue;
+      if (!/[，；]/.test(strip(c)) || /[A-Za-z0-9_\-\/:.%$}\]]$/.test(c)) continue;
+      if (hdr && hdr[k] && SKIPCOL.test(hdr[k])) continue;
+      parts[k] = seg.replace(c, c + '。');
+    }
+    return parts.join('|');
+  }).join('\n');
+}
+
 function generatePrdMd(prdData) {
   const date = new Date().toISOString().slice(0, 10);
-  return prdHeader(prdData, date) + buildFpSections(prdData);
+  return normalizePrdMd(prdHeader(prdData, date) + buildFpSections(prdData));
 }
+
+/* ══════════════════════════════════════════════════
+   原型 HTML 内嵌数据定位器（2026-11-13 根治）
+   旧写法 content.indexOf('window.__PRD_DATA__') 会先命中标注层顶部【注释】里的文字，
+   再往后找第一个 '=' '{' → 落进 <style> 的 .anno-bar{…}：分享版的只读标志/标注被插进 CSS(不执行)，
+   回写(/anno-persist)把 JS 里那份烤入标注删掉 → 新浏览器打开 0 个标注。
+   现在：只认【后面紧跟能 JSON.parse 的对象/数组】的真赋值；括号扫描跳过字符串内容（字符串里的 { } [ ] ; 不干扰）。
+══════════════════════════════════════════════════ */
+function _scanJsonEnd(s, start) {          // s[start] 为 '{' 或 '['；返回匹配的闭括号下标，失败 -1
+  let depth = 0, inStr = false;
+  for (let i = start; i < s.length; i++) {
+    const ch = s[i];
+    if (inStr) { if (ch === '\\') i++; else if (ch === '"') inStr = false; continue; }
+    if (ch === '"') inStr = true;
+    else if (ch === '{' || ch === '[') depth++;
+    else if (ch === '}' || ch === ']') { if (--depth === 0) return i; }
+  }
+  return -1;
+}
+// 找所有 `window.<name> = {…}` / `= […]` 真赋值（值可 JSON.parse）；返回 [{start, valStart, valEnd, end, value}]，end 已吃掉结尾的 ';'
+function _findJsonAssignments(content, name, open) {
+  const out = [];
+  const re = new RegExp('window\\.' + name + '\\s*=\\s*(?=\\' + open + ')', 'g');
+  let m;
+  while ((m = re.exec(content))) {
+    const valStart = m.index + m[0].length;
+    const valEnd = _scanJsonEnd(content, valStart);
+    if (valEnd === -1) continue;
+    let value;
+    try { value = JSON.parse(content.slice(valStart, valEnd + 1)); } catch (_) { continue; }  // 注释/CSS/非 JSON → 不是真赋值
+    let end = valEnd + 1;
+    while (end < content.length && (content[end] === ' ' || content[end] === '\t')) end++;
+    if (content[end] === ';') end++;
+    out.push({ start: m.index, valStart, valEnd, end, value, ctx: _tagCtx(content, m.index) });
+    re.lastIndex = valEnd + 1;
+  }
+  return out;
+}
+// 下标 i 处于哪个元素里：'script' | 'style' | 'other'（只有 script 里的才会执行）
+function _tagCtx(content, i) {
+  const so = content.lastIndexOf('<script', i), sc = content.lastIndexOf('</script', i);
+  if (so > sc) return 'script';
+  const yo = content.lastIndexOf('<style', i), yc = content.lastIndexOf('</style', i);
+  if (yo > yc) return 'style';
+  return 'other';
+}
+function _locatePrdData(content) {         // 第一个在 <script> 里的真 __PRD_DATA__ 赋值；找不到 null
+  const a = _findJsonAssignments(content, '__PRD_DATA__', '{').filter(x => x.ctx === 'script');
+  return a.length ? a[0] : null;
+}
+// 旧 bug 插进 <style> 里的残留（`window.__ANNO_READONLY__ = true;` / `window.__USER_ANNOTATIONS__ = [...];`）→ 删除区间，恢复被吞的 CSS
+function _strayStyleEdits(content, uaList) {
+  const edits = uaList.filter(u => u.ctx === 'style').map(u => ({ start: u.start, end: u.end, text: '' }));
+  const re = /window\.__ANNO_READONLY__\s*=\s*(?:true|false)\s*;/g;
+  let m;
+  while ((m = re.exec(content))) if (_tagCtx(content, m.index) === 'style') edits.push({ start: m.index, end: m.index + m[0].length, text: '' });
+  return edits;
+}
+// 按区间批量替换（区间互不重叠）
+function _applyEdits(content, edits) {
+  // 从后往前改；同起点时先删(区间长的)再插(零宽)，免得插入的内容被同起点的删除吃掉
+  edits = edits.slice().sort((x, y) => (y.start - x.start) || ((y.end - y.start) - (x.end - x.start)));
+  for (const e of edits) {
+    // 纯删除时顺带吃掉前面一个换行（对应注入时加的 '\n'），反复导出/回写不累积空行
+    const s = (e.text === '' && e.end > e.start && content[e.start - 1] === '\n') ? e.start - 1 : e.start;
+    content = content.slice(0, s) + e.text + content.slice(e.end);
+  }
+  return content;
+}
+const _READONLY_HEAD_RE = /<script data-anno-readonly>[^<]*<\/script>/g;
 
 /* ══════════════════════════════════════════════════
    回写原型 HTML 的 window.__PRD_DATA__
@@ -668,34 +890,18 @@ function updatePrototypeHtmls(prdData) {
   for (const htmlPath of files) {
     try {
       let content = fs.readFileSync(htmlPath, 'utf-8');
-      const marker = 'window.__PRD_DATA__';
-      const mIdx = content.indexOf(marker);
-      if (mIdx === -1) continue;
+      const loc = _locatePrdData(content);   // 只认真赋值（不再命中注释里的文字）
+      if (!loc) continue;
       /* ★ 只回写 system_name 匹配的原型，绝不无差别覆盖其它产品的原型（防把 A 产品数据写进 B 原型）*/
-      const existSysM = content.slice(mIdx, mIdx + 6000).match(/["']?system_name["']?\s*:\s*"((?:[^"\\]|\\.)*)"/);
-      const existSys = existSysM ? existSysM[1] : '';
+      const existSys = (loc.value && loc.value.system_name) || '';
       if (targetSys && existSys && existSys !== targetSys) {
         console.log(`  [HTML] Skip(系统不匹配 ${existSys}≠${targetSys}): ${path.basename(htmlPath)}`);
         continue;
       }
-      const eqIdx = content.indexOf('=', mIdx) + 1;
-      const jIdx  = content.indexOf('{', eqIdx);
-      if (jIdx === -1) continue;
-      let depth = 0, jEnd = -1;
-      for (let i = jIdx; i < content.length; i++) {
-        if (content[i] === '{') depth++;
-        else if (content[i] === '}') { if (--depth === 0) { jEnd = i; break; } }
-      }
-      if (jEnd === -1) continue;
-      let tail = jEnd + 1;
-      while (tail < content.length && (content[tail] === ';' || content[tail] === ' ')) tail++;
       // ★ MERGE 而非整体替换：保留原型里 prdData 没有的键（如 page_menus），杜绝回写冲掉原型自有数据
-      let toWrite = prdData;
-      try {
-        const existObj = JSON.parse(content.slice(jIdx, jEnd + 1));
-        toWrite = { ...existObj, ...prdData };  // prdData 权威覆盖 system_name/function_points；existObj 独有键(page_menus)保留
-      } catch {}
-      content = content.slice(0, mIdx) + `window.__PRD_DATA__ = ${JSON.stringify(toWrite, null, 2)};` + content.slice(tail);
+      const toWrite = { ...(loc.value || {}), ...prdData };  // prdData 权威覆盖 system_name/function_points；existObj 独有键(page_menus)保留
+      const json = JSON.stringify(toWrite, null, 2).replace(/<\/script/gi, '<\\/script');
+      content = content.slice(0, loc.start) + `window.__PRD_DATA__ = ${json};` + content.slice(loc.end);
       fs.writeFileSync(htmlPath, content, 'utf-8');
       console.log(`  [HTML] Updated __PRD_DATA__: ${path.basename(htmlPath)}`);
     } catch (e) { console.error(`  [HTML] Skip ${path.basename(htmlPath)}: ${e.message}`); }
@@ -712,32 +918,39 @@ function writeShareVersion(systemName, pins, opts) {
   opts = opts || {};
   const written = [];      // opts.returnContent 时改收 {name, content}，不落盘（交浏览器弹框选位置保存）
   let files = [];
-  try { files = fs.readdirSync(ARCHIVE_DIR).filter(f => f.endsWith('.html') && !/备份|\.bak|backup|分享版/i.test(f)).map(f => path.join(ARCHIVE_DIR, f)); }
+  // opts.fileName(可选)：只处理发请求的那个原型文件（同目录有多个同 system_name 的旧版/预览件时不波及）
+  try { files = fs.readdirSync(ARCHIVE_DIR).filter(f => f.endsWith('.html') && !/备份|\.bak|backup|分享版/i.test(f) && (!opts.fileName || f === opts.fileName)).map(f => path.join(ARCHIVE_DIR, f)); }
   catch {}
   for (const htmlPath of files) {
     try {
       let content = fs.readFileSync(htmlPath, 'utf-8');
-      const mIdx = content.indexOf('window.__PRD_DATA__');
-      if (mIdx === -1) continue;
-      const existSysM = content.slice(mIdx, mIdx + 6000).match(/["']?system_name["']?\s*:\s*"((?:[^"\\]|\\.)*)"/);
-      const existSys = existSysM ? existSysM[1] : '';
+      const loc = _locatePrdData(content);   // 真 __PRD_DATA__ 赋值（不再命中标注层注释 → 不再插进 <style>）
+      if (!loc) continue;
+      const existSys = (loc.value && loc.value.system_name) || '';
       if (systemName && existSys && existSys !== systemName) continue;  // 只对匹配原型生成
-      // 定位 __PRD_DATA__ = {...}; 的末尾
-      const eqIdx = content.indexOf('=', mIdx) + 1;
-      const jIdx  = content.indexOf('{', eqIdx);
-      if (jIdx === -1) continue;
-      let depth = 0, jEnd = -1;
-      for (let i = jIdx; i < content.length; i++) { if (content[i] === '{') depth++; else if (content[i] === '}') { if (--depth === 0) { jEnd = i; break; } } }
-      if (jEnd === -1) continue;
-      let tail = jEnd + 1;
-      while (tail < content.length && (content[tail] === ';' || content[tail] === ' ')) tail++;
-      // 清掉副本里可能已有的同名赋值(幂等)，再注入新的；正则只匹配赋值，不碰 _loadPins 里的引用
-      // 清旧只匹配【布尔赋值】(= true/false;)，绝不碰 isPreviewMode 里的 `=== true` 比较；__USER_ANNOTATIONS__ 只匹配 `= [...]` 赋值，不碰 _loadPins 里的引用
-      const rest = content.slice(tail)
-        .replace(/\s*window\.__ANNO_READONLY__\s*=\s*(?:true|false)\s*;/g, '')
-        .replace(/\s*window\.__USER_ANNOTATIONS__\s*=\s*\[[\s\S]*?\];/g, '');
-      const inject = `\nwindow.__ANNO_READONLY__ = true;\nwindow.__USER_ANNOTATIONS__ = ${JSON.stringify(pins || [])};`;
-      let out = content.slice(0, tail) + inject + rest;
+      // 已烤入的标注（真赋值·整段 JSON 解析，字符串里的 "];" 不会截断）
+      const uaList = _findJsonAssignments(content, '__USER_ANNOTATIONS__', '[').filter(u => u.ctx !== 'other');
+      const uaReal = uaList.filter(u => u.ctx === 'script');
+      const embedded = uaReal.length ? uaReal[uaReal.length - 1].value : [];
+      // 请求没带 pins(非数组) → 保留文件里已烤入的标注；带了(含空数组=用户已清空) → 以浏览器为准
+      const usePins = Array.isArray(pins) ? pins : embedded;
+      const pinsJson = JSON.stringify(usePins).replace(/<\/script/gi, '<\\/script');
+      // 清旧(幂等)：删掉所有旧的 __USER_ANNOTATIONS__ 真赋值 + 旧的 __ANNO_READONLY__ 布尔赋值(不碰 `=== true` 比较)，再在 __PRD_DATA__ 后注入
+      const edits = uaList.map(u => ({ start: u.start, end: u.end, text: '' }));
+      const roRe = /window\.__ANNO_READONLY__\s*=\s*(?:true|false)\s*;/g;
+      let rm;
+      while ((rm = roRe.exec(content))) {
+        if (rm.index >= loc.start && rm.index < loc.end) continue;
+        if (uaList.some(u => rm.index >= u.start && rm.index < u.end)) continue;
+        if (_tagCtx(content, rm.index) === 'other') continue;   // 只清 script 里的赋值 + 旧 bug 留在 style 里的残留
+        edits.push({ start: rm.index, end: rm.index + rm[0].length, text: '' });
+      }
+      edits.push({ start: loc.end, end: loc.end, text: `\nwindow.__ANNO_READONLY__ = true;\nwindow.__USER_ANNOTATIONS__ = ${pinsJson};` });
+      let out = _applyEdits(content, edits);
+      // 只读标志再在 <head> 最前烤一份：标注层里有在解析期就读 __ANNO_READONLY__ 的脚本(如 SSE 自动刷新)，早于 __PRD_DATA__ 所在脚本执行
+      out = out.replace(_READONLY_HEAD_RE, '');
+      out = out.replace(/<head\b[^>]*>/i, m => m + '<script data-anno-readonly>window.__ANNO_READONLY__ = true;</script>');
+      pins = usePins;  // 下面日志用实际嵌入数
       // 只读硬保证(分享版铁律)：给 <body> 打上 anno-preview-mode 类 → CSS 从加载即隐藏所有 .anno-author-only 编辑控件，
       // 不依赖 JS(isPreviewMode) 时机；杜绝老原型/手搓工具条在只读分享版里仍露出「复制已圈/导出分享版/清空/恢复标注」等编辑按钮。
       if (!/<body[^>]*\banno-preview-mode\b/i.test(out)) {
@@ -768,33 +981,37 @@ function writeShareVersion(systemName, pins, opts) {
    与 writeShareVersion 区别：①写回原文件、不另存 -分享版 ②只注 __USER_ANNOTATIONS__、不烤 __ANNO_READONLY__
    通用：按 system_name 匹配任意原型。pins 由客户端 localStorage 全量传入。
 ══════════════════════════════════════════════════ */
-function persistAnnotationsToFile(systemName, pins) {
+function persistAnnotationsToFile(systemName, pins, fileName) {
   useArchiveFor(systemName);   // 多项目：按 systemName 切到该项目目录
   const written = [];
+  if (!Array.isArray(pins)) {   // 请求没带 pins → 不写（旧写法 pins||[] 会把文件里的标注清空）
+    console.log('  [PERSIST] 跳过：请求未带 pins 数组');
+    return written;
+  }
   let files = [];
-  try { files = fs.readdirSync(ARCHIVE_DIR).filter(f => f.endsWith('.html') && !/备份|\.bak|backup|分享版/i.test(f)).map(f => path.join(ARCHIVE_DIR, f)); } catch {}
+  // fileName(可选)：只写发请求的那个原型文件（同目录有多个同 system_name 的旧版/预览件时不波及）
+  try { files = fs.readdirSync(ARCHIVE_DIR).filter(f => f.endsWith('.html') && !/备份|\.bak|backup|分享版/i.test(f) && (!fileName || f === fileName)).map(f => path.join(ARCHIVE_DIR, f)); } catch {}
   for (const htmlPath of files) {
     try {
       let content = fs.readFileSync(htmlPath, 'utf-8');
-      const mIdx = content.indexOf('window.__PRD_DATA__');
-      if (mIdx === -1) continue;
-      const existSysM = content.slice(mIdx, mIdx + 6000).match(/["']?system_name["']?\s*:\s*"((?:[^"\\]|\\.)*)"/);
-      const existSys = existSysM ? existSysM[1] : '';
+      const loc = _locatePrdData(content);   // 真 __PRD_DATA__ 赋值（不再命中标注层注释）
+      if (!loc) continue;
+      const existSys = (loc.value && loc.value.system_name) || '';
       if (systemName && existSys && existSys !== systemName) continue;  // 只回写 system_name 匹配的原型
-      const eqIdx = content.indexOf('=', mIdx) + 1;
-      const jIdx  = content.indexOf('{', eqIdx);
-      if (jIdx === -1) continue;
-      let depth = 0, jEnd = -1;
-      for (let i = jIdx; i < content.length; i++) { if (content[i] === '{') depth++; else if (content[i] === '}') { if (--depth === 0) { jEnd = i; break; } } }
-      if (jEnd === -1) continue;
-      let tail = jEnd + 1;
-      while (tail < content.length && (content[tail] === ';' || content[tail] === ' ')) tail++;
-      // 幂等清旧 __USER_ANNOTATIONS__ 赋值（只匹配 = [...] 赋值，不碰 _loadPins 里的引用）
-      const rest = content.slice(tail).replace(/\s*window\.__USER_ANNOTATIONS__\s*=\s*\[[\s\S]*?\];/g, '');
       // ★ JS/HTML 安全：转义 </script 防字段内容里出现时提前闭合 <script> 标签（曾踩坑）
-      const pinsJson = JSON.stringify(pins || []).replace(/<\/script/gi, '<\\/script');
-      const inject = `\nwindow.__USER_ANNOTATIONS__ = ${pinsJson};`;
-      const out = content.slice(0, tail) + inject + rest;
+      const pinsJson = JSON.stringify(pins).replace(/<\/script/gi, '<\\/script');
+      const assign = `window.__USER_ANNOTATIONS__ = ${pinsJson};`;
+      // 写的就是浏览器传来的全量(用户的编辑)；位置：替换原有那份真赋值(保持原执行顺序)，没有则插在 __PRD_DATA__ 后
+      const uaList = _findJsonAssignments(content, '__USER_ANNOTATIONS__', '[');
+      const uaReal = uaList.filter(u => u.ctx === 'script');
+      const edits = _strayStyleEdits(content, uaList);           // 顺手清掉旧 bug 插进 <style> 的残留
+      if (uaReal.length) {
+        edits.push({ start: uaReal[0].start, end: uaReal[0].end, text: assign });
+        for (const u of uaReal.slice(1)) edits.push({ start: u.start, end: u.end, text: '' });
+      } else {
+        edits.push({ start: loc.end, end: loc.end, text: '\n' + assign });
+      }
+      const out = _applyEdits(content, edits);
       fs.writeFileSync(htmlPath, out, 'utf-8');  // ★ 写回原文件本身（非 -分享版）
       written.push(path.basename(htmlPath));
       console.log(`  [PERSIST] 标注已烤进工作文件: ${path.basename(htmlPath)} (${(pins||[]).length} 个 · 可编辑)`);
@@ -813,17 +1030,9 @@ function extractPrdDataFromHtml() {
   for (const htmlPath of files) {
     try {
       const content = fs.readFileSync(htmlPath, 'utf-8');
-      const mIdx = content.indexOf('window.__PRD_DATA__');
-      if (mIdx === -1) continue;
-      const jIdx = content.indexOf('{', content.indexOf('=', mIdx));
-      if (jIdx === -1) continue;
-      let depth = 0, jEnd = -1;
-      for (let i = jIdx; i < content.length; i++) {
-        if (content[i] === '{') depth++;
-        else if (content[i] === '}') { if (--depth === 0) { jEnd = i; break; } }
-      }
-      if (jEnd === -1) continue;
-      const data = JSON.parse(content.slice(jIdx, jEnd + 1));
+      const loc = _locatePrdData(content);
+      if (!loc) continue;
+      const data = loc.value;
       if (data && data.function_points && Object.keys(data.function_points).length) {
         console.log(`  [INIT] Extracted prd-data from ${path.basename(htmlPath)}`);
         return data;
@@ -851,8 +1060,11 @@ function scheduleDocxOverwrite(mdPath, docxPath, altPath) {
   let tries = 0;
   const attempt = () => {
     tries++;
+    // 用户在 Word 里改过并保存（关 Word 前占用的正是用户在编辑）→ 以 Word 为准，停止覆盖，另存件留着
+    if (docxUserEdited(docxPath)) { __docxRetryTimers.delete(docxPath); console.log(`  [DOCX] ${path.basename(docxPath)} 已被用户在 Word 里修改，以 Word 为准，不自动覆盖`); return; }
     try {
-      execFileSync('pandoc', [mdPath, '-f', 'markdown+hard_line_breaks', '-o', docxPath], { timeout: 20000, cwd: ARCHIVE_DIR });
+      execFileSync(pandocBin(), pandocDocxArgs(mdPath, docxPath), { timeout: 20000, cwd: ARCHIVE_DIR });
+      stampDocx(docxPath);
       // 成功 = Word 已关、正式 docx 已覆盖成最新 → 删另存件、通知前端
       try { if (altPath && fs.existsSync(altPath)) fs.rmSync(altPath, { force: true }); } catch (_) {}
       __docxRetryTimers.delete(docxPath);
@@ -931,12 +1143,22 @@ function assembleArtifacts(systemName) {
   const flow = (flowRet && flowRet.skipped) ? 'skipped' : ((flowRet && flowRet.count > 0) ? 'ok' : 'none');  // skipped=缺Chrome/库降级源码·none=本就没流程图·ok=渲染出图
   fs.writeFileSync(mdPath, generatePrdMd(prdData), 'utf-8');
   console.log(`  [MD]   ${path.basename(mdPath)}`);
-  let docx = 'ok';  // ok=生成·locked=被Word占用另存·skipped=缺pandoc/失败
+  let docx = 'ok';  // ok=生成·locked=被Word占用另存·skipped=缺pandoc/失败·user-edited=用户改过Word不覆盖
   try {
+    if (docxUserEdited(docxPath)) {
+      // Word 优先：用户改过 Word → 不覆盖；新内容另存一份，供把 Word 的改动同步进 prd-data 后再生成
+      docx = 'user-edited';
+      const altPath = docxPath.replace(/\.docx$/i, '-新生成(原Word已被修改未覆盖).docx');
+      try { execFileSync(pandocBin(), pandocDocxArgs(mdPath, altPath), { timeout: 20000, cwd: ARCHIVE_DIR }); } catch (_) {}
+      console.log(`  [DOCX] ${path.basename(docxPath)} 已被用户在 Word 里修改，以 Word 为准，未覆盖；新生成内容另存为「${path.basename(altPath)}」`);
+      try { broadcastSSE('docx-user-edited', { file: path.basename(docxPath), alt: path.basename(altPath), ts: new Date().toISOString() }); } catch (_) {}
+    } else {
     // -f markdown+hard_line_breaks：单换行→docx 内换行；cwd=ARCHIVE_DIR：让 ![](screenshots/...) 相对图嵌进 docx
-    execFileSync('pandoc', [mdPath, '-f', 'markdown+hard_line_breaks', '-o', docxPath], { timeout: 20000, cwd: ARCHIVE_DIR });
+    execFileSync(pandocBin(), pandocDocxArgs(mdPath, docxPath), { timeout: 20000, cwd: ARCHIVE_DIR });
+    stampDocx(docxPath);
     clearDocxRetry(docxPath);
     console.log(`  [DOCX] ${path.basename(docxPath)}`);
+    }
   } catch (e) {
     const msg = String((e && (e.stderr || e.message)) || '');
     if (/EBUSY|busy|locked|being used|in use|denied|permission/i.test(msg)) {
@@ -944,7 +1166,7 @@ function assembleArtifacts(systemName) {
       // 原 docx 被 Word/WPS 锁住 → 另存最新版，用户立刻拿到新内容；后台有界重试，Word 关了自动覆盖回原文件
       const altPath = docxPath.replace(/\.docx$/i, '-最新版(原docx被占用未覆盖).docx');
       let alt = '';
-      try { execFileSync('pandoc', [mdPath, '-f', 'markdown+hard_line_breaks', '-o', altPath], { timeout: 20000, cwd: ARCHIVE_DIR }); alt = path.basename(altPath); } catch (_) {}
+      try { execFileSync(pandocBin(), pandocDocxArgs(mdPath, altPath), { timeout: 20000, cwd: ARCHIVE_DIR }); alt = path.basename(altPath); } catch (_) {}
       console.log(`  [DOCX] ⚠️ ${path.basename(docxPath)} 被 Word/WPS 锁定、原文件未更新` + (alt ? `；已另存最新版「${alt}」（关闭 Word/WPS 后自动覆盖回原文件并删另存件）` : '；且另存也失败'));
       try { broadcastSSE('docx-locked', { file: path.basename(docxPath), alt, ts: new Date().toISOString() }); } catch (_) {}
       scheduleDocxOverwrite(mdPath, docxPath, altPath);
@@ -1218,8 +1440,8 @@ const server = http.createServer((req, res) => {
     req.on('data', d => { body += d; });
     req.on('end', () => {
       try {
-        const { pins, systemName, returnContent } = JSON.parse(body || '{}');
-        const written = writeShareVersion(systemName || '', pins || [], { returnContent: !!returnContent });
+        const { pins, systemName, returnContent, fileName } = JSON.parse(body || '{}');
+        const written = writeShareVersion(systemName || '', pins, { returnContent: !!returnContent, fileName: fileName ? path.basename(String(fileName)) : '' });
         res.writeHead(200, { 'Content-Type': 'application/json' });
         // returnContent=true → files=[{name,content}]（浏览器弹框选位置保存）；否则 files=[名字]（服务端已写 archive）
         res.end(JSON.stringify({ ok: true, files: written, count: (pins || []).length, returned: !!returnContent }));
@@ -1238,12 +1460,12 @@ const server = http.createServer((req, res) => {
     req.on('data', d => { body += d; });
     req.on('end', () => {
       try {
-        const { systemName, prdData, fpFilter, feStack, beStack } = JSON.parse(body || '{}');
-        const r = generateDevCode(systemName || '', prdData, fpFilter || '', feStack || 'vue', beStack || 'java');
+        const { systemName, prdData, fpFilter, feStack, beStack, pagecfg, returnContent, targetDir } = JSON.parse(body || '{}');
+        const r = generateDevCode(systemName || '', prdData, fpFilter || '', feStack || 'vue', beStack || 'java', pagecfg, { returnContent, targetDir });
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, ...r }));
       } catch (e) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.writeHead(e.status || 500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: false, error: e.message }));
       }
     });
@@ -1257,12 +1479,12 @@ const server = http.createServer((req, res) => {
     req.on('data', d => { body += d; });
     req.on('end', () => {
       try {
-        const { systemName, prdData, fpFilter } = JSON.parse(body || '{}');
-        const r = generateDevKit(systemName || '', prdData, fpFilter || '');
+        const { systemName, prdData, fpFilter, pagecfg, returnContent, targetDir } = JSON.parse(body || '{}');
+        const r = generateDevKit(systemName || '', prdData, fpFilter || '', pagecfg, { returnContent, targetDir });
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, ...r }));
       } catch (e) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.writeHead(e.status || 500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: false, error: e.message }));
       }
     });
@@ -1276,8 +1498,8 @@ const server = http.createServer((req, res) => {
     req.on('data', d => { body += d; });
     req.on('end', () => {
       try {
-        const { pins, systemName } = JSON.parse(body || '{}');
-        const written = persistAnnotationsToFile(systemName || '', pins || []);
+        const { pins, systemName, fileName } = JSON.parse(body || '{}');
+        const written = persistAnnotationsToFile(systemName || '', pins, fileName ? path.basename(String(fileName)) : '');
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, files: written, count: (pins || []).length }));
       } catch (e) {
@@ -1494,4 +1716,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { generatePrdMd, buildFpSections, mergePinIntoPrd, parseFpKey, updatePrototypeHtmls, writeShareVersion, persistAnnotationsToFile, saveScreenshotsAndRegen, writePrdData, readPrdData, renderBusinessFlows, scheduleDocxOverwrite, clearDocxRetry, resolveArchiveDirFor, _dirMatchesSystem, assembleArtifacts, spawnAssembleOnce };
+module.exports = { _locatePrdData, _findJsonAssignments, generatePrdMd, buildFpSections, mergePinIntoPrd, parseFpKey, updatePrototypeHtmls, writeShareVersion, persistAnnotationsToFile, saveScreenshotsAndRegen, writePrdData, readPrdData, renderBusinessFlows, scheduleDocxOverwrite, clearDocxRetry, resolveArchiveDirFor, _dirMatchesSystem, assembleArtifacts, spawnAssembleOnce };

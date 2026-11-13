@@ -153,5 +153,5 @@ Write-Host "  2. Playwright MCP tools will appear automatically (mcp__playwright
 Write-Host "  3. Tell Claude: 'Open https://... and log in with account xxx / password xxx'" -ForegroundColor White
 Write-Host ""
 Write-Host "Tip: Claude can only save screenshots inside the project directory." -ForegroundColor Gray
-Write-Host "     Ask Claude to save to e.g. d:\AI\ai-rules\screenshots\capture.png" -ForegroundColor Gray
+Write-Host "     Ask Claude to save to e.g. <工具目录>\screenshots\capture.png" -ForegroundColor Gray
 Write-Host ""

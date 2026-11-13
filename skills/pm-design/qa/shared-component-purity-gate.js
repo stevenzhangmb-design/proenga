@@ -65,7 +65,8 @@ for (const f of SHARED) {
     if (ALLOW_RE.some(re => re.test(ln))) return;
     for (const t of BIZ_TERMS) {
       if (hasTerm(ln, t)) {
-        hits.push({ term: t, line: i + 1, txt: ln.trim().slice(0, 90) });
+        /* §2026-10-25 截断长度可调：90 字符看不到完整的「键名 → 中文值」，修的人没法照着搬 */
+        hits.push({ term: t, line: i + 1, txt: ln.trim().slice(0, Number(process.env.PURITY_WIDTH || 90)) });
         break;
       }
     }
@@ -73,7 +74,11 @@ for (const f of SHARED) {
   if (hits.length) {
     bad += hits.length;
     console.log(`\n  ✗ ${name} —— 代码里硬编码了 ${hits.length} 处项目专有业务词：`);
-    hits.slice(0, 10).forEach(h => console.log(`      「${h.term}」  ${h.txt}`));
+    /* §2026-10-25：原来只打前 10 条、且不带行号 —— 报了红却没法照着改（修的人得自己再去 grep 一遍，
+       还容易把注释里的合法用法也一起改掉）。改成全部列出 + 带行号，判定逻辑一个字没动。 */
+    const LIM = Number(process.env.PURITY_LIMIT || 200);
+    hits.slice(0, LIM).forEach(h => console.log(`      L${String(h.line).padStart(5)}  「${h.term}」  ${h.txt}`));
+    if (hits.length > LIM) console.log(`      …还有 ${hits.length - LIM} 处（PURITY_LIMIT 可调）`);
     console.log('      → 修法：把业务值搬进【数据配置】(project-data)，骨架只留通用机制（如 blockIf:{when,msg}）。');
   } else {
     console.log(`  ✓ ${name} —— 代码干净（项目专有词只出现在注释里=允许，注释是出处文档）`);

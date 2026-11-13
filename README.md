@@ -28,6 +28,7 @@ AI 产研协同工具 —— 原型 · PRD · 代码，同出一源。
 | **`skills/pm-design`** | 画可交互 HTML 原型（内置设计规范 / 多语 / 多地区）+ 右键圈选功能标注 |
 | **`skills/prd`** | 按 PRD 铁律**真推理**生成规范 PRD（4 章 + 字段规范 + 7 节用例规则） |
 | **`skills/dev-codegen`** | 📦 导出对接料（喂任意 AI）／ 🚀 一键生成前后端**可编译**工程代码 |
+| **`skills/rpa`** | 登录参考系统（本地 Chrome + CDP，零依赖）抓页面结构 / 样式真值，供 1:1 复刻与提炼设计规范；只看不提交 |
 | **`skills/tech-design · test-case · dev-prompts · product-pitch · user-manual`** | 下游文档：技术设计 / 测试用例 / 研发提示词 / 售前方案 / 用户手册 |
 | **`anno-server`** | 本地同步引擎：原型 ↔ PRD ↔ 对话框**实时同步**；自动截图 + mermaid 流程图 + Word（pandoc） |
 | **`skills/**/qa`** | 40+ 道机器闸（`deliver-gate` 总闸统管）：交付前跑绿才算完，每条规则焊成断言 |

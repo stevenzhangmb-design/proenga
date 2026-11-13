@@ -13,6 +13,7 @@
    ════════════════════════════════════════════════════════════════════════ */
 'use strict';
 const fs = require('fs'), path = require('path'), os = require('os'), { execFileSync } = require('child_process');
+require('../../_shared/qa/_tmp-sandbox'); // 临时文件进沙盒·退出自动删（铁律·见 _tmp-sandbox.js）
 
 const SKILL = path.join(__dirname, '..');            // skills/pm-design
 const ORIG_MARK = SKILL.replace(/\\/g, '/');          // 原始安装位置（产物不该引用它）
@@ -69,6 +70,23 @@ if (copied) {
     try { runNode([path.join(QA, 'prototype-standard-sync-gate.js'), out], QA); ok('⑰ 判' + label + '(干净副本内)：标注层最新·合规'); }
     catch (e) { bad('⑰ 判' + label + '红（干净副本产物未达最新）'); }
   }
+
+  // ── 从零生成（干净副本里跑 scaffold build·证明"从零画原型"也可移植·2026-10-09）──
+  // scaffold → mockgen → qa/assemble-prototype 全在 pm-design（已复制），只用 node 内置，别人机器一样能从零造整套
+  const planP = path.join(tmpRoot, 'sg-plan.json');
+  const out3 = path.join(tmpRoot, 'scaffold-pd.json');
+  try {
+    const plan = { init: { title: '冒烟', 'system-name': 'SG', region: 'BR' }, pages: [
+      { cmd: 'add-list', id: 'g', title: '列表', nav: '列表', cols: '名称,金额,状态', rows: 3 },
+      { cmd: 'add-form', id: 'gf', title: '新增', hidden: true, fields: '名称*,金额@money' }
+    ] };
+    fs.writeFileSync(planP, JSON.stringify(plan), 'utf8');
+    runNode([path.join(tmpSkill, 'scaffold.js'), out3, 'build', planP, '--assemble'], tmpSkill);
+    const bld = path.join(path.dirname(out3), '_bld.html');
+    if (fs.existsSync(bld) && verOf(bld) === LATEST) ok('scaffold(从零生成)：干净副本 build 出整套原型·标注层=最新 ' + LATEST);
+    else bad('scaffold build 在干净副本产物版本=' + verOf(bld) + '（应=最新 ' + LATEST + '）');
+    if (fs.existsSync(bld) && !refsOrig(bld)) ok('scaffold 产物不含对原始安装位置的引用（真可移植）');
+  } catch (e) { bad('scaffold build 在干净副本执行失败: ' + String(e.message || e).split('\n')[0]); }
 }
 
 try { fs.rmSync(tmpRoot, { recursive: true, force: true }); } catch (e) {}

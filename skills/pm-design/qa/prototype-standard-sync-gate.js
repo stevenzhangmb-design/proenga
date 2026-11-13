@@ -59,6 +59,7 @@ if (selfErr) process.exit(1);
 const compDir = path.dirname(ANNOTATION_LAYER);
 const RENDERER = path.join(compDir, "page-renderer.html");
 const HOSTSHELL = path.join(compDir, "host-shell.html");
+const SKELETON = path.join(compDir, "prototype-skeleton.html");   // 默认装配器用的渲染器(alt 契约源)
 const nw = (s) => String(s || "").replace(/\s+/g, "");   // 去全部空白
 const CONTRACT = [
   // —— 渲染器 page-renderer.html（卡片类 token 用 bare token：兼容 class="lab stat-label" 遗留前缀）——
@@ -68,20 +69,24 @@ const CONTRACT = [
   { key: "区块锚点·查看", sig: "ak('查看')", src: "renderer" },
   { key: "区块锚点·查询", sig: "ak('查询')", src: "renderer" },
   { key: "区块锚点·列表", sig: "ak('列表')", src: "renderer" },
-  { key: "banner重组/新增", sig: "cfg.bannerType==='merge'?'重组合并':'新增模块'", src: "renderer" },
+  // ★ 两套标准渲染器（2026-10-09 根治 ⑰ 对默认装配器误红）：
+  //   ① 默认装配器(assemble-prototype) 用 prototype-skeleton.html —— 筛选/列/操作/自定义/页脚走 cur*(pick2 包装)；
+  //   ② inject 路径 用 page-renderer.html —— 走 cfg.*。二者渲染等价、标注命门一致(stat-label/ak/cell 皆同)。
+  //   故这几条【有 alt 的】用"page-renderer sig 或 骨架 alt sig 任一"判定；无 alt 的是两套共用同款 sig。
+  { key: "banner重组/新增", sig: "cfg.bannerType==='merge'?'重组合并':'新增模块'", alt: "cfg.bannerType==='merge'?", src: "renderer" },
   { key: "stats卡片渲染", sig: "v-for=\"(s,i)incfg.stats\"", src: "renderer" },
   { key: "chart柱状渲染", sig: "cfg.chart.values", src: "renderer" },
   { key: "donut环形渲染", sig: "cfg.donut.grad", src: "renderer" },
-  { key: "filters筛选渲染", sig: "v-for=\"(f,i)incfg.filters\"", src: "renderer" },
-  { key: "table列渲染", sig: "v-for=\"(c,i)incfg.columns\"", src: "renderer" },
-  { key: "actions行操作渲染", sig: "v-for=\"aincfg.actions\"", src: "renderer" },
+  { key: "filters筛选渲染", sig: "v-for=\"(f,i)incfg.filters\"", alt: "curFilters", src: "renderer" },
+  { key: "table列渲染", sig: "v-for=\"(c,i)incfg.columns\"", alt: "colTree", src: "renderer" },
+  { key: "actions行操作渲染", sig: "v-for=\"aincfg.actions\"", alt: "curActions", src: "renderer" },
   { key: "分页栏(标准布局)", sig: "layout=\"total,sizes,prev,pager,next,jumper\"", src: "renderer" },
-  { key: "custom自定义页", sig: "v-html=\"cfg.custom\"", src: "renderer" },
-  { key: "note页脚", sig: "v-if=\"cfg.note\"", src: "renderer" },
+  { key: "custom自定义页", sig: "v-html=\"cfg.custom\"", alt: "v-html=\"L(curCustom)\"", src: "renderer" },
+  { key: "note页脚", sig: "v-if=\"cfg.note\"", alt: "curNote", src: "renderer" },
   { key: "building占位页", sig: "v-if=\"cfg.building\"", src: "renderer" },
   { key: "单元格渲染助手·cell(纯JSON·标签{t,c}·替代旧row/tg函数)", sig: "function cell(v){", src: "renderer" },
   { key: "标签单元{t,c}渲染(纯JSON·禁函数调用)", sig: "'t'in v", src: "renderer" },
-  { key: "table单元格用cell渲染", sig: "v-html=\"cell(row[i])\"", src: "renderer" },
+  { key: "table单元格用cell渲染", sig: "v-html=\"cell(row[i])\"", alt: "v-html=\"cell(row[", src: "renderer" },
   // —— 顶栏外壳 host-shell.html 工具条接桥（★ host 契约对【所有原型·含自定义外壳/豁免件】强制·不豁免）——
   // 工具条=标准部件，四按钮必须齐全。window.__anno.<method> 带点调用【只出现在 host 工具条】(标注层内=0)，
   // 故可作"某按钮在不在"的可靠判据：缺 restoreCleared 调用 = 缺【恢复标注】按钮 → 红。
@@ -97,9 +102,11 @@ const CONTRACT = [
 let contractSelfErr = false;
 if (fs.existsSync(RENDERER) && fs.existsSync(HOSTSHELL)) {
   const rn = nw(fs.readFileSync(RENDERER, "utf8")), hn = nw(fs.readFileSync(HOSTSHELL, "utf8"));
+  const skN = fs.existsSync(SKELETON) ? nw(fs.readFileSync(SKELETON, "utf8")) : "";
   for (const c of CONTRACT) {
     const srcN = c.src === "renderer" ? rn : hn;
     if (!srcN.includes(nw(c.sig))) { console.log(`✗ 闸需更新：标准件(${c.src})已无契约片段「${c.key}」(${c.sig})`); contractSelfErr = true; }
+    if (c.alt && skN && !skN.includes(nw(c.alt))) { console.log(`✗ 闸需更新：骨架(prototype-skeleton)已无等价契约「${c.key}」(${c.alt})`); contractSelfErr = true; }
   }
   if (contractSelfErr) process.exit(1);
 } else {
@@ -144,7 +151,9 @@ for (const f of targets) {
   for (const c of CONTRACT) {
     if (c.src === "renderer" && _legacy) continue;           // 自定义外壳：豁免渲染器契约
     if (c.src === "host") hostChecked++;
-    if (!protoN.includes(nw(c.sig))) drifts.push((c.src === "host" ? "顶栏工具条(host)漂移·缺" : "渲染器漂移·缺") + `契约「${c.key}」`);
+    // 渲染器契约：默认骨架(cur*) 或 page-renderer(cfg.*) 任一命中即算有(两套等价渲染器·2026-10-09)
+    const has = protoN.includes(nw(c.sig)) || (c.alt && protoN.includes(nw(c.alt)));
+    if (!has) drifts.push((c.src === "host" ? "顶栏工具条(host)漂移·缺" : "渲染器漂移·缺") + `契约「${c.key}」`);
   }
   const totalChecks = ANCHORS.length + (_legacy ? hostChecked : CONTRACT.length);
   if (drifts.length) { allOk = false; console.log(`  ✗ ${path.basename(f)}：` + drifts.join("、") + (_legacy ? "  → 豁免件的标注层+工具条也必须最新齐全，请补注入/补按钮" : "  → 该原型未内嵌最新标准件(标注层/渲染器/外壳)，需重新注入/重生"));

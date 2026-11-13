@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8"><title>多语原型样例·冒烟闸夹具</title></head>
+<body>
+<!-- 冒烟闸夹具（2026-11-13）：多语原型的列/标题/筛选是 {zh,en,pt} 对象；含无英文的纯中文列、只有占位文字的筛选、组合搜索(combo)。
+     断言：产物里不得出现 "[object Object]"、不得出现 hex 乱码标识符(field_e58f…)、提示语「批量搜索请用逗号,分隔」不得当列。-->
+<div id="app"></div>
+<script>
+const PAGECFG={"issuing":{"listTitle":{"zh":"开票中","en":"Issuing","pt":"Em emissão"},"columns":[{"label":{"zh":"序列号","en":"Serial","pt":"Série"},"copy":true},{"zh":"发票类型","en":"Type","pt":"Tipo"},{"label":"CPF/CNPJ","copy":true},{"zh":"发票金额","en":"Amount","pt":"Valor"},{"label":{"zh":"单据信息","en":"Document info","pt":"Documento"},"width":240},"商品信息",{"zh":"操作","en":"Actions","pt":"Ações"}],"filters":[{"type":"select","ph":{"zh":"全部发票账号","en":"All accounts","pt":"Todas as contas"},"options":["LD TRADING","VANTAGEM"]},{"type":"combo","fields":[{"zh":"发票号","en":"Invoice no.","pt":"Nº nota"},{"zh":"订单号","en":"Order no.","pt":"Nº pedido"}],"ph":{"zh":"批量搜索请用逗号,分隔","en":"Batch search","pt":"Busca em lote"}},{"type":"dateOne","ph":"08/2026"},{"ph":"请输入"},{"type":"select","label":{"zh":"状态","en":"Status","pt":"Status"},"options":[{"zh":"全部","en":"All","pt":"Todos"},{"zh":"开票中","en":"Issuing","pt":"Emitindo"},{"zh":"失败","en":"Failed","pt":"Falhou"}]}],"rows":[["001",{"zh":"NF-e","en":"NF-e","pt":"NF-e"},"123.456.789-00","R$ 10,00","XSUI4O","水 x1",""]]}};
+window.__PRD_DATA__={system_name:"MultiLangSample",page_menus:[],function_points:{}};
+</script>
+</body></html>

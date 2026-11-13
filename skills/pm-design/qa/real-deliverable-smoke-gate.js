@@ -38,9 +38,25 @@ function findDeliverables() {
   return [];
 }
 
+/* §2026-10-25 端口让位（治假红）：这道闸与 ㊷布局体检闸 **共用同一段固定端口 8990+**，
+   并发时 listen 抛 EADDRINUSE → 0.2 秒判红。实测当天全闸里两道同时假红，单独重跑都绿。
+   假红比没有闸更危险（会训练人把红当抖动放行），所以先探一组真空闲端口再用。 */
+function _probeFree(p) {
+  return new Promise(res => {
+    const s = require('net').createServer();
+    s.once('error', () => res(false));
+    s.listen(p, () => s.close(() => res(true)));
+  });
+}
+async function freePort(start) {
+  for (let p = start; p < start + 400; p += 7) if (await _probeFree(p) && await _probeFree(p + 1000)) return p;
+  throw new Error('找不到空闲端口（起点 ' + start + '）');
+}
+
 async function smoke(file, base) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'realsmoke-'));
   fs.copyFileSync(file, path.join(tmp, 'p.html'));           // 隔离副本：绝不在真文件上操作
+  base = await freePort(base);
   const WPORT = base, DPORT = base + 1000;
   const server = http.createServer((rq, rs) => { const p = path.join(tmp, decodeURIComponent(rq.url.split('?')[0])); fs.readFile(p, (e, d) => { if (e) { rs.writeHead(404); rs.end(); return; } rs.writeHead(200, { 'Content-Type': /\.html$/.test(p) ? 'text/html;charset=utf-8' : 'application/octet-stream' }); rs.end(d); }); }).listen(WPORT);
   const ch = spawn(CHROME, ['--headless=new', '--disable-gpu', '--no-first-run', '--remote-debugging-port=' + DPORT, '--user-data-dir=' + path.join(tmp, 'ud'), 'about:blank']);

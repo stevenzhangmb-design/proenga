@@ -24,10 +24,10 @@ license_note: 仅设计语言参考·不复制微信商标/配图·不逆推登�
 
 # 移动社交端设计规范 · 微信系（WeUI · 学习快照·首版）
 
-> **定位**：画【移动社交】类原型选「默认」时的参照皮（对照 [[feedback_mobile_spec_by_category]]：电商→阿里 [[antd-mobile-ecommerce]]、社交→本文件、B端→TF OMS）。
+> **定位**：画【移动社交】类原型选「默认」时的参照皮（对照 [[feedback_mobile_spec_by_category]]：电商→阿里 [[antd-mobile-ecommerce]]、社交→本文件、B端→某 OMS）。
 > **数据来源**：设计令牌逐字来自 WeUI 官方开源 `src/style/base/theme/vars/light.less` / `dark.less`（见 frontmatter）。
 > **诚实**：**首版**——颜色令牌已坐实；**组件精确尺寸/字号阶梯/圆角本轮未抓**（见 known_gaps），标注为参照级，后续抓 `dist/weui.wxss` 补全。不是微信 App 逐像素还原。
-> **令牌都是 CSS 变量** `--weui-*`，换皮=改变量（天然利于代码生成的令牌契约·与 antd/TF OMS 同思路）。
+> **令牌都是 CSS 变量** `--weui-*`，换皮=改变量（天然利于代码生成的令牌契约·与 antd/某 OMS 同思路）。
 
 ---
 

@@ -90,75 +90,60 @@ function prdHeader(prdData, date) {
     ['PM',       '产品经理（Product Manager）'],
     ['fp_key',   '功能点唯一标识，格式：模块名-系统.功能名'],
   ];
-  const wmsTerms = [
-    ['WMS',      '仓储管理系统（Warehouse Management System）'],
-    ['入库',      '货物从供应商/生产端进入仓库的作业流程'],
-    ['出库',      '货物从仓库发往客户/目的地的作业流程'],
-    ['库存盘点',  '对仓库实物与系统账面数量进行核对的操作'],
-    ['充值',      '客户向账户预存金额以支付仓储费用'],
-    ['计费',      '按仓储合同约定对货主进行费用结算的操作'],
-  ];
-  const omsTerms = [
-    ['OMS',      '订单管理系统（Order Management System）'],
-    ['发货单',    '指导仓库进行货物拣选、包装、发运的订单凭证'],
-    ['退货单',    '客户将货物退回仓库时产生的处理单据'],
-    ['账户余额',  '货主预充值后可用于抵扣仓储/运费的账户金额'],
-    ['对账',      '货主与仓储方核对账目、确认费用的周期性操作'],
-  ];
-  const retailTerms = [
-    ['门店',      '连锁品牌下的单个实体销售网点'],
-    ['总部',      '管理多个门店的品牌总公司视角'],
-    ['挂账',      '暂不结算、记入应收/应付账户的账务处理方式'],
-    ['进销存',    '采购入库（进）、销售出库（销）、库存管理（存）的统称'],
-  ];
-
-  let termRows = [...baseTerms];
-  if (hasSys('WMS')) termRows = [...wmsTerms, ...termRows];
-  if (hasSys('OMS')) termRows = [...termRows, ...omsTerms];
-  // 零售/连锁关键词检测
-  if (/门店|连锁|零售|retail/i.test(productName + modules.join('')))
-    termRows = [...termRows, ...retailTerms];
-
+  // 行业术语【不写死】：AI 据真实系统生成、存 prd-data._prd_meta.terms（[[术语,说明],...]）。
+  // 铁律：skill 里的术语全是【举例】，禁当通用模板硬塞进任意系统（防"发货单/退货单/订单流程"泄漏到充值这类系统）。
+  const _todo = (w) => `（待 AI 据原型/业务真值生成${w}——skill 仅举例，须写本系统真实场景，禁照抄/通用臆造/占位）`;
+  const metaTerms = (prdData._prd_meta && Array.isArray(prdData._prd_meta.terms)) ? prdData._prd_meta.terms : [];
+  const termRows = metaTerms.length ? [...baseTerms, ...metaTerms] : [...baseTerms, ['—', _todo('本系统业务术语')]];
   const termsTable = termRows
     .map(([term, desc]) => `| ${term} | ${desc} |`)
     .join('\n');
 
-  // § 4.1 产品定义：基于系统类型生成贴切描述
-  let productDef = '';
-  if (hasSys('WMS') && hasSys('OMS')) {
-    productDef = `${productName}是面向 **B 端仓储/供应链** 场景的综合管理系统，包含：\n\n- **WMS（仓储管理）**：负责货物入库、出库、库存盘点及仓储费用计费，是仓库运营的核心系统。\n- **OMS（订单管理）**：负责客户订单受理、发货调度、退货处理及账单对账，面向客户服务侧。\n\n两系统通过统一账户体系关联，货主可在 OMS 查看消费明细，财务人员在 WMS 进行充值审核与费用结算。`;
-  } else if (hasSys('WMS')) {
-    productDef = `${productName}是面向 **B 端仓储** 场景的 WMS 系统，覆盖 **${modList}** 等核心业务模块，支持货物入库、出库、库存盘点及财务结算全流程。`;
-  } else if (hasSys('OMS')) {
-    productDef = `${productName}是面向 **B 端电商/供应链** 场景的 OMS 系统，覆盖 **${modList}** 等核心业务模块，支持订单管理、发货调度、退货处理及账单对账全流程。`;
-  } else if (/门店|连锁|零售/i.test(productName + modules.join(''))) {
-    productDef = `${productName}是面向 **连锁零售** 场景的管理系统，覆盖 **${modList}** 等核心业务模块，支持总部统管、门店自主操作双视图。`;
-  } else {
-    productDef = `${productName}覆盖 **${modList}** 等 ${fpNames.length} 个功能点，详见 §4.4 功能点明细。`;
-  }
+  // § 4.1 产品定义【不写死】：AI 据真实系统生成、存 _prd_meta.product_def；生成器不按系统类型猜（防"OMS=订单/发货"这类通用臆造套到充值上）
+  const productDef = hardWrapForPandoc((prdData._prd_meta && prdData._prd_meta.product_def && String(prdData._prd_meta.product_def).trim())
+    || _todo('产品定义（本系统是什么、解决什么业务、覆盖哪些模块）'));
 
   // § 4.3 业务流程图：必须 mermaid（prd 铁律 §2.1，禁纯文字）。编号自 4.3.1 顺延、不重复。
   //   优先用 prdData.business_flows（PM/AI 真推理的业务流，[{title, mermaid}]）；否则按检测到的系统给默认 mermaid 起点。
   let flowIdx = 0, flowDesc = '';
-  const mkFlow = (title, body) => { flowIdx++; return `\n#### 4.3.${flowIdx} ${title}\n\n\`\`\`mermaid\n${String(body).trim()}\n\`\`\`\n\n`; };
-  const customFlows = Array.isArray(prdData.business_flows) ? prdData.business_flows : [];
+  // slug 与 saveScreenshotsAndRegen / renderBusinessFlows 一致：让 §4.3 引用已渲染的 FLOW-N.png（docx 可嵌入）
+  const _flowSafe = (prdData.system_name || 'PRD').replace(/[/\\:*?"<>|]/g, '-');
+  const _flowSlug = _flowSafe.replace(/[\s·]+/g, '-').replace(/-{2,}/g, '-').replace(/^-|-$/g, '') || 'prd';
+  // 读 PNG 真实像素宽高（IHDR：字节16-24），零依赖；失败返回 null
+  const _pngSize = (file) => {
+    try {
+      const b = fs.readFileSync(file);
+      if (b.length < 24 || b.toString('ascii', 1, 4) !== 'PNG') return null;
+      return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
+    } catch (e) { return null; }
+  };
+  const mkFlow = (title, body) => {
+    flowIdx++;
+    const _png = path.join(ARCHIVE_DIR, 'screenshots', _flowSlug, 'FLOW-' + flowIdx + '.png');
+    // 渲染好了 → 引用图片（pandoc cwd=archive 时嵌进 docx）；没渲染（无 Chrome/库 或渲染失败）→ 降级保留 mermaid 源码
+    let _block;
+    if (fs.existsSync(_png)) {
+      // 按真实宽高比给 pandoc 显示宽度：宽图占满页宽、高图放到接近整页高——杜绝 Word 把流程图压成小图
+      const sz = _pngSize(_png);
+      const USABLE_W = 6.2, USABLE_H = 8.0;  // 页面可用区(英寸·留边)
+      let attr = '{width=100%}';
+      if (sz && sz.w > 0 && sz.h > 0) {
+        const win = Math.min(USABLE_W, USABLE_H * (sz.w / sz.h));
+        attr = `{width=${(Math.round(win * 100) / 100)}in}`;
+      }
+      _block = `![业务流程图：${title}](screenshots/${_flowSlug}/FLOW-${flowIdx}.png)${attr}`;
+    } else {
+      _block = `\`\`\`mermaid\n${String(body).trim()}\n\`\`\``;
+    }
+    return `\n#### 4.3.${flowIdx} ${title}\n\n${_block}\n\n`;
+  };
+  const customFlows = (prdData._prd_meta && Array.isArray(prdData._prd_meta.business_flows)) ? prdData._prd_meta.business_flows
+    : (Array.isArray(prdData.business_flows) ? prdData.business_flows : []);
   if (customFlows.length) {
     for (const f of customFlows) flowDesc += mkFlow(f.title || '业务流程', f.mermaid || 'flowchart TD\n    A([开始]) --> Z([结束])');
   } else {
-    if (hasSys('WMS')) flowDesc += mkFlow('WMS 核心业务流程',
-`flowchart TD
-    A([货主签约]) --> B[开立账户] --> C[提交充值申请]
-    C --> D{财务审核}
-    D -->|通过| E[账户到账]
-    D -->|驳回| C
-    E --> F[货物入库] --> G[拣货出库] --> H[月底计费] --> I([对账确认])`);
-    if (hasSys('OMS')) flowDesc += mkFlow('OMS 订单处理流程',
-`flowchart TD
-    A([客户下单]) --> B[创建发货单] --> C[推送 WMS]
-    C --> D[仓库拣货出库] --> E[物流揽收] --> F{是否退货}
-    F -->|否| G([签收完成])
-    F -->|是| H[退货审核] --> I[仓库收货] --> J([退款完成])`);
-    if (!flowDesc) flowDesc = mkFlow('核心业务流程', `flowchart TD\n    A([开始]) --> B[业务处理] --> Z([结束])`);
+    // 不写死订单/发货/充值流程（那是 skill 举例）；AI 没给真实业务流就明确待生成，闸拦住不让交
+    flowDesc = mkFlow('业务流程图', 'flowchart TD\n    A([待生成]) --> B[需 AI 据本系统真实业务流程绘制] --> Z([待生成])');
   }
 
   const sysBoundary = systems.length
@@ -168,6 +153,12 @@ function prdHeader(prdData, date) {
   let boundarySection = '';
   if (systems.length >= 2) { flowIdx++; boundarySection = `#### 4.3.${flowIdx} 系统视图边界\n\n${sysBoundary}\n\n`; }
 
+  // §1 开发目的、§4.2 产品框架【不写死】：优先 _prd_meta（AI 据真值生成）；无则 §1 用数据派生的中性描述、§4.2 明确待生成（不占位"请PM补充"）
+  // ★ 套 hardWrapForPandoc：AI 自由文本(§1/§4.2)里若含「• …」或「N、…」行、下一行非空 → 补行尾两空格，
+  //   否则 pandoc 合并成一坨（⑪ 结构闸 F-WRAP）。此前只对 _draft 字段/用例套了，meta 章节漏套 → 充值 §4.2 的「• OMS/WMS」判红。根因修。
+  const purposeFinal = hardWrapForPandoc((prdData._prd_meta && prdData._prd_meta.dev_purpose && String(prdData._prd_meta.dev_purpose).trim()) || purpose);
+  const productFramework = hardWrapForPandoc((prdData._prd_meta && prdData._prd_meta.product_framework && String(prdData._prd_meta.product_framework).trim()) || _todo('产品框架（系统/模块拓扑、视图划分、模块间关系）'));
+
   return `# ${productName} PRD
 
 > 版本：v1.0.0　生成日期：${date}
@@ -176,7 +167,7 @@ function prdHeader(prdData, date) {
 
 ## 1 开发目的
 
-${purpose}
+${purposeFinal}
 
 ---
 
@@ -204,7 +195,7 @@ ${productDef}
 
 ### 4.2 产品框架
 
-（产品整体架构图 — 请 PM 补充；建议在此插入系统模块拓扑图）
+${productFramework}
 
 ### 4.3 业务流程图
 ${flowDesc}${boundarySection}### 4.4 功能点明细
@@ -222,19 +213,51 @@ function fpMeta(key, fp) {
   return { key, fp, sys, menuPath: mp, fpName: fp.fp_name || parsed.fp || '功能点' };
 }
 
+function draftToMd(v) {
+  if (v == null) return '';
+  if (typeof v === 'string') return v;
+  if (Array.isArray(v)) {
+    if (!v.length) return '';
+    if (v.every(x => x && typeof x === 'object' && !Array.isArray(x))) {   // [{字段对象}] → 标准 5 列表格
+      const cell = x => (x === undefined || x === null) ? '' : String(x).replace(/\|/g, '\\|').replace(/\n/g, ' ');
+      const rows = v.map(x => {
+        const req = x.required === true ? '是' : x.required === false ? '否' : (x.是否必填 ?? x.是否必填必选 ?? x.required ?? '');
+        return `| ${cell(x.field ?? x.name ?? x.字段名称 ?? x.字段 ?? '')} | ${cell(x.type ?? x.类型 ?? '')} | ${cell(req)} | ${cell(x.default ?? x.默认值 ?? '')} | ${cell(x.rule ?? x.desc ?? x.约束规则 ?? x.说明 ?? '')} |`;
+      });
+      return ['| 字段名称 | 类型 | 是否必填/必选 | 默认值 | 约束规则 |', '| --- | --- | --- | --- | --- |', ...rows].join('\n');
+    }
+    return v.map(x => '- ' + (typeof x === 'string' ? x : JSON.stringify(x))).join('\n');   // 其它数组 → 项目符号
+  }
+  if (typeof v === 'object') return String(v.markdown ?? v.md ?? v.text ?? JSON.stringify(v));
+  return String(v);
+}
+
+function hardWrapForPandoc(md) {
+  if (!md) return md;
+  const ls = md.split('\n');
+  return ls.map((l, i) => {
+    if (!/^•\s/.test(l) && !/^\s+\d+、/.test(l)) return l;              // 只处理 • 七节标签行 与 N、子项行
+    if ((ls[i + 1] || '').trim() !== '' && !/  $/.test(l)) return l.replace(/\s*$/, '') + '  ';  // 下一行非空且本行尾无两空格→补
+    return l;
+  }).join('\n');
+}
+
 function renderFp(it, num) {
   const fp = it.fp;
   // 标题层级随编号深度（prd 铁律 §1.2：# 数 = 编号段数 + 1，markdown 封顶 6）
-  const h = '#'.repeat(Math.min(num.split('.').length + 1, 6));
-  let md = `\n${h} ${num} ${it.fpName}\n`;
+  /* 2026-11-13 用户：Word 左侧目录要显示全部章节 → 功能点和它下面的 位置/原型图/字段规范/用例规则 都写成真标题
+     （以前小节写成 **加粗文字**，Word 目录看不到）。markdown 只有 6 级，7～9 级用 pandoc custom-style 写 Word 标题。 */
+  const head = (lv, text) => lv <= 6 ? `\n${'#'.repeat(lv)} ${text}\n` : `\n::: {custom-style="Heading ${Math.min(lv, 9)}"}\n${text}\n:::\n`;
+  const lv = num.split('.').length + 1;
+  let md = head(lv, `${num} ${it.fpName}`);
   const loc = [it.sys, ...it.menuPath, it.fpName].join('-');
-  md += `\n**${num}.1 位置**\n\n${loc}\n`;
-  md += `\n**${num}.2 原型图**\n\n${(fp.img && String(fp.img).trim()) || '无'}\n`;
-  const fs = (fp._draft_fieldSpecs || '').trim();
-  const uc = (fp._draft_useCaseRules || '').trim();
+  md += head(lv + 1, `${num}.1 位置`) + `\n${loc}\n`;
+  md += head(lv + 1, `${num}.2 原型图`) + `\n${(fp.img && String(fp.img).trim()) || '无'}\n`;
+  const fs = hardWrapForPandoc(draftToMd(fp._draft_fieldSpecs).trim());
+  const uc = hardWrapForPandoc(draftToMd(fp._draft_useCaseRules).trim());
   /* 无字段规范 → 该节写「无」（与原型图空值写「无」一致）；用例规则固定 .4，编号不再随有无字段规范挪动 */
-  md += `\n**${num}.3 字段规范**\n\n${fs || '无'}\n`;
-  md += `\n**${num}.4 用例规则**\n\n${uc || '（待生成）'}\n`;
+  md += head(lv + 1, `${num}.3 字段规范`) + `\n${fs || '无'}\n`;
+  md += head(lv + 1, `${num}.4 用例规则`) + `\n${uc || '（待生成）'}\n`;
   return md;
 }
 
@@ -253,8 +276,8 @@ function renderMenuTree(items, prefix, depth) {
     i++;
     const menuNum = `${prefix}.${i}`;
     // 标题层级随编号深度（prd 铁律 §1.2：# 数 = 编号段数 + 1，markdown 封顶 6）
-    const h = '#'.repeat(Math.min(menuNum.split('.').length + 1, 6));
-    md += `\n${h} ${menuNum} ${g.name}\n`;
+    const mlv = menuNum.split('.').length + 1;   /* 超过 6 级用 Word 7～9 级标题，目录才能逐级显示 */
+    md += mlv <= 6 ? `\n${'#'.repeat(mlv)} ${menuNum} ${g.name}\n` : `\n::: {custom-style="Heading ${Math.min(mlv, 9)}"}\n${menuNum} ${g.name}\n:::\n`;
     const deeper = g.items.filter(it => it.menuPath.length > depth + 1);
     const leaf   = g.items.filter(it => it.menuPath.length <= depth + 1);
     if (deeper.length) md += renderMenuTree(deeper, menuNum, depth + 1);
@@ -287,9 +310,25 @@ function buildFpSections(prdData) {
   return md;
 }
 
+function normalizePrdMd(md) {
+  let inCode = false, k = 0;
+  const out = [];
+  md.split('\n').forEach(l => {
+    if (/^```/.test(l)) { inCode = !inCode; k = 0; out.push(l); return; }
+    if (inCode) { out.push(l); return; }
+    let m;
+    if (/^- \S/.test(l)) { k = 0; l = '• ' + l.slice(2); if (!/  $/.test(l)) l = l.replace(/\s*$/, '') + '  '; }
+    else if ((m = l.match(/^[ \t]+- (\S.*)$/))) { k++; l = '  ' + k + '、' + m[1]; if (!/  $/.test(l)) l = l.replace(/\s*$/, '') + '  '; }
+    else k = 0;
+    if (/^\|/.test(l) && out.length && !/^\|/.test(out[out.length - 1]) && out[out.length - 1].trim() !== '') out.push('');
+    out.push(l);
+  });
+  return fixSentenceEnd(out.join('\n'));
+}
+
 function generatePrdMd(prdData) {
   const date = new Date().toISOString().slice(0, 10);
-  return prdHeader(prdData, date) + buildFpSections(prdData);
+  return normalizePrdMd(prdHeader(prdData, date) + buildFpSections(prdData));
 }
   return { parseFpKey, mergePinIntoPrd, prdHeader, generatePrdMd, buildFpSections, fpMeta, renderFp, renderMenuTree };
 });

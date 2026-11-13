@@ -16,7 +16,7 @@ const { execSync, spawn } = require('child_process');
 const fs = require('fs'), path = require('path');
 const PORT = 3799, ROUNDS = 5, HEAL_TIMEOUT_MS = 45000, SLOW_MS = 10000;
 const PRD = process.env.ANNO_PRD || path.join(require('./_archive-dir').existingArchiveDir(), 'prd-data.json');
-const ANNO_DIR = process.env.ANNO_DIR || 'D:/AI/anno-server';
+const ANNO_DIR = process.env.ANNO_DIR || require('path').resolve(__dirname, '../../../anno-server');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const now = () => Date.now();
 

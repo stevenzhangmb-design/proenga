@@ -24,7 +24,7 @@ const QA = __dirname;
 const SERVER = [
   path.join(QA, '..', '..', '..', '..', 'anno-server', 'server.js'),
   path.join(QA, '..', '..', '..', 'anno-server', 'server.js'),
-  'D:/AI/anno-server/server.js',
+  require('path').resolve(__dirname, '../../../anno-server/server.js'),
 ].find(p => { try { return fs.existsSync(p); } catch (_) { return false; } });
 const APORT = 3812, WPORT = 8975, DPORT = 9475;
 const FP_KEY = 'OMS.充值', EDIT_MARKER = '字段规范MARKER编辑ABC';

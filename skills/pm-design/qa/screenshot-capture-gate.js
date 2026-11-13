@@ -22,7 +22,7 @@ const QA = __dirname;
 const SERVER = [
   path.join(QA, '..', '..', '..', '..', 'anno-server', 'server.js'),
   path.join(QA, '..', '..', '..', 'anno-server', 'server.js'),
-  'D:/AI/anno-server/server.js',
+  require('path').resolve(__dirname, '../../../anno-server/server.js'),
 ].find(p => { try { return fs.existsSync(p); } catch (_) { return false; } });
 const APORT = 3815, WPORT = 8978, DPORT = 9478;
 

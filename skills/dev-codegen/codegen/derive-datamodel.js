@@ -29,10 +29,15 @@ const BASE_GLO = {
 const glo = Object.assign({}, BASE_GLO, GLO);
 const warn = [];
 
-function toCol(zh) {
+/* 多语原型里 menu_name 等可能是 {zh,en,pt} 对象 → 取中文，别拼出 [object Object] */
+function _txt(v) { if (v == null) return ''; if (typeof v === 'string') return v; if (typeof v === 'object') return _txt(v.label != null ? v.label : (v.zh != null ? v.zh : (v.en != null ? v.en : v.pt))); return String(v); }
+function toCol(zh, idx) {
   if (glo[zh]) return glo[zh];
-  warn.push(`字段「${zh}」无英文列名映射 → 用占位·需人补词表`);
-  return 'field_' + Buffer.from(zh).toString('hex');   // ★ 全名 hex·不截断：旧 slice(0,8) 只取前4字节→同前缀中文名(审核结果/审核时间/审核原因)全撞成 fieldE5aea1e6→Java 重复字段编译错。根因修。
+  // 纯英文字段名（Key/CPF/CNPJ/XML）直接规范化
+  if (/^[A-Za-z][A-Za-z0-9 _\-\/.]*$/.test(zh)) { const t = zh.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''); if (t && /^[a-z]/.test(t)) return t; }
+  warn.push(`字段「${zh}」无英文列名映射 → 用占位 field_${idx}·需人补词表`);
+  // §2026-11-13：占位改为 field_<本实体内序号>（确定性·可读·不撞名），中文名保留在 comment；不再 hex 编码中文
+  return 'field_' + idx;   // 序号在实体内唯一 → 不会像旧 hex 截断那样撞名（Java 重复字段）
 }
 function maxLen(constraint) {
   let m = constraint.match(/(\d+)\s*[~～至\-]\s*(\d+)\s*(?:位|字符|个字)/); if (m) return +m[2];
@@ -95,16 +100,18 @@ for (const [fpk, fp] of Object.entries(fps)) {
   // 实体英文名：page_key 去掉 system 前缀与 list/detail/add/edit 后缀
   let ent = pageKey.replace(/^[A-Za-z]+-/, '').replace(/-(list|detail|view|add|edit|manage).*$/i, '').replace(/[^A-Za-z0-9]+/g, '') || 'entity';
   ent = ent.replace(/(^\w)/, m => m.toLowerCase());
-  const b = buckets[ent] || (buckets[ent] = { system: fp.system || '', module: (fp.menu_name || fp.fp_name || ''), pageKey, fields: new Map() });
+  const b = buckets[ent] || (buckets[ent] = { system: fp.system || '', module: _txt(fp.menu_name) || _txt(fp.fp_name) || '', pageKey, fields: new Map() });
   for (const f of fields) if (!b.fields.has(f.name)) b.fields.set(f.name, f);
 }
 
 const enums = {}, entities = {}, functionPoints = {};
 for (const [ent, b] of Object.entries(buckets)) {
   const cols = [];
+  let _fi = 0;
   for (const f of b.fields.values()) {
+    _fi++;
     const d = deriveType(f.typeRaw, f.constraint);
-    const _colName = toCol(f.name);
+    const _colName = toCol(f.name, _fi);
     // ★ 跳过映射到基类保留列的业务字段：id/tenant_id/create_time/update_time 由 TenantBasePO 提供，
     //   再声明会与基类审计字段【重复/遮蔽】（如业务字段「创建时间」→create_time 撞审计 createTime → Java 重复变量编译错）。根因修。
     if (['id', 'tenant_id', 'create_time', 'update_time'].includes(_colName)) continue;

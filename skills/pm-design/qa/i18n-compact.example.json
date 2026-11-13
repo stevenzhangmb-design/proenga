@@ -1,0 +1,23 @@
+{
+  "title": "i18n 紧凑写法示例",
+  "systemName": "I18nDemo",
+  "defaultSystem": "s1",
+  "systems": [{ "key": "s1", "label": "示例" }],
+  "home": { "s1": "p1" },
+  "nav": { "s1": [{ "group": "演示", "items": [["p1", "发票列表"]] }] },
+  "region": "BR", "currency": "BRL", "timezone": "America/Sao_Paulo",
+  "locales": ["zh", "en", "pt"], "defaultLocale": "pt",
+  "pagecfg": {
+    "p1": {
+      "listTitle": "|汇总|Summary|Resumo",
+      "columns": [
+        "|发票账号/CNPJ|Issuer / CNPJ|Emissor / CNPJ",
+        "NCM",
+        { "label": "|税种|Tax|Imposto", "width": 130 }
+      ],
+      "rows": [
+        ["APAUL COM LTDA", "3924.90.00", "ICMS"]
+      ]
+    }
+  }
+}

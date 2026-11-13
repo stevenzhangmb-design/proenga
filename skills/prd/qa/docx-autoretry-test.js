@@ -11,6 +11,7 @@
 process.env.ANNO_DOCX_RETRY_MS = process.env.ANNO_DOCX_RETRY_MS || "400";   // 测试加速：0.4s 一次
 process.env.ANNO_DOCX_MAX_TRIES = process.env.ANNO_DOCX_MAX_TRIES || "30";
 const fs = require("fs"), path = require("path"), os = require("os");
+require("../../_shared/qa/_tmp-sandbox"); // 临时文件进沙盒·退出自动删（铁律·见 _tmp-sandbox.js）
 const { execFileSync } = require("child_process");
 
 const SERVER = process.env.ANNO_SERVER || path.join(__dirname, "..", "..", "..", "..", "anno-server", "server.js");

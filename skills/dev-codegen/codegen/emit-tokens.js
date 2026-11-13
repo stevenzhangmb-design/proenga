@@ -3,7 +3,7 @@
    阶段2 A · 设计令牌导出器 · emit-tokens.js · 零依赖
    ────────────────────────────────────────────────────────────────────────
    出【设计令牌】——tokens.json（结构化）+ tokens.css（:root 变量），供【导出对接料·喂AI】
-   让下游 AI 照这份"长什么样"生成符合默认设计规范(TF OMS·system-design-spec.md §8.0.2 实测)的 UI。
+   让下游 AI 照这份"长什么样"生成符合默认设计规范(某 OMS·system-design-spec.md §8.0.2 实测)的 UI。
    令牌栈无关——任何前端框架都能吃这份色/字/间距/圆角/组件尺寸。
    用法：node emit-tokens.js <outDir> [primaryColor]     默认主色 #3363FF
    ════════════════════════════════════════════════════════════════════════ */
@@ -13,9 +13,9 @@ const outDir = process.argv[2];
 const primary = process.argv[3] || '#3363FF';
 if (!outDir) { console.error('用法: node emit-tokens.js <outDir> [primaryColor]'); process.exit(2); }
 
-// 默认令牌（TF OMS 实测基线·system-design-spec.md §8.0.2）
+// 默认令牌（某 OMS 实测基线·system-design-spec.md §8.0.2）
 const tokens = {
-  _source: 'TF OMS 默认设计规范·实测基线(system-design-spec.md §8.0.2)·栈无关',
+  _source: '某 OMS 默认设计规范·实测基线(system-design-spec.md §8.0.2)·栈无关',
   color: {
     primary, warning: '#F2AC3A', success: '#16af78', danger: '#e15b5b',
     'text-primary': '#333333', 'text-body': '#444444', 'text-secondary': '#909399', 'text-header-gray': '#999999',

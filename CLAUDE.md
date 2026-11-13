@@ -37,8 +37,7 @@ try { Invoke-WebRequest -Uri http://localhost:3799/anno-queue -TimeoutSec 2 -Use
 $candidates = @(
   (Join-Path (Split-Path $PWD -Parent) 'anno-server\server.js'),   # 1. ai-rules 同级
   (Join-Path $PWD 'anno-server\server.js'),                         # 2. 当前目录子级
-  (Join-Path $HOME 'anno-server\server.js'),                        # 3. 用户主目录
-  'D:\AI\anno-server\server.js'                                     # 4. 历史默认路径
+  (Join-Path $HOME 'anno-server\server.js')                         # 3. 用户主目录
 )
 $found = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 ```

@@ -78,8 +78,13 @@ const checks = [
             const tag = m[0]; if (!/layout="[^"]*\bsizes\b/.test(tag)) return true;
             return /v-model:page-size=/.test(tag) && !/:page-size="\d/.test(tag); }],
   ['页面 min-width 1350px',   () => /min-width:\s*1350px/.test(sk)],
+  /* 🔴 2026-10-02 实测事故：actIcon() 返回的是 SVG 字符串，哪条分支写成文本插值 {{ actIcon(a) }}，
+     那里就把 "<svg viewBox…" 当字打印出来，在窄操作列里挤成一条竖排乱码（卡片式表格分支中招，
+     标准 el-table 分支早已是 v-html，所以长期没人发现）。此处硬断言：骨架里不许有 actIcon 的文本插值。 */
+  ['行操作图标必须 v-html（禁 {{ actIcon() }} 文本插值）',
+    () => !/\{\{\s*actIcon\s*\(/.test(sk)],
   /* 🔴 2026-07-12 登录态实测校正（真系统 zgl-search-box）：旧值(210/564/112px + #f7f8fa)来自 WMS basic.scss，
-     与 TF OMS 不符。真系统筛选区【无 label】、白底、字段 285px、日期 427px、padding 16px 16px 0。 */
+     与 某 OMS 不符。真系统筛选区【无 label】、白底、字段 285px、日期 427px、padding 16px 16px 0。 */
   ['筛选区 输入/下拉 285px',   () => /\.search-box \.el-input\{width:285px/.test(sk) && /\.search-box \.el-select\{width:285px/.test(sk)],
   ['筛选区 日期范围 427px',    () => /\.search-box \.el-date-editor\{width:427px/.test(sk)],
   ['筛选区 无 label(真系统靠占位符)', () => /\.search-box \.el-form-item__label\{display:none/.test(sk)],
@@ -98,8 +103,13 @@ const checks = [
   ['骨架 稳定键 K()（:key 不随语言变）', () => /const K\s*=\s*v\s*=>\s*isI18n\(v\)/.test(sk)],
   ['骨架 setLang + localStorage 记忆', () => /function setLang\([\s\S]{0,300}?__proto_lang__/.test(sk)],
   /* 窗口放宽到 3000：顶栏右侧现有 5 个控件（语言/菜单模式/消息/头像/标注），间距天然变长。
-     精确顺序由下方「顶栏顺序」断言把关，本条只保证它们都在 .right 里、不是浮层。 */
-  ['骨架 切换器在顶栏右侧(不浮层)', () => /<div class="right">[\s\S]{0,400}?class="langsw"[\s\S]{0,3000}?class="anno-sw"/.test(sk)],
+     精确顺序由下方「顶栏顺序」断言把关，本条只保证它们都在 .right 里、不是浮层。
+     2026-10-07：两段窗口按【实测字符距】放宽（node 量得 .right→langsw=609、langsw→anno-sw=3955）：
+       ① 400→900：v4.2 新增 views[].topbarExtra（视图自带顶栏按钮如「? 帮助」）合法地在 .right 与 langsw 间。
+       ② 3000→4600：langsw/menusw/bell/user 都是 el-dropdown，内联菜单项标签变多、markup 变长，5 控件间距天然撑到 ~3955。
+     结构正确性（5 控件在 .right 内、固定顺序）由下方「顶栏顺序」断言(langsw→menusw→bell→user→anno-sw 有序)独立把关(该断言绿)，
+     本条只保证 langsw 与 anno-sw 都在 .right 簇内、非浮层；按实测放宽窗口容纳合法内容，不削弱校验。 */
+  ['骨架 切换器在顶栏右侧(不浮层)', () => /<div class="right">[\s\S]{0,900}?class="langsw"[\s\S]{0,8000}?class="anno-sw"/.test(sk)],   /* 2026-11-12 窗口 4600→8000：v8.40 铃铛消息浮层(.bell-pop)就地放在顶栏右侧 .right 里，多出约 400 字符；判定意图（切换器在顶栏右侧、不是浮层）不变 */
   /* §5.3g 双菜单模式（2026-07-12 用户定）：顶部导航 ⇄ 左侧菜单可切换；
      切换器必须在【语言切换器 与 标注开关 之间】，且两种模式骨架都要真有 */
   ['规范有 §5.3g 双菜单模式可切换',   () => /双模式可切换（顶部导航\s*⇄\s*左侧菜单）/.test(spec)],
@@ -135,13 +145,18 @@ const checks = [
   ['骨架 开标注自动切回中文',          () => /if\(v\s*&&\s*ZH_OK\s*&&\s*lang\.value!=='zh'\)\{\s*setLang\('zh'\)/.test(sk)],
   ['骨架 标注开启期间锁定语言',        () => /function uiSetLang\([\s\S]{0,160}?annoOn\.value[\s\S]{0,80}?return/.test(sk)],
   ['骨架 切换器暴露的是 uiSetLang(非裸 setLang)', () => /setLang:uiSetLang/.test(sk)],
-  ['骨架 custom 复杂页也走 L()',  () => /v-html="L\(cfg\.custom\)"/.test(sk)],
+  /* 2026-10-07：断言由 cfg.custom 改为 curCustom —— 骨架已重构成用 pick2('custom') 的 curCustom（支持按形态/状态/页签整块换），
+     渲染处仍 v-html="L(curCustom)"（line~2699），L() 照旧应用、行为正确。旧断言写死 cfg.custom 是重构前的过期模式。兼容两种写法。 */
+  ['骨架 custom 复杂页也走 L()',  () => /v-html="L\((curCustom|cfg\.custom)\)"/.test(sk)],
   ['骨架 非中文 label 自适应宽(葡语不换行)', () => /html:not\(\[lang\^="zh"\]\)[\s\S]{0,120}?el-form-item__label\s*\{[^}]*width:\s*auto[^}]*min-width:\s*112px/.test(sk)],
   /* 🔴 2026-08-13：换页必须退出详情页，否则上一页的详情盖住新页面（旧骨架 go() 不重置 detailData 时实测踩到，
      曾在注入层打补丁兜底；根治在骨架 go() 里 detailData.value=null 必须先于 currentPage.value=id）。
      菜单三种导航（侧栏 @select="go" / 顶栏·折叠栏 @click="go(...)"）全走 go()，此断言防回归。 */
+  /* 2026-09-06 修正则盲区：原来写 /function go\(id\)\{[^}]*detailData…[^}]*currentPage…/，
+     而 [^}] 跨不过 go() 里 'page@panel' 那个 if 分支的大括号 —— 实现明明是对的却一直判红。
+     改成直接盯这两句的相邻关系：中间只许有别的赋值和注释，不许隔着大括号（即必须在同一句块里、且清详情在前）。 */
   ['骨架 换页 go() 先清详情态再切页（detailData→null 在 currentPage 之前·防详情盖新页）',
-    () => /function go\(id\)\{[^}]*detailData\.value=null[^}]*currentPage\.value=id/.test(sk)],
+    () => /function go\(id\)\{[\s\S]*?detailData\.value=null[^{}]*currentPage\.value=id/.test(sk)],
 ];
 
 console.log('骨架↔规范同步闸 · 断言「规范写死的实现值，骨架里必须真有」');

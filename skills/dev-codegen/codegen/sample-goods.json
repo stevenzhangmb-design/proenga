@@ -1,5 +1,5 @@
 {
-  "_note": "阶段2 A 生成器输入样例 · 商品模块 data_model（来自 TF WMS 新增商品实测字段·DB契约为推导建议）",
+  "_note": "阶段2 A 生成器输入样例 · 商品模块 data_model（来自 某 WMS 新增商品实测字段·DB契约为推导建议）",
   "data_model": {
     "enums": {
       "goods_status": { "comment": "商品审核状态", "values": [

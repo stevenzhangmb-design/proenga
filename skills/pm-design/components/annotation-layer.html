@@ -54,6 +54,24 @@
     .anno-bar { display:flex; align-items:center; flex-wrap:wrap; gap:8px;
       background:#EEF2FF; border:1px solid #C7D2FE; border-radius:6px; padding:8px 12px; margin-bottom:12px; }
     .anno-bar-label { font-size:12px; color:var(--primary); font-weight:600; margin-right:4px; }
+    /* 1.11.7 宿主顶栏的标注工具条（.anno-sw）按【实际剩余宽度】自适应（作废 1.11.4 的 1799/1800 固定断点：
+       剩余宽度取决于顶部菜单/系统页签有多少个，不只看窗口宽）。脚本 _annoFitToolbar 实测后三选一：
+       ① 一行完整文字 ② 一行紧凑（小字号+短文字）③ 不常用的收进【更多 ▾】下拉（标注开关+复制已圈功能+导出分享版常显）。
+       永远一行、不撑高顶栏、"标注"两字不折行、不压顶部菜单、不出横向滚动条。 */
+    .anno-sw { flex-wrap:nowrap !important; flex-shrink:0; white-space:nowrap; }
+    .anno-sw > span, .anno-sw > .el-switch, .anno-sw > .el-button { flex-shrink:0; white-space:nowrap; }
+    .anno-sw > [data-anno-ov] { display:none !important; }
+    .anno-sw.anno-fit-compact { gap:4px !important; }
+    .anno-sw.anno-fit-compact > .el-button { height:24px; padding:0 7px; font-size:12px; margin-left:0 !important; }
+    .anno-sw.anno-fit-compact > .el-button[data-anno-short] > span { display:none; }
+    .anno-sw.anno-fit-compact > .el-button[data-anno-short]::after { content:attr(data-anno-short); }
+    .anno-sw > .anno-more-btn { flex-shrink:0; margin-left:0 !important; }
+    .anno-sw > .anno-more-btn[hidden] { display:none !important; }
+    .anno-more-pop { position:fixed; z-index:4000; min-width:150px; background:#fff; border:1px solid #E4E7ED; border-radius:4px;
+      box-shadow:0 6px 16px rgba(0,0,0,.14); padding:4px 0; font-size:13px; color:#333; }
+    .anno-more-pop > div { padding:7px 16px; cursor:pointer; white-space:nowrap; line-height:20px; }
+    .anno-more-pop > div:hover { background:#F5F7FA; color:var(--el-color-primary, #409EFF); }
+    .anno-more-pop > div.is-disabled { color:#c0c4cc; cursor:not-allowed; background:none; }
     .anno-chip { display:inline-flex; align-items:center; gap:5px; background:#fff; border:1px solid #C7D2FE;
       border-radius:14px; padding:3px 10px 3px 6px; font-size:12px; color:var(--text-1); cursor:pointer; transition:all .15s; }
     .anno-chip:hover { border-color:var(--primary); color:var(--primary); }
@@ -304,7 +322,7 @@
 
   <!-- ════════ 标注号覆盖层（蓝湖/Zeplin 风格方形标注号）════════ -->
   <div v-if="showPins && annoPins.length" class="pin-layer">
-    <div v-for="pin in annoPins.filter(p => !p.pageKey || p.pageKey === sys + '-' + page)" :key="pin.id"
+    <div v-for="pin in annoPins.filter(p => (!p.pageKey || p.pageKey === sys + '-' + page) && (!p.anchor || p._vis === true))" :key="pin.id"
       class="anno-pin"
       :class="{ 'is-dragging': pin.isDragging, 'is-selected': activePinId===pin.id, 'is-new': pin._isNew }"
       :style="{ left: (pin.docX!=null ? pin.docX - pinScrollX : pin.x) + 'px', top: (pin.docY!=null ? pin.docY - pinScrollY : pin.y) + 'px' }"
@@ -552,7 +570,7 @@
   </div>
 
   <!-- 已圈定功能清单（B方案：复制功能 → 粘到 AI 对话框生成 PRD）-->
-  <el-dialog v-model="scopedListOpen" title="已圈定功能清单" width="760px" append-to-body modal-class="anno-panel-top">
+  <el-dialog v-model="scopedListOpen" title="已圈定功能清单" width="860px" append-to-body modal-class="anno-panel-top">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
       <span style="font-size:13px;color:#888">共 {{ scopedFunctions.length }} 个（按 1、2、3 排序）。复制后粘到 AI 对话框生成 PRD。</span>
       <span style="display:flex;gap:6px">
@@ -571,9 +589,9 @@
           <el-button link type="primary" size="small" class="fn-edit-btn" @click="openRename(s.row._pin)" title="编辑功能名">✏️ 改名</el-button>
         </template>
       </el-table-column>
-      <el-table-column label="状态" width="90" align="center">
+      <el-table-column label="状态" width="160" align="center">
         <template #default="s">
-          <el-tag :type="s.row.status==='已生成'?'success':'info'" effect="light" size="small">{{ s.row.status }}</el-tag>
+          <el-tag :type="s.row.status==='待生成'?'info':'success'" effect="light" size="small">{{ s.row.status }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="操作" width="118" align="center">
@@ -612,7 +630,7 @@
 (function mountAnnotationLayer() {
   /* ★ 版本戳（闸②）：每次改动本组件引擎/渲染逻辑必 bump。AI 打开旧原型时 grep 此常量与
      标准件当前版本比对，不一致 = 标注层过期 → 提示重新注入 + 重跑 qa/regression-check.js。*/
-  window.__ANNO_LAYER_VERSION__ = '1.10.7';  /* 2026-09-01 子进程装配结果可见：新增 SSE 'assemble-status' 监听→docx/流程图【降级】时弹提示(缺pandoc/Word占用/缺Chrome·可补),杜绝静默降级用户无感知。服务端回路:assembleArtifacts 返回状态→assemble-once POST /anno-assemble-status→常驻广播 SSE。成功不弹(prd-updated 已报)。—— 1.10.6 ㊴猜名器收紧：点/框选取名就地过滤三类坏名(共享 _isBadFnName·与anno-server checkFnName同判定)——①点选守卫补字母+数字编号(PTKFX…)/营销句→转画框 ②框选标题采集滤营销句(连接你的商店体验更多功能) ③最终兜底_bad用同源判定。当场少产坏名·仍留✏️改名+422兜底。—— 1.10.5b ㊴工程命名硬卡·浏览器端：_syncPinToServer 收到 anno-server 422(坏名拒写)时，弹原因提示+自动打开改名框，用户一步改成合格功能名。配套 anno-server /anno-inject 落名前 checkFnName 拒纯编号/功能区/营销句。—— 1.10.4 修改名按钮隐形：pin弹窗+已圈定功能清单的✏️改名按钮原用<el-icon><edit-pen>，依赖EP图标UMD包(ElementPlusIconsVue)。离线原型多数没打图标包→window.ElementPlusIconsVue undefined→图标注册不上→按钮渲染成空白(DOM在·可点·但用户看不见→以为不能改名)。实机截图坐实(跨境ERP-offline)。改为纯文字「✏️ 改名」(emoji系统字体全平台可见·零图标依赖)·清单列label改「改名」宽72。—— 1.10.3 选栈弹窗改真下拉(ElMessageBox+VNode·el-select)：前端Vue/React × 后端Java/Node/Python 一个弹窗选·Python 可按钮选了。—— 1.10.2 多栈后端：一键生成代码弹窗加②后端栈选择(Java+Spring / Node+NestJS)·传 beStack·前后端各双栈=4组合。—— 1.10.1 加前端选栈(Vue/React)。 ——  /* 2026-08-06b 一键生成代码升级为【选前端栈】(Vue3+EP / React+AntD·POST feStack·扇出多栈)；自己的栈引导走导出对接料。—— 1.10.0 Route B 两按钮：新增【导出对接料·喂AI】(exportDevkitVersion→/anno-devkit·出openapi+schema+令牌+提示词包·喂AI任意栈) + 【一键生成代码】(generateCodeVersion→/anno-codegen·弹选栈·默认栈直接出前后端骨架代码/自己的栈引导走对接料)·桥暴露 exportDevkit/generateCode。—— 1.9.21 2026-07-19c 修收口守卫误伤框选：旧守卫对【框选】也 return→收发存汇总区框选算出数字/单字名→整框被吞·无气泡·已采内容白丢。改为守卫只对【点选】转画框，【框选】(带zoneTexts/zoneGroups)兜底名"功能区"照常弹气泡。深测(收发存上半区框选无气泡)定位·根因修。 ——
+  window.__ANNO_LAYER_VERSION__ = '1.11.7';  /* 2026-11-13 顶栏标注工具条按实际剩余宽度自适应（一行完整→一行紧凑→不常用的收进【更多 ▾】），作废 1799/1800 固定断点，任何宽度都不超出顶栏、不出横向滚动条。 —— 2026-11-13 PRD 标注更新时，旧版 PRD 生成的标注（带 prdSection）一起换掉，只保留用户自己圈选的（根治页面上混入旧标注、点开没内容）。 —— 2026-11-13 写回(/anno-persist)和导出分享版(/anno-embed)带上当前文件名 fileName，同目录有同名系统的旧原型时只改当前打开的这个。 —— 2026-11-13 【复制已圈功能】按 PRD 生成的标注读自带的归属目录(menuPath)、身份(PRD 章节号)、锚点文字，状态显示“已有字段规范/用例规则”；【恢复标注】没有清空备份时从文件里烤入的 PRD 标注恢复(保留自己圈选的·prd-sig 同步)；顶栏标注工具条在 1366/1440 宽排成两行紧凑块不再超出右边。 —— 2026-11-13 pin.anchor 支持 notTab（这些页签选中时不显示）。 —— 2026-11-13 标注号贴按钮右侧上下居中（表格里竖排的操作链接不再压到上一行字）。 —— 2026-11-13 标注锚点再认 行上【更多▾】(el-tooltip__trigger)、普通 <button>、数量紧跟文字的状态（已开票21）。 —— 2026-11-13 按 PRD 自动生成的标注跟着按钮走（pin.anchor：texts+tab·找不到锚点就不显示·换宽度/切页签自动跟随·老标注不受影响）。 —— 2026-11-12 导出保存位置由用户选（根治「导出对接料直接写进固定目录 archive\对接料\<系统>、用户没法选」）：【导出对接料】【一键生成代码】改走 _exportToFolder——①先弹 showDirectoryPicker(手势内·上次文件夹存 IndexedDB 作 startIn 默认·每次可换) ②anno-server returnContent 返回全部文件(base64) ③页面写进「所选文件夹\<系统>-对接料|-生成代码」；浏览器无该 API/框弹不出 → 小框填绝对路径(服务端校验绝对+自动创建)；真取消 → 不写任何文件。提示显示实际所用文件夹。服务端无目标=400，禁静默退回固定目录。防线 qa/export-target-gate.js。【导出分享版】本就弹另存框/退回浏览器下载，未改。以下为 1.10.10 说明： */  /* 2026-11-10 去掉「PRD 的 Word 没生成」弹窗（用户明令不再弹）。以下为 1.10.9 说明： */  /* 2026-09-10 生成PRD提速：【复制已圈功能】带出去的提示词加两条——①复用 annotation-templates.md 已定义的固定件(操作日志表头§9/查询类固定句§27/通知4列表头§38)、只写业务槽位·不重打样板；②多功能点并行生成(Claude Code扇子agent)+增量(anno-ai-queue只生成新圈/改过的)。质量不降(固定件本是标准件)，速度提。三产物分离:①原型assemble--fast(85ms) ②PRD此处提速 ③data_model确定性脚本秒级。 —— 1.10.8 2026-09-09 对接料/一键生成代码 解耦 PRD：两按钮不再因"没圈选/没生成 PRD"拒绝——有 PRD 字段规范走精确档，否则把原型内嵌 PAGECFG 一并 POST(pagecfg)，anno-server 走 derive-from-prototype 出基线 data_model → 同一套 emit-* 出料/出码。成功提示区分"基线档(据原型结构推断·待PRD精化)"。彼此独立:测试用例/售前/手册同规则(见 _shared/downstream-skill-conventions.md §5)。 —— 1.10.7 2026-09-01 子进程装配结果可见：新增 SSE 'assemble-status' 监听→docx/流程图【降级】时弹提示(缺pandoc/Word占用/缺Chrome·可补),杜绝静默降级用户无感知。服务端回路:assembleArtifacts 返回状态→assemble-once POST /anno-assemble-status→常驻广播 SSE。成功不弹(prd-updated 已报)。—— 1.10.6 ㊴猜名器收紧：点/框选取名就地过滤三类坏名(共享 _isBadFnName·与anno-server checkFnName同判定)——①点选守卫补字母+数字编号(PTKFX…)/营销句→转画框 ②框选标题采集滤营销句(连接你的商店体验更多功能) ③最终兜底_bad用同源判定。当场少产坏名·仍留✏️改名+422兜底。—— 1.10.5b ㊴工程命名硬卡·浏览器端：_syncPinToServer 收到 anno-server 422(坏名拒写)时，弹原因提示+自动打开改名框，用户一步改成合格功能名。配套 anno-server /anno-inject 落名前 checkFnName 拒纯编号/功能区/营销句。—— 1.10.4 修改名按钮隐形：pin弹窗+已圈定功能清单的✏️改名按钮原用<el-icon><edit-pen>，依赖EP图标UMD包(ElementPlusIconsVue)。离线原型多数没打图标包→window.ElementPlusIconsVue undefined→图标注册不上→按钮渲染成空白(DOM在·可点·但用户看不见→以为不能改名)。实机截图坐实(跨境ERP-offline)。改为纯文字「✏️ 改名」(emoji系统字体全平台可见·零图标依赖)·清单列label改「改名」宽72。—— 1.10.3 选栈弹窗改真下拉(ElMessageBox+VNode·el-select)：前端Vue/React × 后端Java/Node/Python 一个弹窗选·Python 可按钮选了。—— 1.10.2 多栈后端：一键生成代码弹窗加②后端栈选择(Java+Spring / Node+NestJS)·传 beStack·前后端各双栈=4组合。—— 1.10.1 加前端选栈(Vue/React)。 ——  /* 2026-08-06b 一键生成代码升级为【选前端栈】(Vue3+EP / React+AntD·POST feStack·扇出多栈)；自己的栈引导走导出对接料。—— 1.10.0 Route B 两按钮：新增【导出对接料·喂AI】(exportDevkitVersion→/anno-devkit·出openapi+schema+令牌+提示词包·喂AI任意栈) + 【一键生成代码】(generateCodeVersion→/anno-codegen·弹选栈·默认栈直接出前后端骨架代码/自己的栈引导走对接料)·桥暴露 exportDevkit/generateCode。—— 1.9.21 2026-07-19c 修收口守卫误伤框选：旧守卫对【框选】也 return→收发存汇总区框选算出数字/单字名→整框被吞·无气泡·已采内容白丢。改为守卫只对【点选】转画框，【框选】(带zoneTexts/zoneGroups)兜底名"功能区"照常弹气泡。深测(收发存上半区框选无气泡)定位·根因修。 ——
      2026-07-19b 收口守卫：点选任何分支漏网产出【空名/纯数字/纯值】(如分页数字<li>1、纯货币格)→ _showTrigger 不弹空气泡、转画框模式。深测发现巴西发票分页"1"弹空名气泡→单一收口兜住所有取名分支·任意APP/网站/B端通用。 ——
      2026-07-19 根治「框选把标注层自己弹的『✏️ 画框模式』提示条(.el-message)几何相交当区域内容抓进去→污染PRD」：
      两处框内文本扫描(_scanEl / 几何确定性补全)的排除选择器补上 EP 瞬时浮层 .el-message/.el-notification/.el-message-box/.el-popper/.el-loading-mask，
@@ -1373,12 +1391,16 @@
         const fp = fpKey ? ((PRD.function_points || {})[fpKey]) : null;
         const _hasDraft = fp && ((fp._draft_useCaseRules && fp._draft_useCaseRules.trim()) || (fp._draft_fieldSpecs && fp._draft_fieldSpecs.trim() && !/^无[。.]?$/.test(fp._draft_fieldSpecs.trim())));
         const generated = !!(_hasDraft || (fp && fp.field_specs && fp.field_specs.groups && fp.field_specs.groups.length) || (fp && fp.use_cases && Object.keys(fp.use_cases).length));  /* 状态看 prd-data 有内容：anno-server 写的 _draft_ 草稿键(主) 或 旧结构化键(兼容)；不看 PIN 草稿 */
+        /* 1.11.4 按 PRD 生成的标注（fromPrd）自带 menuPath / prdSection / fieldSpecs / useCaseRules：归属目录、身份、状态直接读 pin 本身 */
+        const _isPrdPin = !!(p.fromPrd || (!p.pageKey && (p.menuPath || p.prdSection)));
+        const _pinHasContent = !!((p.fieldSpecs && String(p.fieldSpecs).trim()) || (p.useCaseRules && String(p.useCaseRules).trim()));
         return {
           number: p.number,
           name: (p.title || '').replace('功能点：', '').trim() || '（未命名）',
-          fpKey, bound: !!fpKey,
-          /* 归属 = 圈选所在页面的上级菜单（从 prd-data.page_menus 派生，通用·不写死层级）*/
+          fpKey, bound: !!fpKey, prdSection: p.prdSection || '', isPrdPin: _isPrdPin,
+          /* 归属 = 圈选所在页面的上级菜单（从 prd-data.page_menus 派生，通用·不写死层级）；PRD 标注 = 它自带的 menuPath */
           view: (() => {
+            if (_isPrdPin && p.menuPath) return String(p.menuPath);
             const pk = p.pageKey || ''; const di = pk.indexOf('-');
             const _sys = di > 0 ? pk.slice(0, di) : '';
             const _pg  = di > 0 ? pk.slice(di + 1) : pk;
@@ -1388,7 +1410,7 @@
             const _sysL = (PRD.system_labels && PRD.system_labels[_sys]) || _sys;
             return _sysL ? (_sysL + ' › ' + menu) : menu;
           })(),
-          status: generated ? '已生成' : '待生成',
+          status: generated ? '已生成' : ((_isPrdPin && _pinHasContent) ? '已有字段规范/用例规则' : '待生成'),
           _pin: p,
         };
       }));
@@ -1399,9 +1421,19 @@
       /* ★ 复制 = 名字(标签) + 身份id + 原型真实内容(改名不变)；让 AI 认 id+内容、不认名字 */
       const lines = list.map((f, i) => {
         const zc = (f._pin && f._pin.zoneContext) || f.zoneContext || {};
-        const _id = f.fpKey || zc.fpKey || zc.zoneId || ('归属:' + (f.view || ''));
-        const _content = [...new Set([...(zc.zoneTexts || []), ...((zc.zoneGroups || []).flatMap(g => [g.title, ...(g.fields || [])]))])].filter(Boolean).join('、');
-        return `${i + 1}. ${f.name}\n   · 身份id（改名不变·AI据此认范围）：${_id}\n   · 原型真实内容（字段/状态/枚举·改名不变）：${_content || '（见原型该区域）'}`;
+        const _p = f._pin || {};
+        const _sec = f.prdSection || _p.prdSection || '';
+        const _id = f.fpKey || zc.fpKey || zc.zoneId || (_sec ? ('PRD ' + _sec) : '') || ('归属:' + (f.view || ''));
+        let _content = [...new Set([...(zc.zoneTexts || []), ...((zc.zoneGroups || []).flatMap(g => [g.title, ...(g.fields || [])]))])].filter(Boolean).join('、');
+        /* 1.11.4 PRD 标注没有 zoneTexts：用它的锚点（页签 + 按钮/文字）当原型真实内容 */
+        if (!_content && _p.anchor) {
+          const _a = _p.anchor;
+          _content = [_a.tab ? ('页签【' + _a.tab + '】') : '', ...((_a.texts || []).map(t => '【' + t + '】'))].filter(Boolean).join('、');
+        }
+        const _extra = (f.isPrdPin || _p.fromPrd)
+          ? `\n   · 归属目录：${f.view || '—'}\n   · 现有内容：${f.status === '待生成' ? '待生成' : ('已有字段规范/用例规则（PRD ' + (_sec || '—') + '），在此基础上核对、优化')}`
+          : '';
+        return `${i + 1}. ${f.name}\n   · 身份id（改名不变·AI据此认范围）：${_id}\n   · 原型真实内容（字段/状态/枚举·改名不变）：${_content || '（见原型该区域）'}${_extra}`;
       });
       /* ★ 复制到 AI 对话框的文本 = 绑定 prd skill 全部铁律的指令头 + 功能清单。
          设计：①提示词把 AI 绑去读规则原文(不靠记忆/清单) ②列铁律清单当提醒 ③强制跑 deliver-gate 不绿不交。
@@ -1411,6 +1443,8 @@
 '· 业务内容(字段/值/必填/校验/默认值/枚举/流程)一律以【原型】为准、禁臆造；格式一律按【prd 铁律】、不简化不自创。\n' +
 '· 名字仅显示标签(用户可改名/变长短)：一字照下方清单用作 fp_name、禁改名/缩写/合并，按【身份id + 原型真实内容】生成、绝不照名字猜；系统归属按原型真实菜单(OMS/WMS 等)，无"通用"。\n' +
 '· 生成前先问我：部署地区(CN/BR) 与 消息通知清单；其余信息缺失先问、禁臆测。\n' +
+'· 【提速·省重打】7 节里的固定件直接【沿用】skills/pm-design/annotation-templates.md 已定义的（操作日志固定说明语+6行表头 §9 / 查询·查看类固定写"查询/查看不输出操作日志。" §27 / 提示消息表头 / 消息通知固定 4 列表头 §38），禁逐字重新推导重写——只写【业务槽位】。质量不降（固定件本就是标准件），速度更快、格式永远对。\n' +
+'· 【提速·并行+增量】多个功能点【并行生成】（Claude Code 可同时扇多个子 agent 各写一个功能点）；只生成【新圈/改过】的功能点，已生成的不重跑（走 anno-ai-queue 增量）。\n' +
 '· 细则以 skills/prd 规则原文为准（不靠记忆）；生成后自动跑 node skills/pm-design/qa/deliver-gate.js，不绿不交、不让用户当 QA。\n\n' +
 '━━ 圈定功能清单 ━━\n';
       const txt = RULE_HEADER + lines.join('\n');
@@ -1418,7 +1452,7 @@
         .catch(() => { if (window.ElMessage) ElMessage.warning('浏览器限制自动复制，请手动复制'); });
     };
     const _normFn = (o) => (o && o.name !== undefined) ? o
-      : { name: (o.title || '').replace('功能点：', '').trim() || '（未命名）', fpKey: (o.zoneContext && o.zoneContext.fpKey) || o.boundFp || '', zoneContext: o.zoneContext, _pin: o };
+      : ((o && o.fromPrd && scopedFunctions.value.find(f => f._pin === o || (o.id && f._pin && f._pin.id === o.id))) || { name: (o.title || '').replace('功能点：', '').trim() || '（未命名）', fpKey: (o.zoneContext && o.zoneContext.fpKey) || o.boundFp || '', zoneContext: o.zoneContext, _pin: o });   /* 1.11.4 PRD 标注单条复制也带归属目录/状态 */
     const copyScoped      = (item) => { const f = item ? _normFn(item) : null; _copyFnList(f ? [f] : scopedFunctions.value, f ? f.name : '全部'); };
     const copyUngenerated = () => _copyFnList(scopedFunctions.value.filter(f => f.status === '待生成'), '待生成');
     const copySelected    = () => _copyFnList(scopedSelection.value, '选中');
@@ -1469,10 +1503,21 @@
       return true;
     };
     /* ── 恢复标注（杜绝误清空丢数据·点击需二次确认）：①优先还原刚清空的备份(位置+内容精确) ②无备份则从已生成 PRD 重建 ── */
+    /* 1.11.4 文件里烤入的 PRD 标注（fromPrd）+ 它的内容签名；_loadPins 与【恢复标注】共用同一套签名（键 _STORAGE_KEY+'::prd-sig'） */
+    const _bakedPrdPins = () => (Array.isArray(window.__USER_ANNOTATIONS__) ? window.__USER_ANNOTATIONS__ : []).filter(p => p && p.fromPrd);
+    const _prdPinsSig = (baked) => {
+      let h = 0; const str = JSON.stringify(baked.map(p => [p.id, p.title, p.fieldSpecs, p.useCaseRules, p.anchor]));
+      for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+      return 'r2:' + baked.length + ':' + h;   /* r2：1.11.6 改了替换规则（旧版 PRD 标注一起换掉），换前缀让已打开过的浏览器也重新替换一次 */
+    };
     const restoreCleared = () => {
       let raw = null; try { raw = localStorage.getItem(_STORAGE_KEY + '-undo'); } catch(e) {}
       let n = 0, src = '';
+      /* 1.11.4 没有清空备份时，先从文件里烤入的 PRD 标注恢复（只补当前没有的，用户自己圈选的标注原样保留） */
+      const _have = new Set(annoPins.value.map(p => p && p.id));
+      const _bakedMissing = raw ? [] : _bakedPrdPins().filter(p => !_have.has(p.id));
       if (raw) { try { n = (JSON.parse(raw) || []).length; } catch(e) {} src = '上次清空的备份'; }
+      else if (_bakedMissing.length) { n = _bakedMissing.length; src = '原型文件里按 PRD 生成的标注'; }
       else { n = Object.keys((window.__PRD_DATA__ && window.__PRD_DATA__.function_points) || {}).length; src = '已生成的 PRD'; }
       if (!n) { if (window.ElMessage) ElMessage.info('没有可恢复的标注（无清空备份、本地也未生成 PRD）'); return; }
       ElMessageBox.confirm(`确认恢复标注？将从【${src}】重建 ${n} 个功能点标注。`, '恢复标注', {
@@ -1483,6 +1528,20 @@
           try { localStorage.removeItem(_STORAGE_KEY + '-undo'); } catch(e) {}
           hasUndo.value = false;
           if (window.ElMessage) ElMessage.success('已还原 ' + annoPins.value.length + ' 个标注');
+        } else if (_bakedMissing.length) {
+          const baked = _bakedPrdPins();
+          const keepIds = new Set(baked.map(p => p.id));
+          /* 与 _loadPins 同序：用户自己的标注在前、PRD 标注在后，统一重排编号；已在的 PRD 标注保留现状不重复 */
+          const own = annoPins.value.filter(p => !p.fromPrd && !p.prdSection);   /* 只留用户自己圈选的；带 PRD 章节号的是旧版 PRD 生成的标注，一起换掉 */
+          const curPrd = new Map(annoPins.value.filter(p => p.fromPrd).map(p => [p.id, p]));
+          const merged = own.concat(baked.map(p => curPrd.get(p.id) || JSON.parse(JSON.stringify(p))), annoPins.value.filter(p => p.fromPrd && !keepIds.has(p.id)));
+          merged.forEach((p, i) => { p.number = i + 1; });
+          annoPins.value = merged;
+          pinCounter.value = merged.length;
+          try { localStorage.setItem(_STORAGE_KEY + '::prd-sig', _prdPinsSig(baked)); } catch (e) {}
+          _savePins();
+          nextTick(() => { try { window.__annoAnchorTick && window.__annoAnchorTick(); } catch (e) {} });
+          if (window.ElMessage) ElMessage.success('已恢复 ' + _bakedMissing.length + ' 个按 PRD 生成的标注' + (own.length ? '（你自己圈选的 ' + own.length + ' 个保留不动）' : ''));
         } else {
           restoreFromPRD();
         }
@@ -1539,6 +1598,104 @@
       return { method: 'download' };
     };
 
+    /* ── 通用「选保存文件夹」助手（导出对接料 / 一键生成代码 共用·2026-11-12 根治「写死 archive\对接料、用户没法选目录」）──
+       ① 先弹 showDirectoryPicker（手势最新鲜·放在任何 await fetch 之前）；上次选过的文件夹存 IndexedDB，作为 startIn 默认打开位置，用户每次仍可换。
+       ② 选到 → 服务端 returnContent 把全部文件(base64)返回 → 页面写进「所选文件夹\<系统>-对接料」。
+       ③ 浏览器没有该 API(Firefox/Safari) 或框弹不出(瞬时失败) → 弹小框让用户填/粘贴保存目录(绝对路径)，服务端校验并创建后写入；
+          用户在原生框里真点了取消(≥300ms) → 只提示已取消，什么都不写。
+       ⛔ 任何分支都不许静默写到固定目录（export-target-gate 静态断言 + 服务端无目标即 400）。 */
+    const _DIR_DB = 'proenga-export', _DIR_STORE = 'handles', _DIR_KEY = 'lastDir', _LAST_PATH_KEY = 'proenga-export-last-path';
+    let _lastDirHandle = null;   // 页面加载时预读，点按钮时同步可用（不在手势里 await IndexedDB）
+    const _idb = (mode, fn) => new Promise((ok, no) => {
+      try {
+        const rq = indexedDB.open(_DIR_DB, 1);
+        rq.onupgradeneeded = () => { try { rq.result.createObjectStore(_DIR_STORE); } catch (e) {} };
+        rq.onerror = () => no(rq.error);
+        rq.onsuccess = () => { try { const tx = rq.result.transaction(_DIR_STORE, mode); const r = fn(tx.objectStore(_DIR_STORE)); tx.oncomplete = () => { ok(r && r.result); rq.result.close(); }; tx.onerror = () => no(tx.error); } catch (e) { no(e); } };
+      } catch (e) { no(e); }
+    });
+    try { _idb('readonly', s => s.get(_DIR_KEY)).then(h => { if (h && h.kind === 'directory') _lastDirHandle = h; }).catch(() => {}); } catch (e) {}
+    const _rememberDir = (h) => { _lastDirHandle = h; try { _idb('readwrite', s => s.put(h, _DIR_KEY)).catch(() => {}); } catch (e) {} };
+    const _pickDirHandle = async () => {
+      if (!window.showDirectoryPicker) return { unsupported: true, why: 'no-api' };
+      const _t0 = _now();
+      const _open = (startIn) => window.showDirectoryPicker(Object.assign({ id: 'proenga-export', mode: 'readwrite' }, startIn ? { startIn } : {}));
+      try {
+        let handle;
+        try { handle = await _open(_lastDirHandle); }
+        catch (e1) { if (_lastDirHandle && e1 && e1.name === 'TypeError') handle = await _open(null); else throw e1; }   // 上次的文件夹已被删/失效 → 不带默认位置重弹
+        return { handle };
+      } catch (e) {
+        const _dt = _now() - _t0, _name = (e && e.name) || 'unknown';
+        if (_name === 'AbortError' && _dt >= _PICKER_MIN_MS) return { aborted: true };   // 框真弹出来、用户真取消
+        return { unsupported: true, why: _name, dt: Math.round(_dt) };                    // 瞬时失败 = 框弹不出来
+      }
+    };
+    const _b64ToBytes = (b64) => { const bin = atob(b64 || ''); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; };
+    /* 把 [{path:'a/b.json', b64}] 写进 dirHandle/subName/…；返回写入个数 */
+    const _writeFilesToDir = async (dirHandle, subName, contents) => {
+      if (dirHandle.queryPermission && (await dirHandle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
+        if (!dirHandle.requestPermission || (await dirHandle.requestPermission({ mode: 'readwrite' })) !== 'granted') throw Object.assign(new Error('没有这个文件夹的写入权限'), { plain: true });
+      }
+      const root = await dirHandle.getDirectoryHandle(subName, { create: true });
+      let n = 0;
+      for (const f of (contents || [])) {
+        const parts = String(f.path || '').split('/').filter(Boolean);
+        if (!parts.length || parts.some(p => p === '..')) continue;
+        let d = root;
+        for (const seg of parts.slice(0, -1)) d = await d.getDirectoryHandle(seg, { create: true });
+        const fh = await d.getFileHandle(parts[parts.length - 1], { create: true });
+        const w = await fh.createWritable(); await w.write(_b64ToBytes(f.b64)); await w.close(); n++;
+      }
+      return n;
+    };
+    /* 浏览器选不了文件夹时：让用户填/粘贴保存目录（上次填的作默认值） */
+    const _askDirPath = async (title, why) => {
+      let last = ''; try { last = localStorage.getItem(_LAST_PATH_KEY) || ''; } catch (e) {}
+      const reason = why === 'no-api' ? '当前浏览器不支持弹出「选择文件夹」框（Chrome / Edge 支持）。'
+                                      : '浏览器没能弹出「选择文件夹」框（本地双击打开的页面有时会被浏览器限制）。';
+      try {
+        const { value } = await ElMessageBox.prompt(reason + '请填写或粘贴要保存到的文件夹完整路径，文件夹不存在会自动创建。', title, {
+          confirmButtonText: '保存到这里', cancelButtonText: '取消', inputValue: last,
+          inputPlaceholder: navigator.platform && /Win/i.test(navigator.platform) ? '例如 D:\\导出' : '例如 /Users/你的用户名/导出',
+          inputValidator: v => (v && v.trim()) ? true : '请填写保存目录',
+        });
+        return (value || '').trim();
+      } catch (e) { return null; }
+    };
+    /* 统一导出流程：label=按钮名(用于提示)，endpoint，body，loadingMsg，onDone(j, whereText) 生成成功提示 */
+    const _exportToFolder = async ({ label, endpoint, body, loadingMsg, onDone }) => {
+      const pick = await _pickDirHandle();                     // ① 先弹框（不得放在任何 await fetch 之后）
+      if (pick.aborted) { ElMessage.info('已取消' + label + '，没有写入任何文件'); return; }
+      let targetDir = null;
+      if (!pick.handle) {                                       // ③ 兜底：用户填路径
+        targetDir = await _askDirPath(label + ' · 选择保存位置', pick.why);
+        if (!targetDir) { ElMessage.info('已取消' + label + '，没有写入任何文件'); return; }
+      }
+      const loading = ElMessage({ message: loadingMsg, type: 'info', duration: 0 });
+      let j;
+      try {
+        const r = await fetch('http://localhost:3799' + endpoint, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.assign({}, body, pick.handle ? { returnContent: true } : { targetDir }))
+        });
+        j = await r.json();
+      } catch (e) { loading.close(); ElMessage({ message: label + '失败：需先启动 anno-server（localhost:3799）', type: 'error', duration: 6000 }); return; }
+      if (!j || !j.ok) { loading.close(); ElMessage({ message: label + '失败：' + ((j && j.error) || '未知原因'), type: 'error', duration: 8000 }); return; }
+      let where;
+      if (pick.handle) {
+        try { await _writeFilesToDir(pick.handle, j.subName, j.contents); }
+        catch (e) { loading.close(); ElMessage({ message: label + '失败：写入所选文件夹出错（' + ((e && e.plain) ? e.message : ((e && e.name) === 'NotAllowedError' ? '浏览器没有获得写入权限' : (e && e.message) || e)) + '）', type: 'error', duration: 8000 }); return; }
+        _rememberDir(pick.handle);
+        where = '你选的文件夹【' + pick.handle.name + '】里的【' + j.subName + '】';
+      } else {
+        try { localStorage.setItem(_LAST_PATH_KEY, j.baseDir || targetDir); } catch (e) {}
+        where = j.outDir;
+      }
+      loading.close();
+      ElMessage({ message: onDone(j, where), type: 'success', duration: 11000 });
+    };
+
     /* ── 导出分享版：嵌入全量定位 pin + 烤只读 → 弹框让用户【选保存位置】(或下载)，发给别人只读看/上传静态托管 ── */
     const exportShareVersion = async () => {
       const pins = annoPins.value || [];   // ①②：0 个标注也照导——分享的是原型只读副本，标注只是可选附加
@@ -1550,7 +1707,7 @@
         /* ② 再取内容 */
         const r = await fetch('http://localhost:3799/anno-embed', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pins, systemName: sys, returnContent: true })  // 让服务端把内容返回、由浏览器写入
+          body: JSON.stringify({ pins, systemName: sys, returnContent: true, fileName: (()=>{try{return decodeURIComponent((location.pathname||'').split('/').pop()||'')}catch(e){return ''}})() })  // 让服务端把内容返回、由浏览器写入；fileName=只处理当前打开的这个文件
         });
         const j = await r.json();
         if (!j || !j.ok) { ElMessage.error('导出失败：' + ((j && j.error) || '未知')); return; }
@@ -1578,24 +1735,30 @@
 
     /* ── 导出对接料·喂AI（A·Route B 左线·不出码）：prd-data → openapi+schema+令牌+提示词包 → 喂用户自己的 AI 出任意栈代码 ── */
     const exportDevkitVersion = async () => {
-      const prd = window.__PRD_DATA__, sys = (prd && prd.system_name) || '';
-      if (!prd || !prd.function_points) { ElMessage.warning('原型还没有 PRD 数据——先圈选功能生成 PRD 再导出对接料'); return; }
-      const loading = ElMessage({ message: '正在导出对接料（openapi + schema + 设计令牌 + 提示词包）…', type: 'info', duration: 0 });
-      try {
-        const r = await fetch('http://localhost:3799/anno-devkit', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ systemName: sys, prdData: prd })
-        });
-        const j = await r.json(); loading.close();
-        if (!j || !j.ok) { ElMessage.error('导出对接料失败：' + ((j && j.error) || '未知')); return; }
-        ElMessage({ message: '✅ 对接料已导出（' + j.count + ' 个文件）→ ' + j.outDir + '　把这包喂给你的 AI（Cursor/Codex/…）即可生成【任意技术栈】代码。', type: 'success', duration: 11000 });
-      } catch (e) { loading.close(); ElMessage({ message: '导出对接料失败：需先启动 anno-server（localhost:3799）', type: 'error', duration: 6000 }); }
+      const prd = window.__PRD_DATA__ || {}, sys = (prd && prd.system_name) || '';
+      const pagecfg = (typeof PAGECFG !== 'undefined') ? PAGECFG : (window.PAGECFG || null);   // 兜底数据源：原型结构·没 PRD/没圈选也能出
+      /* 解耦：导出对接料与「是否生成过 PRD/圈选」无关。有 PRD 字段规范→精确档；否则用原型 PAGECFG→基线档。两者皆无才拦。 */
+      if ((!prd.function_points || !Object.keys(prd.function_points).length) && (!pagecfg || !Object.keys(pagecfg).length)) {
+        ElMessage.warning('这个原型既没有 PRD 数据、也没有可识别的列表页结构（PAGECFG）——无法导出对接料'); return;
+      }
+      /* 保存位置由用户选（_exportToFolder：选文件夹框 → 不支持就填路径）·禁写死 archive/对接料 */
+      await _exportToFolder({
+        label: '导出对接料', endpoint: '/anno-devkit', body: { systemName: sys, prdData: prd, pagecfg },
+        loadingMsg: '正在导出对接料（openapi + schema + 设计令牌 + 提示词包）…',
+        onDone: (j, where) => '✅ 对接料已导出（' + j.count + ' 个文件）'
+          + (j.source === 'prototype' ? '（基线档·据原型结构推断字段类型/枚举·喂 AI 时可让它按业务复核）' : '')
+          + '→ ' + where + '　把这包喂给你的 AI（Cursor/Codex/…）即可生成【任意技术栈】代码。',
+      });
     };
 
     /* ── 一键生成代码（B·Route B 右线·Proenga 自己出码）：弹选栈 → 默认栈直接生成 / 自己的栈引导走 A ── */
     const generateCodeVersion = async () => {
-      const prd = window.__PRD_DATA__, sys = (prd && prd.system_name) || '';
-      if (!prd || !prd.function_points) { ElMessage.warning('原型还没有 PRD 数据——先圈选功能生成 PRD 再生成代码'); return; }
+      const prd = window.__PRD_DATA__ || {}, sys = (prd && prd.system_name) || '';
+      const pagecfg = (typeof PAGECFG !== 'undefined') ? PAGECFG : (window.PAGECFG || null);   // 兜底数据源：原型结构·没 PRD/没圈选也能出码
+      /* 解耦：一键生成代码与「是否生成过 PRD/圈选」无关。有 PRD 字段规范→精确档；否则用原型 PAGECFG→基线档。两者皆无才拦。 */
+      if ((!prd.function_points || !Object.keys(prd.function_points).length) && (!pagecfg || !Object.keys(pagecfg).length)) {
+        ElMessage.warning('这个原型既没有 PRD 数据、也没有可识别的列表页结构（PAGECFG）——无法生成代码'); return;
+      }
       let feStack = 'vue', beStack = 'java';
       /* 真下拉选栈弹窗（ElMessageBox + VNode·可装 N 栈·无需改模板/状态）：前端 Vue/React × 后端 Java/Node/Python */
       const h = Vue.h, feRef = ref('vue'), beRef = ref('java');
@@ -1610,16 +1773,13 @@
         await ElMessageBox({ title: '一键生成代码 · 选技术栈', message: content, showCancelButton: true, confirmButtonText: '生成代码', cancelButtonText: '取消' });
       } catch (e) { return; }
       feStack = feRef.value; beStack = beRef.value;
-      const loading = ElMessage({ message: '正在生成前后端代码（' + (feStack === 'react' ? 'React+AntD' : 'Vue3+EP') + ' · ' + (beStack === 'node' ? 'NestJS' : beStack === 'python' ? 'FastAPI' : 'Java+Spring') + ' · MySQL）…', type: 'info', duration: 0 });
-      try {
-        const r = await fetch('http://localhost:3799/anno-codegen', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ systemName: sys, prdData: prd, feStack, beStack })
-        });
-        const j = await r.json(); loading.close();
-        if (!j || !j.ok) { ElMessage.error('生成代码失败：' + ((j && j.error) || '未知')); return; }
-        ElMessage({ message: '✅ 前后端代码已生成（' + j.count + ' 个文件 · ' + (j.stack === 'react' ? 'React' : 'Vue') + ' 前端 · 静态校验' + (j.staticGreen ? '绿' : '见日志') + '）→ ' + j.outDir + '　可跑骨架·业务逻辑那 20% 已标 TODO。', type: 'success', duration: 11000 });
-      } catch (e) { loading.close(); ElMessage({ message: '生成代码失败：需先启动 anno-server（localhost:3799）', type: 'error', duration: 6000 }); }
+      /* 保存位置由用户选（_exportToFolder）·禁写死 archive/生成代码。选栈弹窗的「生成代码」点击本身就是用户手势，紧接着弹选文件夹框。 */
+      await _exportToFolder({
+        label: '生成代码', endpoint: '/anno-codegen', body: { systemName: sys, prdData: prd, feStack, beStack, pagecfg },
+        loadingMsg: '正在生成前后端代码（' + (feStack === 'react' ? 'React+AntD' : 'Vue3+EP') + ' · ' + (beStack === 'node' ? 'NestJS' : beStack === 'python' ? 'FastAPI' : 'Java+Spring') + ' · MySQL）…',
+        onDone: (j, where) => '✅ 前后端代码已生成（' + j.count + ' 个代码文件 · ' + (j.stack === 'react' ? 'React' : 'Vue') + ' 前端 · 静态校验' + (j.staticGreen ? '绿' : '见日志')
+          + (j.source === 'prototype' ? ' · 基线档(据原型结构推断·字段类型/校验待 PRD 精化)' : '') + '）→ ' + where + '　可跑骨架·业务逻辑那 20% 已标 TODO。',
+      });
     };
 
     /* ── localStorage 持久化 ── 按 system_name 命名空间隔离：同一浏览器/同一 origin 打开不同原型
@@ -1638,7 +1798,7 @@
         try {
           fetch('http://localhost:3799/anno-persist', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ systemName: PRDD.system_name || '', pins: annoPins.value }),
+            body: JSON.stringify({ systemName: PRDD.system_name || '', pins: annoPins.value, fileName: (()=>{try{return decodeURIComponent((location.pathname||'').split('/').pop()||'')}catch(e){return ''}})() }),   /* 同目录多个同名系统的文件时只写回当前这个 */
             signal: AbortSignal.timeout(4000),
           }).catch(() => {});
         } catch (e) {}
@@ -1691,6 +1851,20 @@
         if (raw === null && Array.isArray(window.__USER_ANNOTATIONS__) && window.__USER_ANNOTATIONS__.length) {
           saved = JSON.parse(JSON.stringify(window.__USER_ANNOTATIONS__));
         }
+        /* 1.11.0 按 PRD 生成的标注（fromPrd）以文件里烤的为准：PRD 一更新（内容签名变了）就整套替换本浏览器里的旧 PRD 标注，
+           用户自己圈选的标注原样保留；PRD 没变时尊重本浏览器（含用户主动清空）。 */
+        try {
+          const baked = _bakedPrdPins();
+          if (baked.length) {
+            const sig = _prdPinsSig(baked), sk = _STORAGE_KEY + '::prd-sig';
+            if (localStorage.getItem(sk) !== sig) {
+              const own = (Array.isArray(saved) ? saved : []).filter(p => !p.fromPrd && !p.prdSection);   /* 2026-11-13：旧版 PRD 生成的标注（带 prdSection、没有 fromPrd，如 11-08 的 343 个）不当成用户圈选的保留 */
+              saved = own.concat(JSON.parse(JSON.stringify(baked)));
+              saved.forEach((p, i) => { p.number = i + 1; });
+              try { localStorage.setItem(sk, sig); localStorage.setItem(_STORAGE_KEY, JSON.stringify(saved)); } catch (e) {}
+            }
+          }
+        } catch (e) {}
         if (!Array.isArray(saved) || !saved.length) return;
         /* 检测 5 分钟内注入的新 pin，打上 _isNew 标记 */
         const fiveMinAgo = Date.now() - 5 * 60 * 1000;
@@ -1757,6 +1931,49 @@ function initAnnotationLayer() {   /* ← 在宿主 onMounted 里调用一次 */
   window.addEventListener('resize', _repositionPins);
   window.addEventListener('scroll', () => { pinScrollX.value = window.scrollX; pinScrollY.value = window.scrollY; }, { passive:true });
   document.body.classList.toggle('anno-mode-on', showPins.value);
+
+  /* ── 1.11.0 按 PRD 自动生成的标注：跟着按钮走（pin.anchor）──
+     pin.anchor = { pages:['issuing','issuingR'], texts:['取消发票','更多'], tab:'近期发票' }（pageKey 留空）：
+       · pages：只在这些页面 id 上显示（不分系统）；
+       · tab：页面上当前选中的页签/状态（.is-active / .on / .active）文字等于它时才显示；不配=不限页签；
+       · texts：按顺序找当前页面上【看得见】且文字完全相同的按钮/链接，第一个找到的就是锚点，标注号贴在它右上角；
+       · 都找不到（按钮被开关隐藏、在别的页签、弹窗没开）→ 标注号不显示，不会乱放在默认位置。
+     换屏幕宽度、页面改版、切页签都自动跟随，不靠存坐标。没有 anchor 的老标注照旧（按坐标/selectorPath）。 */
+  /* 去掉下拉箭头、空白和末尾数量：“已开票(21)”“已开票21”都当“已开票”（左侧状态面板的数量会随开票变化） */
+  const _anNorm = s => String(s || '').replace(/[▾⌄›﹀▼\s]/g, '').replace(/[（(]\d+[)）]$/, '').replace(/([^\d.\-])\d+$/, '$1').trim();
+  const _anVis = el => { if (!el || !el.offsetParent) return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.right > 0; };
+  const _anchorTick = () => {
+    const pins = annoPins.value; if (!showPins.value || !pins.some(p => p.anchor)) return;
+    const root = document.getElementById('app') || document.body;
+    const byText = new Map(); const active = new Set();
+    root.querySelectorAll('.el-button,button,a,.el-link,.el-dropdown-link,.el-tooltip__trigger,[aria-haspopup],.el-tabs__item,.stab,span,label,th .cell,.el-radio-button__inner,.el-checkbox__label,div').forEach(el => {
+      if (el.closest('#anno-app')) return;
+      const isBtn = el.matches('.el-button,button,a,.el-link,.el-dropdown-link,.el-tooltip__trigger,[aria-haspopup],.el-tabs__item,.stab');   /* 收银台等用的普通 <button> 也认 */   /* 行上的【更多▾】是 el-tooltip__trigger 带子元素，按按钮整体认 */
+      if (!isBtn && el.children.length) return;          /* 普通元素只认叶子文字，按钮整体认 */
+      const t = _anNorm(el.innerText); if (!t || t.length > 30) return;
+      if (/(^|\s)(is-active|on|active)(\s|$)/.test(el.className || '') && _anVis(el)) active.add(t);
+      if (!byText.has(t) && _anVis(el)) byText.set(t, el);
+    });
+    root.querySelectorAll('.is-active,.on,.active').forEach(el => { if (_anVis(el)) { const t = _anNorm(el.innerText); if (t && t.length <= 30) active.add(t); } });
+    const used = new Map();
+    pins.forEach(pin => {
+      if (!pin.anchor) return;
+      const a = pin.anchor; let el = null;
+      const pageOk = !a.pages || !a.pages.length || a.pages.includes(page.value);   /* pages：只认页面 id（不分系统），电商/零售同名功能一个标注两边都显示 */
+      const tabOk = (!a.tab || [].concat(a.tab).every(t => active.has(_anNorm(t))))
+        && (!a.notTab || ![].concat(a.notTab).some(t => active.has(_anNorm(t))));   /* notTab：这些页签选中时不显示（如 待开票 下的子页签 开票失败） */   /* tab 写成数组 = 这几个页签同时选中（如 异常发票 › 待处理） */
+      if (pageOk && tabOk) for (const t of (a.texts || [])) { el = byText.get(_anNorm(t)); if (el) break; }
+      if (!el) { if (pin._vis !== false) pin._vis = false; return; }
+      const r = el.getBoundingClientRect(); const n = used.get(el) || 0; used.set(el, n + 1);   /* 同一个按钮上有多个标注 → 依次往右排开 */
+      const x = r.right + 2 + n * 22, y = r.top + r.height / 2 - 9;   /* 贴按钮右侧、上下居中：表格里竖排的操作链接不会压到上一行文字 */
+      if (pin._vis !== true) pin._vis = true;
+      const dx = x + window.scrollX, dy = y + window.scrollY;
+      if (pin.docX !== dx) pin.docX = dx; if (pin.docY !== dy) pin.docY = dy; pin.x = x; pin.y = y;
+    });
+  };
+  setInterval(_anchorTick, 400);
+  document.addEventListener('scroll', () => requestAnimationFrame(_anchorTick), { passive: true, capture: true });
+  window.__annoAnchorTick = _anchorTick;
 
   /* ── pin 手动拖拽（全局 mousemove / mouseup）── */
   document.addEventListener('mousemove', (e) => {
@@ -2565,6 +2782,111 @@ function initAnnotationLayer() {   /* ← 在宿主 onMounted 里调用一次 */
   if (window.ElementPlusIconsVue) {
     for (const [k, c] of Object.entries(window.ElementPlusIconsVue)) _annoApp.component(k, c);
   }
+  /* ── 1.11.7 顶栏标注工具条自适应（_annoFitToolbar）：宿主 .anno-sw 由宿主 Vue 渲染，这里只加 data 属性/类名 + 一个【更多 ▾】，
+       不改宿主节点文字。实测顶栏剩余宽度，依次试：①一行完整 ②一行紧凑 ③紧凑+把不常用的逐个收进【更多 ▾】，取第一个放得下的。
+       放得下 = 顶栏不溢出、页面无横向滚动条、工具条在顶栏内且不与顶部菜单等兄弟块相交、各块没有被挤得内容溢出。 ── */
+  (function _annoFitToolbar() {
+    const ORDER = ['↩', '🗑', '🚀', '📦', '📤', '📋'];          /* 收起顺序：越靠前越先收；📤/📋 只有实在放不下才收 */
+    const SHORT = { '📋': '📋 复制已圈', '📤': '📤 分享版', '📦': '📦 对接料', '🚀': '🚀 生成代码', '🗑': '🗑 清空', '↩': '↩ 恢复' };
+    const MORE = { '标注': '更多', 'Annotate': 'More', 'Anotação': 'Mais', 'Anotación': 'Más' };
+    let sw = null, box = null, more = null, pop = null, ro = null, mo = null, raf = 0;
+    const txt = b => ((b.querySelector('span') || b).textContent || '').trim();
+    const rank = b => { const t = txt(b); const i = ORDER.findIndex(e => t.indexOf(e) === 0); return i < 0 ? -1 : i; };
+    const closePop = () => { if (pop) { pop.remove(); pop = null; } };
+    const openPop = () => {
+      closePop();
+      const hid = [...sw.querySelectorAll(':scope > .el-button[data-anno-ov]')];
+      if (!hid.length) return;
+      pop = document.createElement('div'); pop.className = 'anno-more-pop';
+      hid.forEach(b => {
+        const it = document.createElement('div'); it.textContent = txt(b);
+        const dis = b.disabled || b.classList.contains('is-disabled');
+        if (dis) it.className = 'is-disabled';
+        it.addEventListener('click', e => { e.stopPropagation(); if (dis) return; closePop(); b.click(); });
+        pop.appendChild(it);
+      });
+      document.body.appendChild(pop);
+      const r = more.getBoundingClientRect(), pw = pop.offsetWidth;
+      pop.style.top = (r.bottom + 4) + 'px';
+      pop.style.left = Math.max(4, Math.min(r.right - pw, window.innerWidth - pw - 4)) + 'px';
+    };
+    const ensureMore = () => {
+      if (more && more.parentNode === sw) return;
+      more = document.createElement('button'); more.type = 'button';
+      more.className = 'el-button el-button--small is-plain anno-more-btn';
+      more.addEventListener('click', e => { e.stopPropagation(); pop ? closePop() : openPop(); });
+      sw.appendChild(more);
+    };
+    /* 当前可见的作者按钮（预览/分享只读模式下被 .anno-author-only 隐藏的不算） */
+    const btns = () => [...sw.querySelectorAll(':scope > .el-button:not(.anno-more-btn)')].filter(b => { b.removeAttribute('data-anno-ov'); return getComputedStyle(b).display !== 'none'; });
+    const apply = (list, compact, k) => {
+      sw.classList.toggle('anno-fit-compact', compact);
+      const zh = /[一-龥]/.test(list.map(txt).join(''));
+      list.forEach(b => { const s = SHORT[(txt(b).match(/^\S+/) || [''])[0]]; if (zh && s) b.setAttribute('data-anno-short', s); else b.removeAttribute('data-anno-short'); });
+      const sorted = list.slice().sort((a, b) => rank(a) - rank(b));
+      const hide = new Set(sorted.slice(0, k));
+      list.forEach(b => hide.has(b) ? b.setAttribute('data-anno-ov', '1') : b.removeAttribute('data-anno-ov'));
+      if (k > 0) { ensureMore(); more.hidden = false; const lb = (sw.querySelector(':scope > span') || {}).textContent; more.textContent = (MORE[(lb || '').trim()] || '更多') + ' ▾'; }
+      else if (more) more.hidden = true;
+    };
+    const measure = () => {
+      const kids = [...box.children].concat(sw.parentElement && sw.parentElement !== box ? [...sw.parentElement.children] : []);
+      return { doc: document.documentElement.scrollWidth - window.innerWidth, box: box.scrollWidth - box.clientWidth,
+               kids: kids.map(el => [el, el.scrollWidth - el.clientWidth]) };
+    };
+    const fits = (base) => {
+      const m = measure();
+      if (m.doc > Math.max(0, base.doc) + 1) return false;
+      if (m.box > Math.max(0, base.box) + 1) return false;
+      for (const [el, d] of m.kids) { const b0 = base.kids.find(x => x[0] === el); if (d > Math.max(0, b0 ? b0[1] : 0) + 1) return false; }
+      const r = sw.getBoundingClientRect(), br = box.getBoundingClientRect();
+      if (r.right > br.right + 0.5 || r.left < br.left - 0.5 || r.height > br.height + 0.5) return false;
+      for (const el of box.children) {
+        if (el.contains(sw) || !el.offsetParent) continue;
+        const q = el.getBoundingClientRect();
+        if (q.width && q.right > r.left + 0.5 && q.left < r.right - 0.5 && q.bottom > r.top && q.top < r.bottom) return false;
+      }
+      return true;
+    };
+    const fit = () => {
+      raf = 0;
+      if (!sw || !sw.isConnected) return;
+      const list = btns();
+      if (!list.length) { sw.classList.remove('anno-fit-compact'); if (more) more.hidden = true; closePop(); return; }
+      apply(list, true, list.length); const base = measure();       /* 最收的状态当基线（顶栏本身就挤爆的部分不算工具条的账） */
+      const modes = [[false, 0], [true, 0]];
+      for (let k = 1; k <= list.length; k++) modes.push([true, k]);
+      for (const [c, k] of modes) { apply(list, c, k); if (fits(base)) break; }
+      if (pop) openPop();
+    };
+    const schedule = () => { if (!raf) raf = requestAnimationFrame(fit); };
+    const bind = () => {
+      const cur = document.querySelector('.anno-sw');
+      if (cur === sw) return;
+      if (ro) ro.disconnect(); if (mo) mo.disconnect(); closePop();
+      sw = cur; more = null; if (!sw) return;
+      box = sw.closest('.topbar, header, .header, .navbar, [class*="topbar"]') || sw.parentElement.parentElement || sw.parentElement;
+      ro = new ResizeObserver(schedule); ro.observe(box);
+      mo = new MutationObserver(recs => {
+        if (recs.every(r => (more && (r.target === more || more.contains(r.target))) || [...r.addedNodes, ...r.removedNodes].every(n => n === more))) return;
+        schedule();
+      });
+      mo.observe(box, { childList: true, subtree: true, characterData: true });
+      mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });   /* 进出只读预览模式 */
+      schedule();
+    };
+    const start = () => {
+      bind(); setInterval(bind, 1000);
+      window.addEventListener('resize', () => { closePop(); schedule(); });
+      document.addEventListener('click', e => { if (pop && !pop.contains(e.target)) closePop(); }, true);
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') closePop(); });
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
+      window.__annoFitToolbar = schedule;
+    };
+    if (typeof ResizeObserver === 'undefined' || typeof MutationObserver === 'undefined') return;
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+  })();
+
   const _mountAnno = () => { if (document.getElementById('anno-app')) _annoApp.mount('#anno-app'); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _mountAnno);
   else _mountAnno();
@@ -2620,8 +2942,8 @@ function initAnnotationLayer() {   /* ← 在宿主 onMounted 里调用一次 */
     es.addEventListener('assemble-status', (ev) => {
       try {
         const st = JSON.parse(ev.data); if (!window.ElMessage) return;
-        if (st.docx === 'skipped') window.ElMessage({ message: '⚠️ PRD 的 Word(.docx) 这次没生成——本机缺 pandoc。Markdown 已生成；装好 pandoc 后重新生成即可补上。', type: 'warning', duration: 6000, showClose: true });
-        else if (st.docx === 'locked') window.ElMessage({ message: '⚠️ Word 文档被占用（Word/WPS 开着未更新原文件），已另存「最新版」；关闭 Word/WPS 后自动覆盖回原文件。', type: 'warning', duration: 6000, showClose: true });
+        /* 1.10.10（2026-11-10 用户明令）：Word 没生成（docx=skipped）不再弹提示，只在后台日志记录 */
+        if (st.docx === 'locked') window.ElMessage({ message: '⚠️ Word 文档被占用（Word/WPS 开着未更新原文件），已另存「最新版」；关闭 Word/WPS 后自动覆盖回原文件。', type: 'warning', duration: 6000, showClose: true });
         if (st.flow === 'skipped') window.ElMessage({ message: 'ℹ️ 业务流程图这次没渲染（本机缺 Chrome 或 mermaid 库）——PRD 里已保留流程图源码，装好后重生成即出图。', type: 'info', duration: 5000, showClose: true });
       } catch (e) {}
     });

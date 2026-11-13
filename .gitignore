@@ -28,7 +28,7 @@ desktop.ini
 *.swo
 *~
 
-# VSCode workspace 文件（含用户本地路径如 D:\AI\，不分发）
+# VSCode workspace 文件（含用户本地路径如本机工作目录，不分发）
 *.code-workspace
 
 # Node（预留 — 若未来加 tooling）
@@ -63,7 +63,7 @@ logs/
 /*.json
 !/package.json
 /br-summary.md
-# 真实生产系统（TF OMS/WMS 等）截图素材：含登录页/验证码/真实业务数据，仅本机提取设计规范用
+# 真实生产系统（OMS/WMS 等）截图素材：含登录页/验证码/真实业务数据，仅本机提取设计规范用
 /screenshots/
 
 # 临时文件
@@ -74,3 +74,6 @@ skills/pm-design/qa/.gate-vendor-cache/
 skills/dev-codegen/codegen/out*/
 skills/pm-design/codegen/out*/
 *.bak-old
+
+# 本机临时目录根（各机器自己配，不上传）
+.proenga-tmp

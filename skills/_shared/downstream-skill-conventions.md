@@ -45,3 +45,20 @@
 5. **product-pitch** ← **必须在 user-manual 之后或同时**，不可先于它（操作手册的业务术语/场景是售前方案业务对象命名的来源）。
 
 > 以上 1–3 之间无强制先后；硬约束只有两条：dev-prompts 依赖 tech-design 内容源；product-pitch 不得先于 user-manual。
+
+---
+
+## 5. 数据源两档（有无 PRD 都能出·2026-09-09 解耦·强制）
+
+> 🏛 **铁律**：所有下游文档（对接料 / 前后端代码 / 测试用例 / 技术设计 / 售前 PPT+文档 / 操作手册 / 研发提示词）**与「是否生成过 PRD、是否圈选/点选过功能」彻底独立**——只要画了原型就能生成，**绝不因没 PRD 而拒绝或空转**。`prd-data.json` 是**可选增强项**，不是硬前提。
+
+判定与取数分两档：
+
+- **有 PRD（精确档·首选）**：`prd-data.json` 存在且含字段规范（`function_points.*._draft_fieldSpecs`）/ 7 节用例规则 → 以它为一真理源，产出精确。
+- **没 PRD（兜底档·始终可用）**：没 prd-data、或 prd-data 里 `function_points` 为空 / 无 `_draft_fieldSpecs` → **改从原型 HTML 结构取数**，绝不停：
+  - **结构来源**：原型内嵌 `const PAGECFG={...}`（每页 `columns` 列 / `filters` 筛选 / `rows` 样例行）+ `window.__PRD_DATA__.{system_name, page_menus}`。
+  - **代码/对接料类**（dev-codegen）：跑 `../dev-codegen/codegen/derive-from-prototype.js <原型.html> <dm.json>` 推基线 data_model，再走 emit-*（见 dev-codegen SKILL 第 0 步）。
+  - **文档类**（test-case / tech-design / product-pitch / user-manual / dev-prompts）：AI 直接读原型 HTML 的 PAGECFG + 页面菜单，按各自模板生成**基线文档**——字段/流程来自原型列名、筛选、按钮、样例值与页面结构。
+  - **诚实标注**：兜底档里凡属"从原型结构推断"的字段类型 / 校验 / 业务规则，必在文首变更日志或对应处标「据原型结构推断·待 PRD/PM 确认」，不冒充已确认规范（不臆造、不吹精确）。
+
+> 换言之：`prd-data.json` 有则更好、无则退到原型结构，两档产出**同一套交付物**，差异只在字段精度。禁止任何下游技能把「没 PRD」当作停工理由。

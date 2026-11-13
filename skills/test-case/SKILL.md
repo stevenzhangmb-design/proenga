@@ -13,10 +13,12 @@ description: 根据 pm-design 生成的原型 + prd-data.json 输出"测试用�
 | 显式指令 | "生成测试用例 / 出测试用例 / 给 QA 的测试文档 / 写测试场景" |
 | 同步更新 | "原型改了，测试用例更新一下" |
 
-## 输入（单一真理源）
+## 输入（两档·有无 PRD 都能出）
 
-1. **prd-data.json** —— 字段规范 + 用例规则
-2. **原型 HTML**（执行参考）
+1. **prd-data.json** —— 字段规范 + 用例规则（**可选增强·首选**；有则据它出精确用例）
+2. **原型 HTML**（**始终可用的兜底数据源**；没 PRD 时改读原型 `PAGECFG` 列/筛选/按钮/样例值 + 页面菜单直接出基线用例）
+
+> 🏛 **解耦铁律**：生成测试用例**不依赖是否生成过 PRD、是否圈选/点选过功能**——只要有原型就出，没 PRD 不停。取数两档与诚实标注见 [../_shared/downstream-skill-conventions.md §5](../_shared/downstream-skill-conventions.md)。
 
 ## 输出
 

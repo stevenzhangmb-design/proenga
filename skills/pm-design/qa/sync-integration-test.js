@@ -8,6 +8,7 @@
    运行：  node sync-integration-test.js [原型HTML绝对路径]   退出码 0=通过/跳过 1=失败。
    ════════════════════════════════════════════════════════════════════════ */
 const http=require("http"),fs=require("fs"),path=require("path"),os=require("os"),{spawn}=require("child_process");
+require("../../_shared/qa/_tmp-sandbox"); // 临时文件进沙盒·退出自动删（铁律·见 _tmp-sandbox.js）
 const PROTO = process.argv[2] || '';  // 必传原型路径（去个人机器路径·公开仓安全）
 const CHROME = process.env.CHROME_PATH || "C:/Program Files/Google/Chrome/Application/chrome.exe";
 const ROOT = path.dirname(PROTO), FILE = path.basename(PROTO), ARCHIVE = ROOT;
