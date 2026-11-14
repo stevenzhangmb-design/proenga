@@ -41,10 +41,13 @@ function lintFile(file) {
   }
 
   // ② PascalCase 组件标签（首字母大写）—— in-DOM 会被小写解析不出
+  /* §2026-11-14：先剥掉 HTML 注释再查。骨架文件头的版本说明注释里写着 <Transition> 这类字样，
+     以前只测一份手搓旧原型、从没碰到；改测当前骨架装配出的样例后，注释被当成模板判红（假红）。注释不会被渲染。 */
+  const tplNoCmt = tpl.replace(/<!--[\s\S]*?-->/g, c => c.replace(/[^\n]/g, ' '));
   let re2 = /<([A-Z][A-Za-z0-9]*)(?=[\s/>])/g;
-  while ((m = re2.exec(tpl))) {
+  while ((m = re2.exec(tplNoCmt))) {
     if (m[1] === 'DOCTYPE') continue;
-    errs.push({ line: lineOf(tpl, m.index), msg: `PascalCase 组件标签 <${m[1]}> → in-DOM 模板必须 kebab-case <${m[1].replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()}>`, snip: m[0].slice(0, 70) });
+    errs.push({ line: lineOf(tplNoCmt, m.index), msg: `PascalCase 组件标签 <${m[1]}> → in-DOM 模板必须 kebab-case <${m[1].replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()}>`, snip: m[0].slice(0, 70) });
   }
 
   // ③ HTML 注释跨 <script> 边界
@@ -54,8 +57,20 @@ function lintFile(file) {
   }
 
   // ④ <script> 开/闭标签不平衡 → 必有脚本块未正确闭合（如注入标注层时漏关业务 </script>）→ 整页 JS 崩
-  const sOpen = (raw.match(/<script\b[^>]*>/gi) || []).length;
-  const sClose = (raw.match(/<\/script>/gi) || []).length;
+  /* §2026-11-14：按浏览器的解析方式数——<script> 开了以后到第一个 </script> 为止都是脚本正文，正文里（比如 JS 注释）
+     出现的 <script> 字样不算新开一段；HTML 注释里的也不算。以前直接全文数字样，骨架脚本注释里一句「另一 <script>」就会假红。 */
+  let sOpen = 0, sClose = 0;
+  {
+    const tok = /<!--|<script\b[^>]*>|<\/script>/gi; let t;
+    while ((t = tok.exec(raw))) {
+      if (t[0] === '<!--') { const e = raw.indexOf('-->', tok.lastIndex); if (e < 0) break; tok.lastIndex = e + 3; continue; }
+      if (/^<\/script>$/i.test(t[0])) { sClose++; continue; }          // 脚本外面多出来的 </script>
+      sOpen++;
+      const e = raw.slice(tok.lastIndex).search(/<\/script>/i);
+      if (e < 0) break;                                                  // 开了没关 → 开比闭多一个
+      sClose++; tok.lastIndex += e + '</script>'.length;
+    }
+  }
   if (sOpen !== sClose) errs.push({ line: 0, msg: `<script> 开(${sOpen})/闭(${sClose}) 标签不平衡 → 必有脚本块未闭合(常见：注入新<script>前漏关上一段</script>)，会致 "Unexpected token '<'" 整页崩` });
 
   return { errs, warns };

@@ -614,6 +614,7 @@ function deliverableReportNote() {
 async function main() {
   const _t0 = Date.now();
   let _archSnap = null; try { _archSnap = archiveSnapshot(); } catch (_) {}   // 52b 跑闸前快照（见 archiveSnapshot）
+  if (_archSnap && !_archSnap.size) console.log("  ℹ 52b：用户原型目录里眼下没有 *.html 可比对，本轮只靠 52 静态检查把关（各闸的测试样本是随包样例，放在临时目录，不在用户目录里）");
   /* 助手和纯静态池同时起步：助手编译约 2～4 秒，纯静态闸不需要它 */
   const helperP = startHelper();
   for (const j of jobs) j.lane = laneOf(j.file);
@@ -658,7 +659,9 @@ async function main() {
 
 /* 52b（2026-11-13）总闸前后给用户原型目录的 *.html 做哈希快照：任何一道闸让真 anno-server 回写了用户原型 → 红。
    静态的 52 anno-isolation-gate 管"写法"，这里管"结果"——漏网的（比如闸起的子进程开了浏览器）也逮得到。
-   目录 = 闸扫描的原型目录 + anno-server 配置里的 archiveDir/archiveDirs（真实例回写的就是这些）。只读，不改任何文件。 */
+   目录 = 闸扫描的原型目录 + anno-server 配置里的 archiveDir/archiveDirs（真实例回写的就是这些）。只读，不改任何文件。
+   §2026-11-14：各闸的测试样本已不再是用户原型（archive 里没有时改用临时目录里现装的随包样例），
+   所以这里比对的只是用户自己的原型有没有被改写；用户删掉某份原型不影响判定（跑闸前后都在的文件才比对）。 */
 function archiveDirsToWatch() {
   const dirs = new Set();
   try { require("./_archive-dir").protoScanDirs().forEach(d => dirs.add(path.resolve(d))); } catch (_) {}

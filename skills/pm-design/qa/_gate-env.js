@@ -28,7 +28,9 @@ function findPrototypes(archive) {
   archive = archive || findArchive();
   let files = [];
   try { files = fs.readdirSync(archive).filter(f => f.endsWith('.html') && !/备份|\.bak|backup|试跑|草稿|draft|demo|proto-test|分享版|share/i.test(f)).map(f => path.join(archive, f)); } catch (e) {}
-  return files.filter(f => { try { const s = fs.readFileSync(f, 'utf8'); return s.includes('window.__PRD_DATA__') && s.includes('anno-app'); } catch (e) { return false; } });
+  files = files.filter(f => { try { const s = fs.readFileSync(f, 'utf8'); return s.includes('window.__PRD_DATA__') && s.includes('anno-app'); } catch (e) { return false; } });
+  /* 2026-11-14：archive 里一份用户原型都没有时，改测随包样例（当前骨架现装·见 _sample-deliverable.js），不再依赖用户自己的业务原型当样本 */
+  return require('./_sample-deliverable').orSample(files);
 }
 // TARGET_PRDDATA 可显式指定 prd-data.json（多工程/异构时把闸指向某个具体工程，不依赖自动猜）
 function findPrdData(archive) {

@@ -110,7 +110,7 @@ async function smoke(file, base) {
 
 (async () => {
   if (!CHROME) { console.log('⊘ SKIP：未找到 Chrome/Edge'); process.exit(0); }
-  const files = findDeliverables();
+  const files = require('./_sample-deliverable').orSample(findDeliverables());
   if (!files.length) { console.log('⊘ SKIP：archive 未找到 *装配版*offline.html 交付原型'); process.exit(0); }
   console.log('\n════════ 真实交付物 冒烟闸（真文件·隔离副本·屏蔽写真数据）════════');
   let allPass = true;

@@ -149,7 +149,7 @@ function main() {
   console.log(`  主色=${exp.primary} 警告=${exp.warning} 分页sizes=${exp.pageSizes} 分页layout="${exp.pageLayout}"（筛选区3列 v1暂不硬拦）`);
   console.log('───────────────────────────────────────');
 
-  const files = target ? collect(target) : autoDiscover();
+  const files = target ? collect(target) : require('./_sample-deliverable').orSample(autoDiscover());
   if (!files.length) { console.log('⊘ 未找到交付原型(装配版*offline.html)，跳过'); process.exit(0); }
 
   let anyRed = false;

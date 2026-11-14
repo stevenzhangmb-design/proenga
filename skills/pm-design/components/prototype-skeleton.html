@@ -3,6 +3,7 @@
      v8.53（2076）：设置开关（flag）联动扩展，都写 flagHide:{名:值} / flagShow:{名:值}，不配不生效：列表列 columns[i]、筛选项 filters[i]、
             批量按钮 selectActions[i] 及其 menu[j]、说明条 alert 里写成 {label:{zh,en,pt}, flagHide} 的那一行、左侧状态面板 statusPanel.items[i]、详情板块 / 板块页签 / 字段；
             flagMoves 新写法 {when, fromStatus, toStatus, at, set} → 按标志位把左侧状态面板 byStatus[fromStatus]（含其页签）的行挪到 byStatus[toStatus]，改回时原样挪回。
+     v8.58（2160）：查询区筛选项可写 kwNot:{选项文字:[排除词…]} → 选中该选项点【查询】时，行里含这些字的排除（“已开票”不筛出“离线已开票（待上传）”）；配了 col 就只看那一列。不配不生效。
      v8.57（2150）：fd.maxSoft:true（不截断、超长红字「{f}最多 N 个字符」）扩到整页文本域、弹窗（分区 / 不分区）的输入框和文本域，右下仍显示 n / max 计数；
             不分区弹窗的输入框 / 文本域写 blurCheck:true → 离开输入框即校验（原来只在点确定时校验）。
             收银台【整单备注】【交班备注】【退款说明】写 noteSoft / softMax:true 同样不截断、超长红字并拦住确定；门店预订【预订信息】字段可写 pattern(+patternMsg)，填错在字段下面红字（默认「{f}格式不正确」）。都不配不生效。
@@ -7526,6 +7527,8 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       });
       function rowPassKw(r, kw){ const t=rowPlainText(r);
           return kw.every(w => {
+            /* §v8.58 kwNot：{any:[…], not:[…], col?} → 命中 any 之一且不含 not 里任何一个才算（不配 not 的老写法不变） */
+            if(w && !Array.isArray(w) && typeof w==='object' && Array.isArray(w.not)){ const ct=w.col!=null ? rowPlainText([r[w.col]]) : t; const has=x=>ct.includes(String(x).toLowerCase()); return (w.any||[]).some(has) && !w.not.some(has); }
             if(w && !Array.isArray(w) && typeof w==='object' && w.col!=null){ const ct=rowPlainText([r[w.col]]); return (w.any||[]).some(x=>ct.includes(String(x).toLowerCase())); }
             return Array.isArray(w)
               ? w.some(x=>t.includes(String(x).toLowerCase()))
@@ -8273,7 +8276,10 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
             let parts = v.split(/[,，;；\r\n]+/).map(x=>x.trim()).filter(Boolean);
             parts = [].concat(...parts.map(x=>{ const sp=x.split(/\s+/); return (sp.length>1 && sp.every(y=>/^[A-Za-z0-9.\-\/]+$/.test(y) && /\d/.test(y))) ? sp : [x]; }));
             if(parts.length>1) words = parts; else if(parts.length===1) words = parts[0]; }
-          kw.push((fd && fd.col!=null) ? {col:fd.col, any:[].concat(words)} : words);
+          /* §v8.58 kwNot:{选项文字:[排除词…]} → 选中该选项时，行里含这些字的排除（“已开票”不筛出“离线已开票（待上传）”）；不配不生效 */
+          const notW = (fd && typeof fd==='object' && fd.kwNot && fd.kwNot[v]!=null) ? [].concat(fd.kwNot[v]).map(x=>String(K(x))).filter(Boolean) : null;
+          if(notW && notW.length) kw.push(Object.assign({any:[].concat(words), not:notW}, (fd.col!=null ? {col:fd.col} : {})));
+          else kw.push((fd && fd.col!=null) ? {col:fd.col, any:[].concat(words)} : words);
         });
         return {kw, shown};
       }

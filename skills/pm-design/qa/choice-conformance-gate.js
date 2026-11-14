@@ -102,7 +102,9 @@ function checkOne(file) {
        （"[object WeakMap]"），CN 原型会被 C-CUR 误判红。剥完再把项目数据字面量拼回来。 */
   const stripVendor = s => s.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ');
   const dataLits = ['const SYSTEMS=', 'const NAV=', 'const PAGECFG='].map(d => grabLiteral(html, d)).join('\n');
-  const body = stripVendor(html.slice(0, cut)) + '\n' + dataLits;
+  /* §2026-11-14：再剥掉 HTML 注释。骨架文件头的版本说明注释里写着「R$ 37,00」这类例子，CN 原型会被 C-CUR 假红；
+     以前只测一份手搓旧原型、从没碰到，改测当前骨架装配出的样例后才暴露。注释不会显示给用户。 */
+  const body = stripVendor(html.slice(0, cut)).replace(/<!--[\s\S]*?-->/g, ' ') + '\n' + dataLits;
 
   // C-CUR 币种符号（负向为主·可靠；只看业务区）
   if (currency === 'BRL' && /￥|(?<![A-Za-z])¥/.test(body)) reds.push('C-CUR 币种漂移：选了 BRL 却出现 ¥（残留 CN 币种？应为 R$）');
@@ -178,7 +180,7 @@ function main() {
 
   console.log('选择一致性自检闸 · 验"原型 == 四问所选(__DESIGN_CHOICE__)"');
   console.log('───────────────────────────────────────');
-  const files = target ? collect(target) : autoDiscover();
+  const files = target ? collect(target) : require('./_sample-deliverable').orSample(autoDiscover());
   if (!files.length) { console.log('⊘ 未找到交付原型(装配版*offline.html)，跳过'); process.exit(0); }
 
   let anyRed = false;

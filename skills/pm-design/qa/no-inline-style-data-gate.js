@@ -75,7 +75,7 @@ function checkOne(file) {
   return { file, status: gf ? 'warn' : 'fail', nHtml: hits.length, samples: [...new Set(hits)].slice(0, 3), badWords };
 }
 
-const targets = process.argv.slice(2).length ? process.argv.slice(2) : findDeliverables();
+const targets = process.argv.slice(2).length ? process.argv.slice(2) : require('./_sample-deliverable').orSample(findDeliverables());
 console.log('\n════════ ㊳ 数据卫生闸（生成代码地基·禁手写内联样式HTML + 禁按钮禁用词）════════');
 if (!targets.length) { console.log('  （未发现真交付原型，跳过）\n════════════════════════════════'); process.exit(0); }
 

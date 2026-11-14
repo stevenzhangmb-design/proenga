@@ -20,7 +20,7 @@ const { findChrome } = require('./_gate-env');
 const CHROME = process.env.CHROME_PATH || findChrome();
 const sleep = ms => new Promise(z => setTimeout(z, ms));
 
-/* ── A：真实交付物发现（绝不用 fixture） ── */
+/* ── A：真实交付物发现（不用 qa/fixtures 里的旧 fixture；archive 一份用户原型都没有时，改测由当前骨架现装的随包样例，见 _sample-deliverable.js） ── */
 const SCAN_DIRS = require('./_archive-dir').protoScanDirs();
 const SKIP_RE = /_serverless验证|_草稿|_superseded|fixtures|node_modules|分享版|-分享/i;
 function findDeliverables() {
@@ -47,7 +47,7 @@ function findDeliverables() {
   return out;
 }
 
-const targets = process.argv.slice(2).length ? process.argv.slice(2) : findDeliverables();
+const targets = process.argv.slice(2).length ? process.argv.slice(2) : require('./_sample-deliverable').orSample(findDeliverables());
 if (!targets.length) { console.log('  （未发现真实交付原型，跳过）'); process.exit(0); }
 
 let PORT = 8700, DPORT = 9700;

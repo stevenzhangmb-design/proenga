@@ -1,0 +1,48 @@
+{
+  "_note": "随包样例交付原型的源数据（中性示例·无客户/个人信息）。闸在 archive 里找不到用户原型时，用它现装一份离线交付件当测试样本（见 _sample-deliverable.js）。改这里会改变多道闸的测试样本，改前先跑这些闸对比。",
+  "title": "样例系统",
+  "systemName": "样例系统",
+  "locales": ["zh"],
+  "defaultLocale": "zh",
+  "region": "CN",
+  "currency": "CNY",
+  "systems": [{ "key": "OMS", "label": "订单系统" }],
+  "home": { "OMS": "OMS-order-list" },
+  "page_menus": { "OMS-order-list": ["订单", "订单管理"], "OMS-customer-list": ["基础资料", "客户管理"] },
+  "nav": { "OMS": [
+    { "group": "订单管理", "items": [["OMS-order-list", "订单列表"]] },
+    { "group": "基础资料", "items": [["OMS-customer-list", "客户列表"]] }
+  ] },
+  "pagecfg": {
+    "OMS-order-list": {
+      "filters": [
+        { "label": "订单号", "ph": "请输入订单号" },
+        { "label": "状态", "type": "select", "options": ["已完成", "待付款"] },
+        { "label": "下单日期", "ph": "请选择" }
+      ],
+      "toolbar": ["导出"],
+      "listTitle": "订单列表",
+      "primaryBtn": "新增订单",
+      "columns": ["订单号", "客户名称", "下单日期", "金额", "状态"],
+      "rows": [
+        ["SO-000128", "示例客户甲", "2026-07-09", "¥ 12,400.00", "已完成"],
+        ["SO-000129", "示例客户乙", "2026-07-10", "¥ 3,980.00", "待付款"]
+      ],
+      "actions": ["查看", "编辑"],
+      "total": 24
+    },
+    "OMS-customer-list": {
+      "filters": [ { "label": "客户名称", "ph": "请输入客户名称" } ],
+      "toolbar": ["导出"],
+      "listTitle": "客户列表",
+      "primaryBtn": "新增客户",
+      "columns": ["客户编码", "客户名称", "联系电话"],
+      "rows": [
+        ["C001", "示例客户甲", "010-00000001"],
+        ["C002", "示例客户乙", "010-00000002"]
+      ],
+      "actions": ["查看", "编辑"],
+      "total": 2
+    }
+  }
+}

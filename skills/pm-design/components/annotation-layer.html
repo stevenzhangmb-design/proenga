@@ -62,6 +62,9 @@
     .anno-sw > span, .anno-sw > .el-switch, .anno-sw > .el-button { flex-shrink:0; white-space:nowrap; }
     .anno-sw > [data-anno-ov] { display:none !important; }
     .anno-sw.anno-fit-compact { gap:4px !important; }
+    /* 1.11.9 开/关标注时宿主弹的提示条（“标注已开启…”）挪到顶部导航栏（顶栏+模块菜单+页签这一叠吸顶条）下方，
+       不再盖住【标注】开关和工具条按钮、也不盖业务菜单；内容和停留时长由宿主决定，这里只改位置（_annoToastBelow 打标）。 */
+    .el-message[data-anno-below] { top: var(--anno-msg-top, 16px) !important; }
     .anno-sw.anno-fit-compact > .el-button { height:24px; padding:0 7px; font-size:12px; margin-left:0 !important; }
     .anno-sw.anno-fit-compact > .el-button[data-anno-short] > span { display:none; }
     .anno-sw.anno-fit-compact > .el-button[data-anno-short]::after { content:attr(data-anno-short); }
@@ -630,7 +633,7 @@
 (function mountAnnotationLayer() {
   /* ★ 版本戳（闸②）：每次改动本组件引擎/渲染逻辑必 bump。AI 打开旧原型时 grep 此常量与
      标准件当前版本比对，不一致 = 标注层过期 → 提示重新注入 + 重跑 qa/regression-check.js。*/
-  window.__ANNO_LAYER_VERSION__ = '1.11.8';  /* 2026-11-13 标注自己的工具条和【更多 ▾】不参与标注锚点查找（修：窄屏时“修改重提”标注跑到工具条【更多】上）。 —— 2026-11-13 顶栏标注工具条按实际剩余宽度自适应（一行完整→一行紧凑→不常用的收进【更多 ▾】），作废 1799/1800 固定断点，任何宽度都不超出顶栏、不出横向滚动条。 —— 2026-11-13 PRD 标注更新时，旧版 PRD 生成的标注（带 prdSection）一起换掉，只保留用户自己圈选的（根治页面上混入旧标注、点开没内容）。 —— 2026-11-13 写回(/anno-persist)和导出分享版(/anno-embed)带上当前文件名 fileName，同目录有同名系统的旧原型时只改当前打开的这个。 —— 2026-11-13 【复制已圈功能】按 PRD 生成的标注读自带的归属目录(menuPath)、身份(PRD 章节号)、锚点文字，状态显示“已有字段规范/用例规则”；【恢复标注】没有清空备份时从文件里烤入的 PRD 标注恢复(保留自己圈选的·prd-sig 同步)；顶栏标注工具条在 1366/1440 宽排成两行紧凑块不再超出右边。 —— 2026-11-13 pin.anchor 支持 notTab（这些页签选中时不显示）。 —— 2026-11-13 标注号贴按钮右侧上下居中（表格里竖排的操作链接不再压到上一行字）。 —— 2026-11-13 标注锚点再认 行上【更多▾】(el-tooltip__trigger)、普通 <button>、数量紧跟文字的状态（已开票21）。 —— 2026-11-13 按 PRD 自动生成的标注跟着按钮走（pin.anchor：texts+tab·找不到锚点就不显示·换宽度/切页签自动跟随·老标注不受影响）。 —— 2026-11-12 导出保存位置由用户选（根治「导出对接料直接写进固定目录 archive\对接料\<系统>、用户没法选」）：【导出对接料】【一键生成代码】改走 _exportToFolder——①先弹 showDirectoryPicker(手势内·上次文件夹存 IndexedDB 作 startIn 默认·每次可换) ②anno-server returnContent 返回全部文件(base64) ③页面写进「所选文件夹\<系统>-对接料|-生成代码」；浏览器无该 API/框弹不出 → 小框填绝对路径(服务端校验绝对+自动创建)；真取消 → 不写任何文件。提示显示实际所用文件夹。服务端无目标=400，禁静默退回固定目录。防线 qa/export-target-gate.js。【导出分享版】本就弹另存框/退回浏览器下载，未改。以下为 1.10.10 说明： */  /* 2026-11-10 去掉「PRD 的 Word 没生成」弹窗（用户明令不再弹）。以下为 1.10.9 说明： */  /* 2026-09-10 生成PRD提速：【复制已圈功能】带出去的提示词加两条——①复用 annotation-templates.md 已定义的固定件(操作日志表头§9/查询类固定句§27/通知4列表头§38)、只写业务槽位·不重打样板；②多功能点并行生成(Claude Code扇子agent)+增量(anno-ai-queue只生成新圈/改过的)。质量不降(固定件本是标准件)，速度提。三产物分离:①原型assemble--fast(85ms) ②PRD此处提速 ③data_model确定性脚本秒级。 —— 1.10.8 2026-09-09 对接料/一键生成代码 解耦 PRD：两按钮不再因"没圈选/没生成 PRD"拒绝——有 PRD 字段规范走精确档，否则把原型内嵌 PAGECFG 一并 POST(pagecfg)，anno-server 走 derive-from-prototype 出基线 data_model → 同一套 emit-* 出料/出码。成功提示区分"基线档(据原型结构推断·待PRD精化)"。彼此独立:测试用例/售前/手册同规则(见 _shared/downstream-skill-conventions.md §5)。 —— 1.10.7 2026-09-01 子进程装配结果可见：新增 SSE 'assemble-status' 监听→docx/流程图【降级】时弹提示(缺pandoc/Word占用/缺Chrome·可补),杜绝静默降级用户无感知。服务端回路:assembleArtifacts 返回状态→assemble-once POST /anno-assemble-status→常驻广播 SSE。成功不弹(prd-updated 已报)。—— 1.10.6 ㊴猜名器收紧：点/框选取名就地过滤三类坏名(共享 _isBadFnName·与anno-server checkFnName同判定)——①点选守卫补字母+数字编号(PTKFX…)/营销句→转画框 ②框选标题采集滤营销句(连接你的商店体验更多功能) ③最终兜底_bad用同源判定。当场少产坏名·仍留✏️改名+422兜底。—— 1.10.5b ㊴工程命名硬卡·浏览器端：_syncPinToServer 收到 anno-server 422(坏名拒写)时，弹原因提示+自动打开改名框，用户一步改成合格功能名。配套 anno-server /anno-inject 落名前 checkFnName 拒纯编号/功能区/营销句。—— 1.10.4 修改名按钮隐形：pin弹窗+已圈定功能清单的✏️改名按钮原用<el-icon><edit-pen>，依赖EP图标UMD包(ElementPlusIconsVue)。离线原型多数没打图标包→window.ElementPlusIconsVue undefined→图标注册不上→按钮渲染成空白(DOM在·可点·但用户看不见→以为不能改名)。实机截图坐实(跨境ERP-offline)。改为纯文字「✏️ 改名」(emoji系统字体全平台可见·零图标依赖)·清单列label改「改名」宽72。—— 1.10.3 选栈弹窗改真下拉(ElMessageBox+VNode·el-select)：前端Vue/React × 后端Java/Node/Python 一个弹窗选·Python 可按钮选了。—— 1.10.2 多栈后端：一键生成代码弹窗加②后端栈选择(Java+Spring / Node+NestJS)·传 beStack·前后端各双栈=4组合。—— 1.10.1 加前端选栈(Vue/React)。 ——  /* 2026-08-06b 一键生成代码升级为【选前端栈】(Vue3+EP / React+AntD·POST feStack·扇出多栈)；自己的栈引导走导出对接料。—— 1.10.0 Route B 两按钮：新增【导出对接料·喂AI】(exportDevkitVersion→/anno-devkit·出openapi+schema+令牌+提示词包·喂AI任意栈) + 【一键生成代码】(generateCodeVersion→/anno-codegen·弹选栈·默认栈直接出前后端骨架代码/自己的栈引导走对接料)·桥暴露 exportDevkit/generateCode。—— 1.9.21 2026-07-19c 修收口守卫误伤框选：旧守卫对【框选】也 return→收发存汇总区框选算出数字/单字名→整框被吞·无气泡·已采内容白丢。改为守卫只对【点选】转画框，【框选】(带zoneTexts/zoneGroups)兜底名"功能区"照常弹气泡。深测(收发存上半区框选无气泡)定位·根因修。 ——
+  window.__ANNO_LAYER_VERSION__ = '1.11.9';  /* 2026-11-14 开/关标注时的提示条（标注已开启…）挪到顶部导航栏（顶栏+模块菜单+页签）下方，不再盖住【标注】开关和工具条按钮（菜单少的原型里会盖住），内容和停留时长不变。 —— 2026-11-13 标注自己的工具条和【更多 ▾】不参与标注锚点查找（修：窄屏时“修改重提”标注跑到工具条【更多】上）。 —— 2026-11-13 顶栏标注工具条按实际剩余宽度自适应（一行完整→一行紧凑→不常用的收进【更多 ▾】），作废 1799/1800 固定断点，任何宽度都不超出顶栏、不出横向滚动条。 —— 2026-11-13 PRD 标注更新时，旧版 PRD 生成的标注（带 prdSection）一起换掉，只保留用户自己圈选的（根治页面上混入旧标注、点开没内容）。 —— 2026-11-13 写回(/anno-persist)和导出分享版(/anno-embed)带上当前文件名 fileName，同目录有同名系统的旧原型时只改当前打开的这个。 —— 2026-11-13 【复制已圈功能】按 PRD 生成的标注读自带的归属目录(menuPath)、身份(PRD 章节号)、锚点文字，状态显示“已有字段规范/用例规则”；【恢复标注】没有清空备份时从文件里烤入的 PRD 标注恢复(保留自己圈选的·prd-sig 同步)；顶栏标注工具条在 1366/1440 宽排成两行紧凑块不再超出右边。 —— 2026-11-13 pin.anchor 支持 notTab（这些页签选中时不显示）。 —— 2026-11-13 标注号贴按钮右侧上下居中（表格里竖排的操作链接不再压到上一行字）。 —— 2026-11-13 标注锚点再认 行上【更多▾】(el-tooltip__trigger)、普通 <button>、数量紧跟文字的状态（已开票21）。 —— 2026-11-13 按 PRD 自动生成的标注跟着按钮走（pin.anchor：texts+tab·找不到锚点就不显示·换宽度/切页签自动跟随·老标注不受影响）。 —— 2026-11-12 导出保存位置由用户选（根治「导出对接料直接写进固定目录 archive\对接料\<系统>、用户没法选」）：【导出对接料】【一键生成代码】改走 _exportToFolder——①先弹 showDirectoryPicker(手势内·上次文件夹存 IndexedDB 作 startIn 默认·每次可换) ②anno-server returnContent 返回全部文件(base64) ③页面写进「所选文件夹\<系统>-对接料|-生成代码」；浏览器无该 API/框弹不出 → 小框填绝对路径(服务端校验绝对+自动创建)；真取消 → 不写任何文件。提示显示实际所用文件夹。服务端无目标=400，禁静默退回固定目录。防线 qa/export-target-gate.js。【导出分享版】本就弹另存框/退回浏览器下载，未改。以下为 1.10.10 说明： */  /* 2026-11-10 去掉「PRD 的 Word 没生成」弹窗（用户明令不再弹）。以下为 1.10.9 说明： */  /* 2026-09-10 生成PRD提速：【复制已圈功能】带出去的提示词加两条——①复用 annotation-templates.md 已定义的固定件(操作日志表头§9/查询类固定句§27/通知4列表头§38)、只写业务槽位·不重打样板；②多功能点并行生成(Claude Code扇子agent)+增量(anno-ai-queue只生成新圈/改过的)。质量不降(固定件本是标准件)，速度提。三产物分离:①原型assemble--fast(85ms) ②PRD此处提速 ③data_model确定性脚本秒级。 —— 1.10.8 2026-09-09 对接料/一键生成代码 解耦 PRD：两按钮不再因"没圈选/没生成 PRD"拒绝——有 PRD 字段规范走精确档，否则把原型内嵌 PAGECFG 一并 POST(pagecfg)，anno-server 走 derive-from-prototype 出基线 data_model → 同一套 emit-* 出料/出码。成功提示区分"基线档(据原型结构推断·待PRD精化)"。彼此独立:测试用例/售前/手册同规则(见 _shared/downstream-skill-conventions.md §5)。 —— 1.10.7 2026-09-01 子进程装配结果可见：新增 SSE 'assemble-status' 监听→docx/流程图【降级】时弹提示(缺pandoc/Word占用/缺Chrome·可补),杜绝静默降级用户无感知。服务端回路:assembleArtifacts 返回状态→assemble-once POST /anno-assemble-status→常驻广播 SSE。成功不弹(prd-updated 已报)。—— 1.10.6 ㊴猜名器收紧：点/框选取名就地过滤三类坏名(共享 _isBadFnName·与anno-server checkFnName同判定)——①点选守卫补字母+数字编号(PTKFX…)/营销句→转画框 ②框选标题采集滤营销句(连接你的商店体验更多功能) ③最终兜底_bad用同源判定。当场少产坏名·仍留✏️改名+422兜底。—— 1.10.5b ㊴工程命名硬卡·浏览器端：_syncPinToServer 收到 anno-server 422(坏名拒写)时，弹原因提示+自动打开改名框，用户一步改成合格功能名。配套 anno-server /anno-inject 落名前 checkFnName 拒纯编号/功能区/营销句。—— 1.10.4 修改名按钮隐形：pin弹窗+已圈定功能清单的✏️改名按钮原用<el-icon><edit-pen>，依赖EP图标UMD包(ElementPlusIconsVue)。离线原型多数没打图标包→window.ElementPlusIconsVue undefined→图标注册不上→按钮渲染成空白(DOM在·可点·但用户看不见→以为不能改名)。实机截图坐实(跨境ERP-offline)。改为纯文字「✏️ 改名」(emoji系统字体全平台可见·零图标依赖)·清单列label改「改名」宽72。—— 1.10.3 选栈弹窗改真下拉(ElMessageBox+VNode·el-select)：前端Vue/React × 后端Java/Node/Python 一个弹窗选·Python 可按钮选了。—— 1.10.2 多栈后端：一键生成代码弹窗加②后端栈选择(Java+Spring / Node+NestJS)·传 beStack·前后端各双栈=4组合。—— 1.10.1 加前端选栈(Vue/React)。 ——  /* 2026-08-06b 一键生成代码升级为【选前端栈】(Vue3+EP / React+AntD·POST feStack·扇出多栈)；自己的栈引导走导出对接料。—— 1.10.0 Route B 两按钮：新增【导出对接料·喂AI】(exportDevkitVersion→/anno-devkit·出openapi+schema+令牌+提示词包·喂AI任意栈) + 【一键生成代码】(generateCodeVersion→/anno-codegen·弹选栈·默认栈直接出前后端骨架代码/自己的栈引导走对接料)·桥暴露 exportDevkit/generateCode。—— 1.9.21 2026-07-19c 修收口守卫误伤框选：旧守卫对【框选】也 return→收发存汇总区框选算出数字/单字名→整框被吞·无气泡·已采内容白丢。改为守卫只对【点选】转画框，【框选】(带zoneTexts/zoneGroups)兜底名"功能区"照常弹气泡。深测(收发存上半区框选无气泡)定位·根因修。 ——
      2026-07-19b 收口守卫：点选任何分支漏网产出【空名/纯数字/纯值】(如分页数字<li>1、纯货币格)→ _showTrigger 不弹空气泡、转画框模式。深测发现巴西发票分页"1"弹空名气泡→单一收口兜住所有取名分支·任意APP/网站/B端通用。 ——
      2026-07-19 根治「框选把标注层自己弹的『✏️ 画框模式』提示条(.el-message)几何相交当区域内容抓进去→污染PRD」：
      两处框内文本扫描(_scanEl / 几何确定性补全)的排除选择器补上 EP 瞬时浮层 .el-message/.el-notification/.el-message-box/.el-popper/.el-loading-mask，
@@ -2724,7 +2727,7 @@ function initAnnotationLayer() {   /* ← 在宿主 onMounted 里调用一次 */
         // ── 宿主桥接：标注开关 / 模式（宿主 nav 通过 window.__anno 调用，见下）──
         _bridge: (() => {
           window.__anno = {
-            toggleShow: (v) => { showPins.value  = (v == null) ? !showPins.value  : !!v; },
+            toggleShow: (v) => { showPins.value  = (v == null) ? !showPins.value  : !!v; try { window.__annoToastBelow && window.__annoToastBelow(); } catch (e) {} },
             toggleMode: (v) => { pinModeOn.value = (v == null) ? !pinModeOn.value : !!v; },
             scanMissing: () => { try { scanMissing(); } catch (e) {} },
             openScopedList: () => { try { openScopedList(); } catch (e) {} },  // 复制已圈定功能面板
@@ -2782,6 +2785,27 @@ function initAnnotationLayer() {   /* ← 在宿主 onMounted 里调用一次 */
   if (window.ElementPlusIconsVue) {
     for (const [k, c] of Object.entries(window.ElementPlusIconsVue)) _annoApp.component(k, c);
   }
+  /* ── 1.11.9 开/关标注提示条挪到顶部导航栏下方（_annoToastBelow）：宿主在调 __anno.toggleShow 之后同步弹 ElMessage，
+       这里在之后约 1 秒内给新出现的 .el-message 打 data-anno-below，并算出位置：从工具条（.anno-sw）所在的吸顶/固定条起，
+       往下接上紧挨着的整宽吸顶条（模块菜单、页签栏），取这一叠的下沿 + 8px。没有工具条就不动。 ── */
+  window.__annoToastBelow = function () {
+    const sw = document.querySelector('.anno-sw');
+    if (!sw || typeof MutationObserver === 'undefined') return;
+    const pos = e => getComputedStyle(e).position;
+    let bar = sw; while (bar && bar !== document.body && !/^(sticky|fixed)$/.test(pos(bar))) bar = bar.parentElement;
+    let bottom = (bar && bar !== document.body ? bar : sw).getBoundingClientRect().bottom;
+    const vw = window.innerWidth, cap = window.innerHeight * 0.4;
+    const bars = [...document.querySelectorAll('body *')].filter(e => {
+      if (e.closest('#anno-app') || !/^(sticky|fixed)$/.test(pos(e))) return false;
+      const r = e.getBoundingClientRect(); return r.width >= vw * 0.6 && r.height > 0 && r.top < cap;
+    }).map(e => e.getBoundingClientRect());
+    for (let grew = true; grew;) { grew = false; for (const r of bars) if (r.top <= bottom + 2 && r.bottom > bottom && r.bottom < cap) { bottom = r.bottom; grew = true; } }
+    const top = Math.round(bottom + 8);
+    const mark = m => { if (m.hasAttribute('data-anno-below')) return; const extra = Math.max(0, (parseFloat(m.style.top) || 16) - 16); m.style.setProperty('--anno-msg-top', (top + extra) + 'px'); m.setAttribute('data-anno-below', ''); };
+    const mo = new MutationObserver(list => { for (const x of list) for (const n of x.addedNodes) { if (n.nodeType !== 1) continue; if (n.matches('.el-message')) mark(n); n.querySelectorAll && n.querySelectorAll('.el-message').forEach(mark); } });
+    mo.observe(document.body, { childList: true, subtree: true });
+    setTimeout(() => mo.disconnect(), 1000);
+  };
   /* ── 1.11.7 顶栏标注工具条自适应（_annoFitToolbar）：宿主 .anno-sw 由宿主 Vue 渲染，这里只加 data 属性/类名 + 一个【更多 ▾】，
        不改宿主节点文字。实测顶栏剩余宽度，依次试：①一行完整 ②一行紧凑 ③紧凑+把不常用的逐个收进【更多 ▾】，取第一个放得下的。
        放得下 = 顶栏不溢出、页面无横向滚动条、工具条在顶栏内且不与顶部菜单等兄弟块相交、各块没有被挤得内容溢出。 ── */

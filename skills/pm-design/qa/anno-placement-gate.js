@@ -62,12 +62,25 @@ async function checkOne(file, PORT, DPORT) {
     // ② .ai-pin-bar 不渲染/不可见(无浮层)
     R.floatBar = await ev(`(function(){var b=document.querySelector('.ai-pin-bar'); return !!b && b.offsetParent!==null;})()`);
     // ③ 标注开关够得着：elementFromPoint 命中开关本身
-    R.switchReach = await ev(`(function(){
+    /* §2026-11-14（标注层 1.11.9 起）：开启标注后的提示条必须出现在顶部导航栏下方，
+       不许盖住【标注】开关或工具条（.anno-sw）里任何按钮——被提示条盖住也判红（曾只警告，已改回）。 */
+    const reachSrc = `(function(){
       var sws=[].slice.call(document.querySelectorAll('.el-switch'));
       var s=sws.find(function(x){var p=x.closest('span,div'); return p&&(p.title||'').indexOf('标注')>=0;}) || sws[0];
-      if(!s)return false; var r=s.getBoundingClientRect(); var el=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
-      return !!el && (s.contains(el)||el===s);
-    })()`);
+      if(!s)return 'nosw'; var r=s.getBoundingClientRect(); var el=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+      if(!!el && (s.contains(el)||el===s)) return 'ok';
+      return (el && el.closest && el.closest('.el-message,.el-notification')) ? 'toast' : 'blocked';
+    })()`;
+    let reach = await ev(reachSrc);
+    if (reach === 'toast') R.toastCover = true;
+    R.toastHits = await ev(`(function(){
+      var ms=[].slice.call(document.querySelectorAll('.el-message,.el-notification')).filter(function(m){var r=m.getBoundingClientRect();return r.width>0&&r.height>0;});
+      var bs=[].slice.call(document.querySelectorAll('.anno-sw > .el-switch, .anno-sw > .el-button, .anno-sw button')).filter(function(b){return b.offsetParent!==null;});
+      var hit=[]; ms.forEach(function(m){var a=m.getBoundingClientRect(); bs.forEach(function(b){var c=b.getBoundingClientRect();
+        if(a.left<c.right&&a.right>c.left&&a.top<c.bottom&&a.bottom>c.top){var t=(b.innerText||'').trim().slice(0,12)||'标注开关'; if(hit.indexOf(t)<0)hit.push(t);}});});
+      return hit;
+    })()`) || [];
+    R.switchReach = reach === 'ok';
     await new Promise(z => setTimeout(z, 300));
     ws.close();
   } catch (e) { err = e.message; }
@@ -79,10 +92,12 @@ async function checkOne(file, PORT, DPORT) {
   console.log(C(okTop) + "    复制已圈功能 内联顶部(top=" + R.copyTop + "，应 0~130)");
   console.log(C(!R.floatBar) + "    无浮层 ai-pin-bar (" + (R.floatBar ? "仍在渲染!" : "已弃用") + ")");
   console.log(C(R.switchReach) + "    「标注」开关够得着·没被遮挡");
+  console.log(C(!R.toastCover && !R.toastHits.length) + "    开启标注后的提示条不盖开关/工具条按钮" + (R.toastHits.length ? "（盖住：" + R.toastHits.join("、") + "）" : ""));
   console.log(C(realErr.length === 0) + "    0 真实报错");
   if (err) fails.push(name + " 运行异常: " + err);
   if (!okTop) fails.push(name + " 复制已圈功能 不在顶部头部(top=" + R.copyTop + ") —— 标注控件没内联到顶部右侧");
   if (R.floatBar) fails.push(name + " 仍有浮层 ai-pin-bar 渲染 —— 违反【不浮层】");
-  if (!R.switchReach) fails.push(name + " 「标注」开关被遮挡/够不着 —— 反人类");
+  if (!R.switchReach) fails.push(name + " 「标注」开关被遮挡/够不着" + (R.toastCover ? "（被开启标注后的提示条盖住）" : "") + " —— 反人类");
+  if (R.toastHits && R.toastHits.length) fails.push(name + " 开启标注后的提示条盖住了工具条：" + R.toastHits.join("、") + " —— 提示条须在顶部导航栏下方");
   if (realErr.length) fails.push(name + " " + realErr.length + " 个真实报错");
 }

@@ -57,6 +57,7 @@ logs/
 /*.gif
 /*.webp
 /*.docx
+!/使用指南.docx
 /*.xlsx
 /*.pdf
 /*.txt

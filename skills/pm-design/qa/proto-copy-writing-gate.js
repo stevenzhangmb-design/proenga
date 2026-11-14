@@ -90,7 +90,7 @@ function autoDiscover() {
 const target = process.argv[2];
 if (target && !fs.existsSync(target)) { console.error('✘ 目标不存在：' + target); process.exit(2); }
 console.log('\n════════ ㊾ 原型文案书面用语闸 ════════');
-const files = target ? [target] : autoDiscover();
+const files = target ? [target] : require('./_sample-deliverable').orSample(autoDiscover());
 if (!files.length) { console.log('  ⊘ 未找到交付原型，跳过'); process.exit(0); }
 let red = false; for (const f of files) if (checkOne(f)) red = true;
 if (red) { console.log('  FAIL ❌ —— 按 skills/prd/SKILL.md「中文书面用语铁律」改到 0 再交付'); process.exit(1); }

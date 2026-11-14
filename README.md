@@ -81,30 +81,81 @@ AI 产研协同工具 —— 原型 · PRD · 代码，同出一源。
 ## 快速开始
 
 ### 前置
-- **Node.js**：建议 22 或更高；18 也能用（跑 `anno-server`、画原型、生成 PRD），但不能自动出标注（不圈选生成 PRD 后自动配对标注要用 Node.js 22 自带的 WebSocket）
-- **pandoc**（可选：PRD `.md` → Word `.docx`；不装则跳过 docx）
+- **Node.js**：必装，建议 22 或更高（18 也能用，但不圈选生成 PRD 后不能自动出标注）。
+- **pandoc**：可选，只有要把 PRD 转成 Word 才装。
 
 ### 1. 安装 skills
 ```bash
-# 全局（所有项目可用）
-cp -r skills/* ~/.claude/skills/
-# 或项目级
-cp -r skills/* .claude/skills/
-# Claude Code：启用钩子（必做，否则收工自动检查、需求清单拦截不生效）
+# 下载工具包并进入文件夹（没有 git：在 GitHub 仓库网页点【Code】→【Download ZIP】，解压后进入该文件夹）
+git clone https://github.com/stevenzhangmb-design/proenga.git
+cd proenga
+```
+
+**Claude Code：** 用 Claude Code 打开 proenga 文件夹，技能和规则自动生效；再复制一份钩子配置，重启 Claude Code，收工检查和需求清单拦截才会生效。
+```bash
+# Mac / Linux：启用钩子
 cp .claude/settings.json.example .claude/settings.json
 ```
+```powershell
+# Windows（PowerShell）：启用钩子
+Copy-Item .claude\settings.json.example .claude\settings.json
+```
+
+**Cursor / Codex / GitHub Copilot：** 用它打开 proenga 文件夹即可，自动读取 AGENTS.md 和 .agents/skills。Copilot 在 VS Code 的 Copilot Chat 里用 Agent 模式。
+
+**OpenClaw：** 把技能复制到全局技能目录，然后新开一个会话。
+```bash
+# Mac / Linux
+mkdir -p ~/.agents/skills && cp -r skills/* ~/.agents/skills/
+```
+```powershell
+# Windows（PowerShell）
+New-Item -ItemType Directory -Force "$HOME\.agents\skills" | Out-Null; Copy-Item -Recurse -Force skills\* "$HOME\.agents\skills\"
+```
+
+**WorkBuddy：** 把技能复制到 WorkBuddy 的技能目录，然后重启 WorkBuddy。
+```bash
+# Mac / Linux
+mkdir -p ~/.workbuddy/skills && cp -r skills/* ~/.workbuddy/skills/
+```
+```powershell
+# Windows（PowerShell）
+New-Item -ItemType Directory -Force "$HOME\.workbuddy\skills" | Out-Null; Copy-Item -Recurse -Force skills\* "$HOME\.workbuddy\skills\"
+```
+
+**想在所有项目里都能用（可选）：** Claude Code 复制到 ~/.claude/skills，Cursor / Codex / GitHub Copilot 复制到 ~/.agents/skills（与上面 OpenClaw 的命令相同）。
+```bash
+# Mac / Linux：Claude Code 全局安装
+mkdir -p ~/.claude/skills && cp -r skills/* ~/.claude/skills/
+```
+```powershell
+# Windows（PowerShell）：Claude Code 全局安装
+New-Item -ItemType Directory -Force "$HOME\.claude\skills" | Out-Null; Copy-Item -Recurse -Force skills\* "$HOME\.claude\skills\"
+```
+全局安装时钩子不会自动生效，需要的话跟 AI 说：“把 proenga 里 .claude/settings.global.json.example 的钩子合并到我的 ~/.claude/settings.json。”。
 
 ### 2. 启动本地同步服务
 ```bash
-cd anno-server
-node start-anno-server.js      # 跨平台后台监督器·崩溃自愈·防双开
-# Windows 可双击 start-anno-server.vbs（全隐藏后台）
+# Mac / Linux：在 proenga 文件夹里后台启动（崩溃自动重启，已在运行就不重复启动）
+nohup node anno-server/start-anno-server.js >/dev/null 2>&1 &
+```
+```powershell
+# Windows（PowerShell）：在 proenga 文件夹里后台启动，不弹窗口（也可以直接双击 anno-server\start-anno-server.vbs）
+wscript anno-server\start-anno-server.vbs
+```
+```bash
+# Mac / Linux：等几秒后检查，能看到返回内容（如 []）就说明在运行
+curl http://localhost:3799/anno-queue
+```
+```powershell
+# Windows（PowerShell）：等几秒后检查，能看到返回内容（如 []）就说明在运行
+curl.exe http://localhost:3799/anno-queue
 ```
 
 ### 3. 在你的 AI 工具里开工
 ```
 画一个 XX 系统的原型            # → pm-design 弹四问 → 出可交互原型
-（原型上圈选功能）→ 复制已圈功能 → 粘到对话框 → 生成 PRD
+（原型上圈选功能）→ 点【📋 复制已圈功能】→ 粘到对话框 → 生成 PRD
 给 XX 模块生成 PRD             # → 不圈选直接生成，写完自动出原型标注
 一键生成代码 / 导出对接料        # → dev-codegen 出料/出码
 ```

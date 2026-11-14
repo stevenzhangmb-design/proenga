@@ -1,0 +1,73 @@
+{
+  "_README": "技能复制到 ~/.claude/skills 后使用：把下面的 hooks 合并进 ~/.claude/settings.json（没有这个文件就直接复制本文件过去并改名）。",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/prd/qa/_stop-hook-check.js\"",
+            "timeout": 120,
+            "statusMessage": "交付快闸自检(PRD结构/字段防臆造/系统归属/改名/原型漂移)"
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/_shared/qa/_stop-ledger-check.js\"",
+            "timeout": 15,
+            "statusMessage": "需求清单核对(还有「本轮·待做」不准收工)"
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/_shared/qa/_stop-speed-budget.js\"",
+            "timeout": 15,
+            "statusMessage": "交付预算闸(改了源没重建交付件=白改·不准收工)"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/pm-design/qa/_posttooluse-ui-check.js\"",
+            "timeout": 180,
+            "statusMessage": "原型UI改动·浏览器回归自检(抓页面崩/重复/遮挡)"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/pm-design/qa/_userprompt-ask-ui-hook.js\"",
+            "timeout": 15,
+            "statusMessage": "画原型意图检测·开画前三问提醒(UI/端/地区币种时区)"
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/_shared/qa/_userprompt-ledger-hook.js\"",
+            "timeout": 15,
+            "statusMessage": "需求清单提醒(先记清单再动手)"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/_shared/qa/_no-throwaway-script-hook.js\"",
+            "timeout": 15,
+            "statusMessage": "禁写一次性脚本闸(改原型只准截图看·不准造审计工具)"
+          }
+        ]
+      }
+    ]
+  }
+}

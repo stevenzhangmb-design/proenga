@@ -172,7 +172,7 @@ function main() {
 
   console.log('三语完整性闸 · 验"多语原型的每条文案都真有 en/pt"（规范 §5.5）');
   console.log('───────────────────────────────────────');
-  const files = target ? collect(target) : autoDiscover();
+  const files = target ? collect(target) : require('./_sample-deliverable').orSample(autoDiscover());
   if (!files.length) { console.log('⊘ 未找到交付原型(装配版*offline.html)，跳过'); process.exit(0); }
 
   let anyRed = false;
