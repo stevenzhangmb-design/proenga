@@ -1432,8 +1432,9 @@ AI 打开或修改任意原型 HTML 时，必须检查是否含 `initSSEAutoRefr
 > 1. **触发条件**：用户说过“以后 PRD 和原型改完，自动更新到网上”这类话，并且已经配置好发布仓库（一个本地 git 仓库，已开启 GitHub Pages 或其它静态托管，本机已登录、能推送）。缺一个条件就不自动推送，只告诉用户还差哪一步。
 > 2. **每次改完原型**（交付件已重建、自检通过后）：运行 `node skills/pm-design/make-share-copy.js <交付件.html> <发布仓库里的只读版.html>` 生成只读版（保留内嵌标注，打开即只读），然后在发布仓库里 `git add`、`git commit`、`git push`。文件超过 25MB 时 GitHub 网页上传不了，只能用 git 推送。
 > 3. **推送后核对**：约 1 分钟后打开线上网址，确认页面能打开、标注能显示，再告诉用户“已更新到网上”并给出网址。
-> 4. **路径不写进工具包**：发布仓库的位置、文件名和网址由用户告诉 AI，记在本机的记忆或项目说明里；本节和任何随包文件都不写个人路径、公司名或客户名。
-> 5. PRD 的在线网页见 prd SKILL.md 的同名一节；推送失败时停下来告诉用户原因，不反复重试。
+> 4. **线上必须和本地一模一样**：推送后必须运行 `node skills/_shared/qa/verify-pages-sync.js --local <发布仓库目录> --base <线上根网址> --wait 20 <只读版.html>`，核对线上文件和本地文件完全一致。全部显示一致、退出码为 0 才算完成；有不一致或下载失败时，不许说“已推送”或“已更新到网上”，要先查原因（例如网页还没部署完、部署失败）并告诉用户。
+> 5. **路径不写进工具包**：发布仓库的位置、文件名和网址由用户告诉 AI，记在本机的记忆或项目说明里；本节和任何随包文件都不写个人路径、公司名或客户名。
+> 6. PRD 的在线网页见 prd SKILL.md 的同名一节；推送失败时停下来告诉用户原因，不反复重试。
 
 > 🔒 **标注可携带性 / 自动烤回工作文件铁律（2026-06-26 用户定 · 标注层 v1.7.7 · 根治"pin 只活 localStorage、换浏览器/拷文件给别人就丢"·满足"拷贝原文件即可分享 + 对方完整可编辑·清空/复制已圈→AI重生成/编辑删PRD内容"）**：
 > - **自动烤回（非只读·可编辑·无需导出按钮）**：`_savePins` 每次（圈选/编辑/删除/清空触发）**去抖 1.5s POST anno-server `/anno-persist`** → `persistAnnotationsToFile(systemName, pins)` 按 system_name 把全量 pin **写回【工作文件本身】的 `window.__USER_ANNOTATIONS__`**（紧跟 `__PRD_DATA__` 后；**只注标注、不烤 `__ANNO_READONLY__`** → 对方拷贝原文件即看即编辑）。无 anno-server 静默降级(localStorage 已存)；只读分享版 `if(__ANNO_READONLY__===true)return` 不回写。**★ JSON 必转义 `</script>`→`<\/script`**（字段内容含 `</script>` 会提前闭合 `<script>` 标签整页崩；`persistAnnotationsToFile` + `writeShareVersion` 都要）。
