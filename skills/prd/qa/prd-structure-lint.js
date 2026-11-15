@@ -174,7 +174,9 @@ BANS.forEach(([w]) => { if (md.includes(w)) E("BAN", `全文出现禁用措辞�
     if (/请参考\s*[\d.]+\d\s*的目录/.test(b)) continue;
     if (h.name === "字段规范" && !(/^无[。.]?$/.test(b) || /\|\s*字段名称\s*\|\s*类型\s*\|\s*是否必填\/?必?选?\s*\|\s*默认值\s*\|\s*约束规则\s*\|/.test(b))) bad.push(`「${h.text}」须为“无。”或五列表头`);
     if (h.name === "用例规则") { const miss = SEC7.filter(s => !new RegExp("\\u2022\\s*" + s).test(b)); if (miss.length) bad.push(`「${h.text}」用例规则缺 ${miss.map(s => "• " + s).join("、")}`); }
-    if (h.name === "流程图" && !/```mermaid|!\[/.test(b) && !/^无[。.]?$/.test(b)) bad.push(`「${h.text}」没有流程图（mermaid 或图片）`);
+    /* 2026-11-15：流程图小节到下一个单独成行的加粗小标题（如“和税局（SEFAZ）的数据交互”）为止；以前把后面那段也算进来，写了“无。”仍误报 */
+    const bFlow = h.name === "流程图" ? b.split(/\n\*\*[^\n]+\*\*[ \t]*(?=\n|$)/)[0].trim() : b;
+    if (h.name === "流程图" && !/```mermaid|!\[/.test(bFlow) && !/^无[。.]?$/.test(bFlow)) bad.push(`「${h.text}」没有流程图（mermaid 或图片）`);
     if (/^原型/.test(h.name) && !/!\[/.test(b) && !/^无[。.]?$/.test(b) && !/IMG-/.test(b)) bad.push(`「${h.text}」没有原型截图`);
   }
   if (bad.length) E("STD", `有 ${bad.length} 处【流程图/原型/字段规范/用例规则】不符合标准模板（个性化结构的 PRD 也必须一样）：${bad.slice(0, 5).join("；")}${bad.length > 5 ? " 等" : ""}`);
@@ -297,6 +299,9 @@ fps.forEach(N => {
    ① 用例规则七节齐全且顺序对；② 有字段规范就必须是五列表，没有字段就写“无。”（2026-11-06 用户明令，覆盖 10-29 的“整段不写”）；
    ③ 提示消息是表就用固定三列表头；④ 操作日志：查询/查看写不输出，否则固定说明语 + 6 行。 */
 const h7 = H.filter(h => h.lv === 7 && !/^(位置|原型图|字段规范|用例规则)$/.test(h.title));   /* 功能点下的四个小节写成第 7 级标题时不是功能点 */
+/* 2026-11-15：功能点下的说明小节（如 x.1 哪些场景可以开 55 发票，后面同级紧跟 位置/原型图/字段规范/用例规则）也不是功能点，以前误报“缺用例规则” */
+const SUB4 = /^(位置|原型图|字段规范|用例规则)$/, parentOf = n => n.split(".").slice(0, -1).join(".");
+for (let k = h7.length - 1; k >= 0; k--) { const p = parentOf(h7[k].num); if (H.some(x => x.lv === 7 && SUB4.test(x.title) && parentOf(x.num) === p)) h7.splice(k, 1); }
 h7.forEach(h => {
   const nx = H.find(x => x.line > h.line && x.lv !== 8 && x.lv !== 9);   /* 第 8、9 级小节属于这个功能点 */
   const body = between(h.line, nx ? (nx.start ?? nx.line) : lines.length).replace(/^:::.*$/gm, "").replace(/\[([^\]\n]*)\]\{custom-style="[^"]*"\}/g, "$1");   /* 去掉标题外层红字标记再找小节 */
@@ -329,7 +334,7 @@ lines.forEach((l, i) => {
 
 /* ══════ 输出 ══════ */
 console.log("\n════════ PRD 合规机器闸（prd 铁律可执行版） ════════");
-console.log("PRD：" + path.basename(file) + " | 标题 " + H.length + " | 功能点 " + (fps.length || H.filter(h => h.lv === 7).length) + " | 原型图为无 " + proImgNoneCount + "/" + fps.length);
+console.log("PRD：" + path.basename(file) + " | 标题 " + H.length + " | 功能点 " + (fps.length || h7.length) + " | 原型图为无 " + proImgNoneCount + "/" + fps.length);
 if (!errs.length) console.log("  ✅ 机械/结构/格式/表格/禁词层 全合规 PASS（判断类仍须按 deepcheck 铁律人工逐条核）");
 else { console.log("  ❌ 发现 " + errs.length + " 处违规 FAIL："); errs.forEach(e => console.log("    - " + e)); }
 console.log("══════════════════════════════════════════════════\n");
