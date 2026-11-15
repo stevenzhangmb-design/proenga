@@ -78,3 +78,6 @@ skills/pm-design/codegen/out*/
 
 # 本机临时目录根（各机器自己配，不上传）
 .proenga-tmp
+
+# Word 生成记录（本机防覆盖用，不进仓库）
+.*.docx.gen

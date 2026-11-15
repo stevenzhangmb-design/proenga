@@ -118,6 +118,7 @@
 
 **第 1 步：装 VS Code 并登录 GitHub Copilot**
 - 打开 code.visualstudio.com/download，下载 Windows 版并安装。
+- VS Code 要 1.116 或更高版本，新版已经自带 Copilot，不用另装扩展。
 - 打开 VS Code，把鼠标移到底部状态栏的 Copilot 图标上，点【Use AI Features】。
 - 按提示用 GitHub 账号登录，没有账号就按提示注册一个。
 - 账号还没有 Copilot 套餐的，登录后会自动开通 Copilot Free，每月有免费额度，用得多需要付费套餐。
@@ -142,6 +143,7 @@
 - 按 Ctrl + Alt + I 打开 Chat 视图。
 - 在输入框的 Agent 下拉框里选【Agent】。
 - 在输入框里输入“帮我完成 Proenga 的安装”，然后发送。
+- Copilot 要运行命令时会弹窗请你确认，点【Allow】（允许）。
 - Copilot 会照 proenga 文件夹里的安装说明一步步做，比如检查 Node.js 和 pandoc，启动本地同步服务并检查。
 - 中间它可能会问你原型放在哪个文件夹，照实回答就行。
 
@@ -150,17 +152,18 @@
 
 ### OpenClaw
 
-**第 1 步：装 OpenClaw**
-- 打开 github.com/openclaw/openclaw-windows-node/releases/latest，下载 OpenClawCompanion-Setup-x64.exe，ARM 电脑下载 OpenClawCompanion-Setup-arm64.exe。
-- 双击安装包装好，不需要管理员权限。
-- 从开始菜单打开【OpenClaw Companion】，第一次打开时点【Set up locally】，等设置完成、托盘图标变绿。
-- OpenClaw 是开源软件，本身不收费，但要接一个 AI 模型：已登录的 Claude Code 或 Codex，或者模型服务商的 API key，按设置提示选。
-- Mac 用户打开 github.com/openclaw/openclaw/releases 下载 .dmg 安装包，装好后打开 OpenClaw.app。
-
-**第 2 步：装 Node.js（只装一次）**
+**第 1 步：装 Node.js（只装一次）**
 - 打开 nodejs.org，选 LTS 版本下载。
 - 双击下载好的安装包，一路点下一步装完。
-- 已经装过的跳过这一步。
+- OpenClaw 要求 Node.js 24.16 或更高版本，已经装过的确认版本够新。
+
+**第 2 步：装 OpenClaw**
+- 在开始菜单搜索“PowerShell”，打开【Windows PowerShell】。
+- 粘贴下面这行官方安装命令，按回车：`iwr -useb https://openclaw.ai/install.ps1 | iex`
+- 这种装法直接装在 Windows 上，不用装 WSL，能直接读写 D 盘的文件。
+- 装完会进入设置向导，按提示选 AI 模型：已登录的 Claude Code 或 Codex，或者模型服务商的 API key。
+- OpenClaw 是开源软件，本身不收费，用的 AI 模型按模型服务商收费。
+- Mac 用户打开 github.com/openclaw/openclaw/releases 下载 .dmg 安装包，装好后打开 OpenClaw.app。
 
 **第 3 步：下载 Proenga**
 - 打开 https://github.com/stevenzhangmb-design/proenga 。
@@ -169,7 +172,7 @@
 - 把解压出来的文件夹名改成 proenga。
 
 **第 4 步：让 OpenClaw 把技能复制过去**
-- OpenClaw 不用打开文件夹，从开始菜单打开【Chat】就能和它对话。
+- OpenClaw 不用打开文件夹。在 PowerShell 里输入 `openclaw dashboard`，按回车，浏览器会打开 OpenClaw 的对话页面。
 - 在输入框里输入“帮我把 D:\proenga 文件夹里 skills 下的全部技能复制到 ~/.agents/skills”，然后发送。
 - 话里的 D:\proenga 换成你解压的实际位置，~/.agents/skills 是 OpenClaw 的个人技能目录，照原样说就行。
 - 复制完新开一个会话，技能才会生效。
@@ -205,18 +208,15 @@
 **第 4 步：用 WorkBuddy 打开 proenga 文件夹**
 - 新建任务时，点输入框左下角的【选择工作空间】。
 - 选中刚才解压的 proenga 文件夹。
+- 第一次打开时会弹出信任提示，选【正常打开】。选受限模式的话，技能不会加载。
+- proenga 文件夹里已经带好 WorkBuddy 的技能目录（.codebuddy/skills），打开文件夹就能用，不用复制。
 
-**第 5 步：让 WorkBuddy 把技能复制过去**
-- 在输入框里输入“帮我把 proenga 文件夹里 skills 下的全部技能复制到 ~/.workbuddy/skills”，然后发送。
-- ~/.workbuddy/skills 是 WorkBuddy 的技能目录，照原样说就行。
-- 复制完把 WorkBuddy 关掉再打开，再按第 4 步选一次 proenga 文件夹。
-
-**第 6 步：对 WorkBuddy 说一句话**
+**第 5 步：对 WorkBuddy 说一句话**
 - 在输入框里输入“帮我完成 Proenga 的安装”，然后发送。
 - WorkBuddy 会照 proenga 文件夹里的安装说明一步步做，比如检查 Node.js 和 pandoc，启动本地同步服务并检查。
 - 中间它可能会问你原型放在哪个文件夹，照实回答就行。
 
-**第 7 步：确认装好了**
+**第 6 步：确认装好了**
 - 新建一个任务，选 proenga 文件夹作为工作空间，输入“检查 Proenga 装好了没有”，然后发送。
 
 ## 安装
@@ -242,7 +242,7 @@ cp .claude/settings.json.example .claude/settings.json
 Copy-Item .claude\settings.json.example .claude\settings.json
 ```
 
-**Cursor / Codex / GitHub Copilot：** 用它打开 proenga 文件夹即可，自动读取 AGENTS.md 和 .agents/skills。Copilot 在 VS Code 的 Copilot Chat 里用 Agent 模式。
+**Cursor / Codex / GitHub Copilot：** 用它打开 proenga 文件夹即可，自动读取 AGENTS.md 和技能目录（Cursor、Codex 读 .agents/skills，Copilot 读 .github/skills）。Copilot 在 VS Code 的 Chat 里用 Agent 模式，VS Code 要 1.116 或更高版本，不用另装扩展。
 
 **OpenClaw：** 把技能复制到全局技能目录，然后新开一个会话。
 ```bash
@@ -254,15 +254,7 @@ mkdir -p ~/.agents/skills && cp -r skills/* ~/.agents/skills/
 New-Item -ItemType Directory -Force "$HOME\.agents\skills" | Out-Null; Copy-Item -Recurse -Force skills\* "$HOME\.agents\skills\"
 ```
 
-**WorkBuddy：** 把技能复制到 WorkBuddy 的技能目录，然后重启 WorkBuddy。
-```bash
-# Mac / Linux
-mkdir -p ~/.workbuddy/skills && cp -r skills/* ~/.workbuddy/skills/
-```
-```powershell
-# Windows（PowerShell）
-New-Item -ItemType Directory -Force "$HOME\.workbuddy\skills" | Out-Null; Copy-Item -Recurse -Force skills\* "$HOME\.workbuddy\skills\"
-```
+**WorkBuddy：** 用 WorkBuddy 打开 proenga 文件夹即可，首次打开弹出信任提示时选【正常打开】；技能在包里的 .codebuddy/skills，自动读取，不用复制。
 
 **想在所有项目里都能用（可选）：** Claude Code 复制到 ~/.claude/skills，Cursor / Codex / GitHub Copilot 复制到 ~/.agents/skills（与上面 OpenClaw 的命令相同）。
 ```bash
@@ -303,7 +295,7 @@ curl.exe http://localhost:3799/anno-queue
 
 ## 各工具从哪里读规则和技能
 
-公开包里已经放好了各工具的技能入口（.claude/skills、.agents/skills、.codebuddy/skills 下每个技能一个 SKILL.md），入口文件只写技能名和用途，并指向 skills/ 下的完整规则。这些入口由发布脚本自动生成，不要手改。
+公开包里已经放好了各工具的技能入口（.claude/skills、.agents/skills、.github/skills、.codebuddy/skills 下每个技能一个 SKILL.md），入口文件只写技能名和用途，并指向 skills/ 下的完整规则。这些入口由发布脚本自动生成，不要手改。
 
 | 工具 | 规则文件 | 技能目录 | 核实情况 |
 |---|---|---|---|
@@ -312,7 +304,7 @@ curl.exe http://localhost:3799/anno-queue
 | Cursor | AGENTS.md | .agents/skills、.cursor/skills、.claude/skills、~/.agents/skills | 官方文档；本机安装包里核对到这些目录，没开界面实测 |
 | GitHub Copilot（VS Code） | AGENTS.md | .github/skills、.agents/skills、.claude/skills、~/.agents/skills、~/.copilot/skills | 官方文档；本机 VS Code 安装包里核对到这些目录，chat.useAgentSkills 和 chat.useAgentsMdFile 默认开启，没开界面实测 |
 | OpenClaw | 自己工作区（默认 ~/.openclaw/workspace）里的 AGENTS.md | 工作区 skills、~/.agents/skills、~/.openclaw/skills | 官方文档；本机实测 openclaw skills list 识别到 10 个技能 |
-| WorkBuddy | 打开的文件夹里的 AGENTS.md（同站 CodeBuddy 文档：没有 CODEBUDDY.md 时读 AGENTS.md） | ~/.workbuddy/skills；项目级 .codebuddy/skills | ~/.workbuddy/skills 来自 WorkBuddy 自带的技能安装说明；项目级目录和规则文件来自同站 CodeBuddy 文档，WorkBuddy 桌面版没实测 |
+| WorkBuddy | 打开的文件夹里的 AGENTS.md（官方文档：与 CODEBUDDY.md、AGENTS.md 兼容） | 项目级 .codebuddy/skills | WorkBuddy 官方文档（workbuddy.cn 项目配置页）写明读项目里的 .codebuddy/skills；首次打开要选【正常打开】，受限模式不加载技能；WorkBuddy 桌面版没实测 |
 
 - **临时文件放哪个盘（自动·不用配）**：检查工具会复制原型、开后台浏览器，产生临时文件。第一次运行时自动选“非系统盘里剩余空间最大的本地硬盘”，用 `<盘>:\proenga-temp`，并记进仓库根的 `.proenga-tmp`；只有系统盘的机器退回系统临时目录。**无论放哪，每个工具用完都会自动删**，崩了下次启动自动清。想换位置：改 `.proenga-tmp` 第一行（或设环境变量 `PROENGA_TMP`）。
 
