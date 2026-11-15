@@ -162,6 +162,7 @@ description: PM 用的 PRD 撰写 skill (PRD-only 主流程 / 无原型场景) �
 **Word 版式铁律（2026-11-05 用户明令）：PRD 生成的 Word 默认字体为微软雅黑，正文和各级标题都为五号（10.5 磅），任何文字都不许倾斜。**
 - 样式模板为 [`prd-reference.docx`](prd-reference.docx)，是唯一出处：全部样式使用微软雅黑；正文、表格、作者、日期、文档标题和一至九级标题都为五号；标题加粗以区别正文；代码保留 Consolas；所有样式都去掉了倾斜（原来四、六、八级标题和图片说明是斜体）。
 - **前面没有编号的正文段落，首行缩进 2 个字（2026-11-06 用户明令，按中文书写习惯）**：以数字编号开头的段落（“1、”“1.”“（1）”“①”“一、”）不缩进；以“•”等列表符号开头的段落也不缩进。由 [`prd-no-italic.lua`](prd-no-italic.lua) 在转 Word 时逐段判断，给不带编号的段落套模板里的“First Line Indent”样式（首行缩进 2 字符）。表格、标题、图片、引用不缩进。不许在 Word 里逐段手工设置缩进。
+- **新增、修改的内容一律用正常颜色，不标红（2026-11-15 用户明令）**：写 PRD、改 PRD、派子任务改 PRD 时，都不许给新内容自动加红色标记；只有用户明确点名“这段标红”的文字才标红。去掉红色标记后，表格里的完整句子照样要补句号（红色标记曾让写法检查漏查）。
 - 用户要求标红的文字写成 `[要标红的文字]{custom-style="Red Text"}`，模板里的“Red Text”字符样式为红色（FF0000）。用户要求标蓝色的写成 `[要标蓝的文字]{custom-style="Blue Text"}`（模板“Blue Text”字符样式为蓝色 0070C0；要加粗写成 `**[文字]{custom-style="Blue Text"}**`）。不许用 HTML 的 color 写法，pandoc 转 Word 时会丢掉。
 - md 里的 `*强调*`、`_强调_` 由 [`prd-no-italic.lua`](prd-no-italic.lua) 在转 Word 时转成正常字体，所以 md 里写了强调也不会倾斜。
 - `skills/pm-design/make-doc.ps1` 和 anno-server 的 `pandocDocxArgs` 都通过 `--reference-doc` 和 `--lua-filter` 使用这两个文件，并带 `--no-highlight`（代码着色会带入 6 个斜体样式），任何工具生成 PRD 的 Word 都必须带上它们。不许在 Word 里手工改字体，也不许另做一份模板。

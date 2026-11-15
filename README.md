@@ -126,11 +126,176 @@ AI 产研协同工具 —— 原型 · PRD · 代码，同出一源。
 **Mac 用户**
 - Node.js 和 Claude 的下载页都有 Mac 版，步骤一样。
 
-**Cursor / Codex / GitHub Copilot 用户**
-- 先装好 Node.js 和你用的工具。
-- 按第 2 步下载 ZIP 并解压。
-- 用工具打开 proenga 文件夹。
-- 对它说“帮我完成 Proenga 的安装”。
+#### Cursor
+
+**第 1 步：装 Cursor**
+- 打开 cursor.com/downloads，下载 Windows 版并安装。
+- 安装好后打开 Cursor，登录你的账号。
+- Cursor 有免费套餐，但 Agent 的使用次数有限，用得多需要付费套餐。
+- Mac 用户在同一个下载页下载 Mac 版，步骤一样。
+
+**第 2 步：装 Node.js（只装一次）**
+- 打开 nodejs.org，选 LTS 版本下载。
+- 双击下载好的安装包，一路点下一步装完。
+- 已经装过的跳过这一步。
+
+**第 3 步：下载 Proenga**
+- 打开 https://github.com/stevenzhangmb-design/proenga 。
+- 点绿色的【Code】按钮，再点【Download ZIP】。
+- 把下载的压缩包解压到好找的位置，比如 D 盘。
+- 把解压出来的文件夹名改成 proenga。
+
+**第 4 步：用 Cursor 打开 proenga 文件夹**
+- 在 Cursor 顶部菜单点【File】，再点【Open Folder】。
+- 选中刚才解压的 proenga 文件夹。
+
+**第 5 步：对 Cursor 说一句话**
+- 按 Ctrl + I 打开【Agent】面板。
+- 在输入框里输入“帮我完成 Proenga 的安装”，然后发送。
+- Cursor 会照 proenga 文件夹里的安装说明一步步做，比如检查 Node.js 和 pandoc，启动本地同步服务并检查。
+- 中间它可能会问你原型放在哪个文件夹，照实回答就行。
+
+**第 6 步：确认装好了**
+- 在【Agent】面板里输入“检查 Proenga 装好了没有”，然后发送。
+
+#### Codex
+
+**第 1 步：装 ChatGPT 桌面版（自带 Codex）**
+- Codex 现在在 ChatGPT 桌面版里，装 ChatGPT 桌面版就行。
+- 打开 learn.chatgpt.com/docs/windows/windows-app，点【Download the ChatGPT desktop app for Windows】，从 Microsoft Store 下载并安装。
+- 安装好后打开 ChatGPT，用你的 ChatGPT 账号登录。
+- 免费账号也能用 Codex，但额度有限；Plus、Pro 等付费套餐额度更多。
+- Mac 用户打开 learn.chatgpt.com/docs/app 下载 Mac 版，步骤一样。
+
+**第 2 步：装 Node.js（只装一次）**
+- 打开 nodejs.org，选 LTS 版本下载。
+- 双击下载好的安装包，一路点下一步装完。
+- 已经装过的跳过这一步。
+
+**第 3 步：下载 Proenga**
+- 打开 https://github.com/stevenzhangmb-design/proenga 。
+- 点绿色的【Code】按钮，再点【Download ZIP】。
+- 把下载的压缩包解压到好找的位置，比如 D 盘。
+- 把解压出来的文件夹名改成 proenga。
+
+**第 4 步：用 Codex 打开 proenga 文件夹**
+- 在 ChatGPT 桌面版里切到【Codex】。
+- 点【Add new project】，或者按 Ctrl + O。
+- 选中刚才解压的 proenga 文件夹。
+
+**第 5 步：对 Codex 说一句话**
+- 点【New chat】开一个新对话。
+- 在输入框里输入“帮我完成 Proenga 的安装”，然后发送。
+- Codex 会照 proenga 文件夹里的安装说明一步步做，比如检查 Node.js 和 pandoc，启动本地同步服务并检查。
+- 中间它可能会问你原型放在哪个文件夹，照实回答就行。
+
+**第 6 步：确认装好了**
+- 在 proenga 项目里点【New chat】，输入“检查 Proenga 装好了没有”，然后发送。
+
+#### GitHub Copilot
+
+**第 1 步：装 VS Code 并登录 GitHub Copilot**
+- 打开 code.visualstudio.com/download，下载 Windows 版并安装。
+- 打开 VS Code，把鼠标移到底部状态栏的 Copilot 图标上，点【Use AI Features】。
+- 按提示用 GitHub 账号登录，没有账号就按提示注册一个。
+- 账号还没有 Copilot 套餐的，登录后会自动开通 Copilot Free，每月有免费额度，用得多需要付费套餐。
+- Mac 用户在同一个下载页下载 Mac 版，步骤一样。
+
+**第 2 步：装 Node.js（只装一次）**
+- 打开 nodejs.org，选 LTS 版本下载。
+- 双击下载好的安装包，一路点下一步装完。
+- 已经装过的跳过这一步。
+
+**第 3 步：下载 Proenga**
+- 打开 https://github.com/stevenzhangmb-design/proenga 。
+- 点绿色的【Code】按钮，再点【Download ZIP】。
+- 把下载的压缩包解压到好找的位置，比如 D 盘。
+- 把解压出来的文件夹名改成 proenga。
+
+**第 4 步：用 VS Code 打开 proenga 文件夹**
+- 在 VS Code 顶部菜单点【File】，再点【Open Folder】。
+- 选中刚才解压的 proenga 文件夹。
+
+**第 5 步：对 Copilot 说一句话**
+- 按 Ctrl + Alt + I 打开 Chat 视图。
+- 在输入框的 Agent 下拉框里选【Agent】。
+- 在输入框里输入“帮我完成 Proenga 的安装”，然后发送。
+- Copilot 会照 proenga 文件夹里的安装说明一步步做，比如检查 Node.js 和 pandoc，启动本地同步服务并检查。
+- 中间它可能会问你原型放在哪个文件夹，照实回答就行。
+
+**第 6 步：确认装好了**
+- 在 Chat 视图里选【Agent】，输入“检查 Proenga 装好了没有”，然后发送。
+
+#### OpenClaw
+
+**第 1 步：装 OpenClaw**
+- 打开 github.com/openclaw/openclaw-windows-node/releases/latest，下载 OpenClawCompanion-Setup-x64.exe，ARM 电脑下载 OpenClawCompanion-Setup-arm64.exe。
+- 双击安装包装好，不需要管理员权限。
+- 从开始菜单打开【OpenClaw Companion】，第一次打开时点【Set up locally】，等设置完成、托盘图标变绿。
+- OpenClaw 是开源软件，本身不收费，但要接一个 AI 模型：已登录的 Claude Code 或 Codex，或者模型服务商的 API key，按设置提示选。
+- Mac 用户打开 github.com/openclaw/openclaw/releases 下载 .dmg 安装包，装好后打开 OpenClaw.app。
+
+**第 2 步：装 Node.js（只装一次）**
+- 打开 nodejs.org，选 LTS 版本下载。
+- 双击下载好的安装包，一路点下一步装完。
+- 已经装过的跳过这一步。
+
+**第 3 步：下载 Proenga**
+- 打开 https://github.com/stevenzhangmb-design/proenga 。
+- 点绿色的【Code】按钮，再点【Download ZIP】。
+- 把下载的压缩包解压到好找的位置，比如 D 盘。
+- 把解压出来的文件夹名改成 proenga。
+
+**第 4 步：让 OpenClaw 把技能复制过去**
+- OpenClaw 不用打开文件夹，从开始菜单打开【Chat】就能和它对话。
+- 在输入框里输入“帮我把 D:\proenga 文件夹里 skills 下的全部技能复制到 ~/.agents/skills”，然后发送。
+- 话里的 D:\proenga 换成你解压的实际位置，~/.agents/skills 是 OpenClaw 的个人技能目录，照原样说就行。
+- 复制完新开一个会话，技能才会生效。
+
+**第 5 步：对 OpenClaw 说一句话**
+- 在新会话里输入“帮我完成 Proenga 的安装，Proenga 在 D:\proenga 文件夹”，然后发送。
+- OpenClaw 会照 proenga 文件夹里的安装说明一步步做，比如检查 Node.js 和 pandoc，启动本地同步服务并检查。
+- 中间它可能会问你原型放在哪个文件夹，照实回答就行。
+
+**第 6 步：确认装好了**
+- 新开一个会话，输入“检查 Proenga 装好了没有，Proenga 在 D:\proenga 文件夹”，然后发送。
+
+#### WorkBuddy
+
+**第 1 步：装 WorkBuddy**
+- 打开 workbuddy.cn，点【立即下载】，选 Windows 版安装包。
+- 双击安装包，按向导一路点下一步，最后点【安装】，装完点【完成】。
+- 打开 WorkBuddy，点【登录】，用微信扫码登录，也可以用手机号或邮箱登录。
+- WorkBuddy 有免费版，额度有限，用得多需要付费套餐，以 workbuddy.cn/pricing 为准。
+- Mac 用户在同一个下载页下载 Mac 版，步骤一样。
+
+**第 2 步：装 Node.js（只装一次）**
+- 打开 nodejs.org，选 LTS 版本下载。
+- 双击下载好的安装包，一路点下一步装完。
+- 已经装过的跳过这一步。
+
+**第 3 步：下载 Proenga**
+- 打开 https://github.com/stevenzhangmb-design/proenga 。
+- 点绿色的【Code】按钮，再点【Download ZIP】。
+- 把下载的压缩包解压到好找的位置，比如 D 盘。
+- 把解压出来的文件夹名改成 proenga。
+
+**第 4 步：用 WorkBuddy 打开 proenga 文件夹**
+- 新建任务时，点输入框左下角的【选择工作空间】。
+- 选中刚才解压的 proenga 文件夹。
+
+**第 5 步：让 WorkBuddy 把技能复制过去**
+- 在输入框里输入“帮我把 proenga 文件夹里 skills 下的全部技能复制到 ~/.workbuddy/skills”，然后发送。
+- ~/.workbuddy/skills 是 WorkBuddy 的技能目录，照原样说就行。
+- 复制完把 WorkBuddy 关掉再打开，再按第 4 步选一次 proenga 文件夹。
+
+**第 6 步：对 WorkBuddy 说一句话**
+- 在输入框里输入“帮我完成 Proenga 的安装”，然后发送。
+- WorkBuddy 会照 proenga 文件夹里的安装说明一步步做，比如检查 Node.js 和 pandoc，启动本地同步服务并检查。
+- 中间它可能会问你原型放在哪个文件夹，照实回答就行。
+
+**第 7 步：确认装好了**
+- 新建一个任务，选 proenga 文件夹作为工作空间，输入“检查 Proenga 装好了没有”，然后发送。
 
 ### 命令行安装（技术人员）
 
