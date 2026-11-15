@@ -2,6 +2,52 @@
 
 > 本工具是一套 skills/（标准 SKILL.md 技能）加纯 Node 机器闸，再加 AGENTS.md 和 CLAUDE.md 两个入口。规则和机器闸与 AI 工具无关，下面按工具写清楚怎么装。
 
+## 傻瓜版安装（推荐，不用敲命令）
+
+下面以 Claude 为例，全程不用敲命令，照着点就行。
+
+**第 1 步：装两个软件（只装一次）**
+- **Node.js**：打开 nodejs.org，选 LTS 版本下载。
+- 双击下载好的安装包，一路点下一步装完。
+- Node.js 是 Proenga 的本地同步服务和检查工具要用的。
+- **Claude 桌面版**：打开 claude.com/download，点【Download for Windows】下载并安装。
+- 安装好后打开 Claude，登录你的账号。
+- Claude Code 需要付费套餐，Pro、Max、Ultra、Team、Enterprise 都可以。
+- 桌面版自带 Claude Code，不用为 Claude 另外装命令行工具。
+- Windows 上不用装 Git。
+
+**第 2 步：下载 Proenga**
+- 打开 https://github.com/stevenzhangmb-design/proenga 。
+- 点绿色的【Code】按钮，再点【Download ZIP】。
+- 把下载的压缩包解压到好找的位置，比如 D 盘。
+- 把解压出来的文件夹名改成 proenga。
+
+**第 3 步：用 Claude 打开 proenga 文件夹**
+- 打开 Claude，点侧边栏顶部的【Code】。
+- 如果侧边栏只显示图标，把鼠标移上去就能看到名字。
+- 在输入框下面那一行，点最左边的环境选择器，选【Local】分组里的第一项。
+- 点旁边的项目文件夹按钮，选【Open folder…】。
+- 选中刚才解压的 proenga 文件夹。
+
+**第 4 步：对 Claude 说一句话**
+- 在输入框里输入“帮我完成 Proenga 的安装”，然后发送。
+- Claude 会自动按顺序做完这些事：检查 Node.js 和 pandoc，复制钩子配置，指定原型输出目录（可选），启动本地同步服务并检查，设开机自动启动，登记需求清单，跑检查验证。
+- 中间它可能会问你原型放在哪个文件夹，照实回答就行。
+- 最后它提醒你重启 Claude 时，把 Claude 关掉再打开。
+
+**第 5 步：确认装好了**
+- 重新打开 Claude 后，按第 3 步再打开 proenga 文件夹。
+- 输入“检查 Proenga 装好了没有”，然后发送。
+
+**开始用**
+- 直接说要做的事，比如“帮我画一个会员管理的原型”。
+
+**遇到问题**
+- 把报错截图发给 Claude，说“帮我看看怎么回事”。
+
+**Mac 用户**
+- Node.js 和 Claude 的下载页都有 Mac 版，步骤一样。
+
 ## 安装
 
 ### 前置

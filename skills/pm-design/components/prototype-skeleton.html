@@ -1657,6 +1657,12 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
   .help-q{display:inline-flex;align-items:center;gap:3px;color:#8793a5;font-size:12px;line-height:1;margin-left:10px;cursor:help;vertical-align:middle;transition:.15s;font-weight:400;}
   .help-q:hover{border-color:#3363FF;color:#3363FF;}
   .list-help-pop{max-width:540px !important;color:#5a6472 !important;font-size:13px !important;}
+  /* listHelp 结构化条目（{title,text,items}）：浮层限高可滚动；标题加粗、子项圆点、二级再缩进 */
+  .list-help-pop .lh-body{max-height:70vh;overflow-y:auto;overscroll-behavior:contain;padding-right:6px;}
+  .list-help-pop .lh-body b{color:#303133;font-weight:600;}
+  .list-help-pop .lh-body ul{margin:2px 0 4px;padding-left:18px;list-style:disc;}
+  .list-help-pop .lh-body ul ul{list-style:circle;margin:0;}
+  .list-help-pop .lh-body li{margin:1px 0;}
   /* ════════ §v5.2 收银台(POS) —— 数值全部按 2026-10-08 登录 某零售系统 /cashier 实测 ════════
      顶栏 57px 白底下边框 #ebeef5 · 门店绿标 12px/#67c23a/底 #f0f9eb/边 #b3e19d/radius4
      左结账清单栏 460px · 其表头 48px padding 14/16 · 中工具条按钮 120×36 · body 14px */
@@ -3438,8 +3444,8 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         <el-card v-if="curColumns.length" class="gl-table" :class="pfSideCls('list')" shadow="never" :style="Object.assign({}, cfg.bodyColor?{'--gl-body-color':cfg.bodyColor}:{}, pfOrd('list')||{})" :data-annotation="ak('列表')">
           <!-- §v3.45 header 的 v-if 要跟着 hideListTitle 走：v3.36 只让标题文字隐身，卡片头照样渲染，
                于是配了 hideListTitle 的页面表格上方留着一条约 60px 的空白带。 -->
-          <template #header v-if="(curListTitle && !curHideListTitle) || (curListHelp&&curListHelp.length&&curListHelpPos!=='toolbar') || (curListTotals && curTotalsPos!=='tabs') || (curListTools&&curListTools.length&&curToolsPos!=='toolbar') || (curPrimaryBtn && (!curSelectable || curPrimaryBtnTop))"><b v-if="curListTitle && !curHideListTitle" style="font-size:14px">{{ L(curListTitle) }}</b><el-tooltip v-if="curListHelp && curListHelp.length && curListHelpPos!=='toolbar'" placement="bottom-start" effect="light" popper-class="list-help-pop"><template #content><div v-for="(h,hi) in curListHelp" :key="hi" style="margin:5px 0;line-height:1.7">{{ L(h) }}</div>
-      </template><span class="help-q">&#9432; 说明</span></el-tooltip><span v-else style="color:#8793a5;font-size:10px;margin-left:8px">{{ L(cfg.listSub||'') }}</span><span v-if="curListTotals && curTotalsPos!=='tabs'" style="float:right;color:#444;font-size:13px;font-weight:600" v-html="L(curListTotals)"></span><!-- §v3.25 表格卡标题行右端工具区（真系统「⚙自定义列 | 总计 0 ‹ 1/1 › 50条/页▾」）：
+          <template #header v-if="(curListTitle && !curHideListTitle) || (curListHelp&&curListHelp.length&&curListHelpPos!=='toolbar') || (curListTotals && curTotalsPos!=='tabs') || (curListTools&&curListTools.length&&curToolsPos!=='toolbar') || (curPrimaryBtn && (!curSelectable || curPrimaryBtnTop))"><b v-if="curListTitle && !curHideListTitle" style="font-size:14px">{{ L(curListTitle) }}</b><el-tooltip v-if="curListHelp && curListHelp.length && curListHelpPos!=='toolbar'" placement="bottom-start" effect="light" popper-class="list-help-pop"><template #content><div class="lh-body" :style="{maxHeight:lhMax}"><div v-for="(h,hi) in curListHelp" :key="hi" style="margin:5px 0;line-height:1.7" v-html="helpHtml(h)"></div></div>
+      </template><span class="help-q" @mouseenter="lhFit">&#9432; 说明</span></el-tooltip><span v-else style="color:#8793a5;font-size:10px;margin-left:8px">{{ L(cfg.listSub||'') }}</span><span v-if="curListTotals && curTotalsPos!=='tabs'" style="float:right;color:#444;font-size:13px;font-weight:600" v-html="L(curListTotals)"></span><!-- §v3.25 表格卡标题行右端工具区（真系统「⚙自定义列 | 总计 0 ‹ 1/1 › 50条/页▾」）：
              cfg.listTools = [{label:'自定义列',icon:'gear',opens:'弹窗名'}, {sep:true}, {text:'总计 0'}, {pager:'1/1'}, {pageSize:['50条/页','100条/页']}] -->
             <span v-if="curListTools && curListTools.length && curToolsPos!=='toolbar'" class="list-tools"><template v-for="(t,ti) in curListTools" :key="ti"><span v-if="t.sep" class="lt-sep">|</span><!-- §v3.48 t.check → 工具区复选框（真系统开票失败页「☐ 显示更多记录」） --><el-checkbox v-else-if="t.check" v-model="ltChecks[ti]" size="small" @change="msg(L(t.check)+'：'+(ltChecks[ti]?'已开启':'已关闭'))">{{ L(t.check) }}</el-checkbox><span v-else-if="t.pager" class="lt-pg-wrap"><span class="lt-pg" @click="pageNo>1 ? pageNo-- : msg(T('firstPage'))">&lsaquo;</span> {{ pageNo }}/{{ pageCount }} <span class="lt-pg" @click="pageNo<pageCount ? pageNo++ : msg(T('lastPage'))">&rsaquo;</span></span><el-select v-else-if="t.pageSize" :model-value="ltSizeKey(t.pageSize)" @change="setPageSize" size="small"><el-option v-for="o in t.pageSize" :key="K(o)" :label="L(o)" :value="K(o)"></el-option></el-select><el-dropdown v-else-if="t.menu" trigger="click" :disabled="t.needSel===true && !selCount" @command="i=>fireBtn(t.menu[i])"><span class="lt-btn" :title="t.icon==='gear' ? btnLabel(t) : null"><span v-if="t.icon==='gear'" class="btn-ic" v-html="actIcon({icon:'gear'})"></span><template v-if="t.icon!=='gear'">{{ btnLabel(t) }}</template><span style="font-size:10px;margin-left:4px">▾</span></span><template #dropdown><el-dropdown-menu><el-dropdown-item v-for="(m,mi) in t.menu" :key="mi" :command="mi" :divided="!!m.divided">{{ btnLabel(m) }}</el-dropdown-item></el-dropdown-menu></template></el-dropdown><span v-else-if="t.opens||t.act" class="lt-btn" :title="t.icon==='gear' ? btnLabel(t) : null" @click="fireBtn(t)"><span v-if="t.icon==='gear'" class="btn-ic" v-html="actIcon({icon:'gear'})"></span><template v-if="t.icon!=='gear'">{{ btnLabel(t) }}</template></span><span v-else>{{ fillList(L(t.text||t.label||t)) }}</span></template></span><!-- §v4.0 去掉一个重复渲染：主按钮在下方工具条里已经出了一次，这里再出一次 → 同一个「新增」按钮在页面上有两个。
              只有在下方工具条整条都不渲染时，才由标题行来出这个按钮。
@@ -3496,7 +3502,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
             </el-dropdown>
             <!-- §v3.84 listHelpPos:'toolbar' →「ⓘ 说明」跟在批量按钮（更多操作）后面；没有批量按钮的页签它自然排到最前。
                  默认仍在表格卡标题行（listHelpPos 不写）。 -->
-            <el-tooltip v-if="curListHelp && curListHelp.length && curListHelpPos==='toolbar'" placement="bottom-start" effect="light" popper-class="list-help-pop"><template #content><div v-for="(h,hi) in curListHelp" :key="hi" style="margin:5px 0;line-height:1.7">{{ L(h) }}</div></template><span class="help-q tb-help">&#9432; 说明</span></el-tooltip>
+            <el-tooltip v-if="curListHelp && curListHelp.length && curListHelpPos==='toolbar'" placement="bottom-start" effect="light" popper-class="list-help-pop"><template #content><div class="lh-body" :style="{maxHeight:lhMax}"><div v-for="(h,hi) in curListHelp" :key="hi" style="margin:5px 0;line-height:1.7" v-html="helpHtml(h)"></div></div></template><span class="help-q tb-help" @mouseenter="lhFit">&#9432; 说明</span></el-tooltip>
             <!-- §v3.77 工具条右端按钮组 toolbarRight（真系统右端：公制/英制 分段切换 + 导入▾/导出▾ 带图标按钮·右对齐）：
                  cfg.toolbarRight=[{segment:['公制','英制'],active:'英制'}, {label:'导入',icon:'import',menu:[…]}, {label:'导出',icon:'export',menu:[…]}] -->
             <span v-if="curToolbarRight && curToolbarRight.length" class="sel-right">
@@ -5620,6 +5626,18 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
   const isI18n = v => !!v && typeof v==='object' && !Array.isArray(v) && Object.keys(v).length>0 && Object.keys(v).every(k=>LOCALE_KEYS.includes(k));
   /* L(v)：解析当前语言文案；普通字符串/数字原样返回（向后兼容） */
   function L(v){ if(v==null) return ''; if(isI18n(v)) return v[lang.value] || v[DEFAULT_LOCALE] || v.zh || v[Object.keys(v)[0]] || ''; return v; }
+  /* 说明浮层（listHelp）每一项：字符串 / 多语对象照旧按纯文本显示（转义）；
+     也可写结构化对象 {title, text, items:[…]}：title 加粗、text 跟在后面、items 渲染成圆点列表，
+     items 里每项同样可以是字符串 / 多语对象 / 结构化对象（可多层嵌套，自动逐层缩进）。只输出转义后的文字，不吃 HTML。 */
+  function helpHtml(h){
+    const e = v => String(L(v)==null?'':L(v)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    if(!h || typeof h!=='object' || Array.isArray(h) || isI18n(h)) return e(h);
+    let s = '';
+    if(h.title!=null) s += '<b>'+e(h.title)+'</b>';
+    if(h.text!=null) s += (s?' ':'')+e(h.text);
+    if(Array.isArray(h.items) && h.items.length) s += '<ul>'+h.items.map(x=>'<li>'+helpHtml(x)+'</li>').join('')+'</ul>';
+    return s;
+  }
   /* §2026-10-25 tplFill —— 递归把配置里的 {占位符} 换成运行时真值（纪律C：业务字段表走数据配置，骨架只留填充机制）。
      为什么要它：原来「换货重开/两票/取消发票/重开」这些单据的字段表是**写死在骨架 JS 里的中文对象**，
      等于把一个项目的业务焊进了共享件（㊲ 判红）。搬进 project-data 后需要一个通用填充器把
@@ -6106,6 +6124,9 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       const curPrimaryBtnTop = computed(()=> { const b=pick2('primaryBtn'); return !!(pick2('primaryBtnTop') || (b && b.top)); });
       const curListHelp     = computed(()=> pick2('listHelp'));
       const curListHelpPos  = computed(()=> pick2('listHelpPos'));
+      /* 说明浮层限高：按「说明」上方、下方较大的那块剩余空间算（浮层会翻到空间大的一侧；最少 240px），内容长时在浮层里滚动，不会伸出窗口外被截断 */
+      const lhMax = ref('70vh');
+      function lhFit(e){ try{ const r=e.currentTarget.getBoundingClientRect(); lhMax.value=Math.max(240, Math.floor(Math.max(window.innerHeight - r.bottom, r.top) - 40))+'px'; }catch(_){ } }
       /* §v7.0 勾选列默认开（2026-11-04 用户明令「所有列表都必须有复选框」）。
          真系统实测 206 个列表页里 172 页有勾选列 —— 它是常态，不是例外。
          以前默认 false，于是"有没有"全看画原型时记不记得写 selectable:true，靠记性必漏。
@@ -7529,16 +7550,21 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           panes.forEach(pn=> ((pn&&pn.fields)||[]).forEach(fn));
         });
       }
-      function dvHasEditFrom(d){ let hit=false; dvEachField(d, f=>{ if(f && f.editFrom!=null) hit=true; });
+      function dvHasEditFrom(d){ let hit=false; dvEachField(d, f=>{ if(f && (f.editFrom!=null || f.labelFrom!=null)) hit=true; });
         /* §v6.12 只有表格写了 rowsFrom、没有 editFrom 字段的详情页（发票主体·电商）也要按行回填 */
         if(!hit) (d.sections||[]).forEach(s=>{ if(s && s.table && s.table.rowsFrom!=null) hit=true; ((s&&s.tabs)||[]).forEach(t=>{ if(t && t.table && t.table.rowsFrom!=null) hit=true; }); });
         if(!hit && d.summary && (d.summary.noFrom!=null || d.summary.statusFrom!=null || d.summary.typeFrom!=null)) hit=true;
         return hit; }
       function fillDetailFromRow(d, row){
         const c2 = JSON.parse(JSON.stringify(d));
+        /* §v8.x editFrom / labelFrom 除了列下标，也可写后台字段的 key（{value,__hidden:true,key:'…'}，与表格 rowsFrom 同一写法）
+           —— 同一页各行的后台字段下标不一样时按 key 取；这一行没有这个 key 就保留配置里的原值。
+           labelFrom：字段名也跟着这一行走（支付信息里「现金 / PIX / 信用卡」这一格的名字随支付方式变）。2026-11-15 */
+        const _rc = k => (typeof k==='string' && !/^\d+$/.test(k)) ? row.find(x=>x && typeof x==='object' && x.__hidden && x.key===k) : row[k];
         dvEachField(c2, f=>{
+          if(f && f.labelFrom!=null){ const lc=_rc(f.labelFrom); if(lc!=null) f.label = (lc && typeof lc==='object') ? (lc.__hidden ? lc.value : (lc.t!=null ? lc.t : lc)) : lc; }
           if(!f || f.editFrom==null) return;
-          const c = row[f.editFrom];
+          const c = _rc(f.editFrom);
           if(c==null) return;
           /* §v6.9 单元格是「前缀文字 + 链接」那种（{pre:{t},cellLink}）时，取前缀文字当字段值
              ——发票主体列表 A1证书列到期那行＝红字剩余时间 +「更换」链接，详情页只要那个时间。2026-10-13 */
@@ -10803,6 +10829,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         dvBlur,dlgBlur,dlgCellBlur,dlgColShow,dlgPickSumText,dlgLineCalc,dlgFillAll,cellErr,cellTouch,anchorErr,minRowsErr,dvTick,sugFetch,cellAi,   /* §v3.94 离开输入框即校验 · §v5.9 建议输入 / AI 推 NCM */
         secIsPill,secActive,secGoTab,                /* §v3.96 胶囊式板块页签 */
         curAreaChart,areaGeo,chartOn,curHideStats,   /* §v3.98 报表页堆叠面积图 */
+        helpHtml,lhMax,lhFit,   /* 说明浮层结构化条目 + 限高 */
         selRows,tblRef,onSelChange,importOpen,importFile,pickImportFile,confirmImport,doSync,
         delDlgRow,dlgRowCheck,fillDlg,dlgOkDisabled,cellCopy,copyIc,dlgRow,dlgFieldVal,dlgFiltered,roVal,SEARCH_SVG,PEN_SVG,numClean,pkState,pkOpen,pkRows,pkPick,pkSel,pkSizes,pkSize,pkPage,pkMulti,itemCount,normItems,pkSelCols,pkHas,pkToggle,pkAllState,pkToggleAll,pkSelectAll,pkClear,pkReset,
         etCur,etDraft,etRefEl,setEtRef,etOpen,etCancel,etSave,dlgAlertOpen,dlgFixErr,
