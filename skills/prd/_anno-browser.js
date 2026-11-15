@@ -46,9 +46,9 @@ async function openPage(html, opt = {}) {
     await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
     await send('Page.bringToFront');
     await send('Page.navigate', { url });
-    // 等 Vue 挂载完成（#app 有内容），最多约 90 秒
-    const t0 = Date.now();
-    while (Date.now() - t0 < 90000) { let ok = false; try { ok = await ev(() => { const a = document.getElementById('app'); return !!(a && (a.__vue_app__ || a._vnode) && a.innerText.trim().length > 0); }, null, 5000); } catch (e) {} if (ok) break; await sleep(50); }
+    // 等 Vue 挂载完成（#app 有内容），最多约 90 秒；opt.ready 可换成别的就绪判断（如 PRD 网页没有 #app），opt.readyTimeout 可放宽（线上大文件下载慢）
+    const t0 = Date.now(), readyFn = opt.ready || (() => { const a = document.getElementById('app'); return !!(a && (a.__vue_app__ || a._vnode) && a.innerText.trim().length > 0); });
+    while (Date.now() - t0 < (opt.readyTimeout || 90000)) { let ok = false; try { ok = await ev(readyFn, null, 5000); } catch (e) {} if (ok) break; await sleep(opt.ready ? 200 : 50); }
   };
   const kill = async () => { if (!cur) return; const c = cur; cur = null; try { c.ws.close(); } catch (_) {} try { c.ch.kill(); } catch (_) {} await sleep(300); try { fs.rmSync(c.prof, { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }); } catch (_) {} };
   const send = (m, p) => cur.send(m, p);

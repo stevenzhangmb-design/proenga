@@ -299,12 +299,12 @@ curl.exe http://localhost:3799/anno-queue
 
 | 工具 | 规则文件 | 技能目录 | 核实情况 |
 |---|---|---|---|
-| Claude Code | CLAUDE.md（其中用 @AGENTS.md 一并读入 AGENTS.md） | .claude/skills、~/.claude/skills | 官方文档；本机实测识别到 10 个技能，钩子生效 |
-| Codex | AGENTS.md（上限 32KiB） | .agents/skills、~/.agents/skills | 官方文档；本机实测读到 AGENTS.md 和 10 个技能 |
-| Cursor | AGENTS.md | .agents/skills、.cursor/skills、.claude/skills、~/.agents/skills | 官方文档；本机安装包里核对到这些目录，没开界面实测 |
-| GitHub Copilot（VS Code） | AGENTS.md | .github/skills、.agents/skills、.claude/skills、~/.agents/skills、~/.copilot/skills | 官方文档；本机 VS Code 安装包里核对到这些目录，chat.useAgentSkills 和 chat.useAgentsMdFile 默认开启，没开界面实测 |
-| OpenClaw | 自己工作区（默认 ~/.openclaw/workspace）里的 AGENTS.md | 工作区 skills、~/.agents/skills、~/.openclaw/skills | 官方文档；本机实测 openclaw skills list 识别到 10 个技能 |
-| WorkBuddy | 打开的文件夹里的 AGENTS.md（官方文档：与 CODEBUDDY.md、AGENTS.md 兼容） | 项目级 .codebuddy/skills | WorkBuddy 官方文档（workbuddy.cn 项目配置页）写明读项目里的 .codebuddy/skills；首次打开要选【正常打开】，受限模式不加载技能；WorkBuddy 桌面版没实测 |
+| Claude Code | CLAUDE.md（其中用 @AGENTS.md 一并读入 AGENTS.md） | .claude/skills、~/.claude/skills | 官方文档；本机实测识别到 10 个技能，钩子生效。 |
+| Codex | AGENTS.md（上限 32KiB） | .agents/skills、~/.agents/skills | 官方文档；本机实测读到 AGENTS.md 和 10 个技能。 |
+| Cursor | AGENTS.md | .agents/skills、.cursor/skills、.claude/skills、~/.agents/skills | 官方文档；本机安装包里核对到这些目录，没开界面实测。 |
+| GitHub Copilot（VS Code） | AGENTS.md | .github/skills、.agents/skills、.claude/skills、~/.agents/skills、~/.copilot/skills | 官方文档；本机 VS Code 安装包里核对到这些目录，chat.useAgentSkills 和 chat.useAgentsMdFile 默认开启，没开界面实测。 |
+| OpenClaw | 自己工作区（默认 ~/.openclaw/workspace）里的 AGENTS.md | 工作区 skills、~/.agents/skills、~/.openclaw/skills | 官方文档；本机实测 openclaw skills list 识别到 10 个技能。 |
+| WorkBuddy | 打开的文件夹里的 AGENTS.md（官方文档：与 CODEBUDDY.md、AGENTS.md 兼容） | 项目级 .codebuddy/skills | WorkBuddy 官方文档（workbuddy.cn 项目配置页）写明读项目里的 .codebuddy/skills；首次打开要选【正常打开】，受限模式不加载技能；WorkBuddy 桌面版没实测。 |
 
 - **临时文件放哪个盘（自动·不用配）**：检查工具会复制原型、开后台浏览器，产生临时文件。第一次运行时自动选“非系统盘里剩余空间最大的本地硬盘”，用 `<盘>:\proenga-temp`，并记进仓库根的 `.proenga-tmp`；只有系统盘的机器退回系统临时目录。**无论放哪，每个工具用完都会自动删**，崩了下次启动自动清。想换位置：改 `.proenga-tmp` 第一行（或设环境变量 `PROENGA_TMP`）。
 

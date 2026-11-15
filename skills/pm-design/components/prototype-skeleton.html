@@ -1,5 +1,9 @@
 <!-- ╔══════════════════════════════════════════════════════════════════════╗
      原型骨架（装配器结构唯一源）· prototype-skeleton · v8.11 （2026-11-10）
+     （2336·待定版号）：收银台网络状态（顶栏在线/离线开关 posOnline）接入两处，都不配不生效、网络正常不受影响：
+            ① posOrder.refundAuto.netOff:{nfState,nfColor,nfEmpty,tip,mirrors} → 离线时退货退款生成的退货订单用这里的开票状态、发票信息和完成提示，只同步 netOff.mirrors；
+            ② 弹窗 posNf.netOff:{msg,onlyState?} → 离线时点确定不提交、开票状态不变、不发邮件，关弹窗并提示 msg。
+            另：收银台订单底部按钮可写 note:{text,needType?,needState?} → 按钮左侧一行灰字（样式同 .po-nf-none）。不配不生效。
      （2261·待定版号）：组合搜索 combo 可写 seg:{col:列名或下标, labels:{左侧选项:[段名…]}} → 只在该列按“段名：值”比对值（包含、大小写不敏感、逗号分隔多个“或”；
             选项不在 labels 里 = 全部段名；段名前紧挨汉字/字母不算）；fieldValue:选项 → 左侧下拉默认选中该项（【重置】回到它）。都不配不生效。
      v8.53（2076）：设置开关（flag）联动扩展，都写 flagHide:{名:值} / flagShow:{名:值}，不配不生效：列表列 columns[i]、筛选项 filters[i]、
@@ -47,7 +51,7 @@
      v8.37（AF）：设置页 pageForm.sideTabs:[{key:'list'|'card:N', label}]（须同时配 pageForm.order）→ 这几块改成「左侧标签 + 右侧内容」，一次显示一块；不配不生效。
      v8.39（AG）：弹窗「按勾选行生成的表格」（table.from:'selected'）可选（都不配不生效）：
             exclude[] / selExclude[] / skipGroups[] 的规则可写 {histMin:N}（该记录的历史条数 ≥ N 就排除；历史取 dialogs.x.historyFrom 指向弹窗的 valueHistory 字段）；
-            cells[] 可写 {histSeq:true}（显示该记录历史条数 + 1，即本次事件编号）；ctrl:'input' 格可写 histHint:{zh:'…{n}…'}（该记录已有历史时，在输入框下方显示提示）；
+            cells[] 可写 {histSeq:true}（显示该记录历史条数 + 1，即本次事件编号）；再加 histPop:true → 数字旁带同单张弹窗 valueHistory 字段的「历史记录 ∨」下拉表格（同一份 historyByKey 数据，没有历史显示同款空状态）；ctrl:'input' 格可写 histHint:{zh:'…{n}…'}（该记录已有历史时，在输入框下方显示提示）；
             columns[ci].fd:{…字段定义} → 这一列的输入格按弹窗字段同一套规则校验（required/min/max/pattern/charRules，文案同字段）；
             table.fillAll:{col, label, ph, btn, emptyMsg, rows, max} → 表格上方一个统一填写框 + 【应用到全部】，把文字填进每一行的第 col 格（每行仍可单独改）；
             table.textCol:N → 提交时 effect.history 追加的文字取这一行第 N 格的值（每行各自的内容），不再取弹窗字段；
@@ -1255,6 +1259,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
   .fd-vh{display:flex;align-items:center;gap:28px;line-height:32px;color:#303133;}
   .fd-vh-link{color:var(--el-color-primary);cursor:pointer;}
   .vh-pop{padding:12px 16px !important;}
+  .fd-vh.vh-cell{gap:12px;line-height:23px;white-space:nowrap;}
   /* §v3.74 弹窗提示条里某一行的「展开 ∨ / 收起 ∧」+ 展开后的长说明 */
   .dlg-alert-more{margin-left:10px;color:var(--el-color-primary);cursor:pointer;font-size:13px;user-select:none;white-space:nowrap;}
   .dlg-alert-detail{margin:6px 0 2px;padding-left:2px;line-height:22px;}
@@ -2179,6 +2184,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
   .po-info span{color:#909399;}
   .po-info b{color:#303133;font-weight:400;}
   .po-btn-w{position:relative;display:inline-flex;}
+  .po-foot-note{align-self:center;margin-right:12px;}   /* §2336 底部按钮左侧灰字（颜色字号沿用 .po-nf-none） */
   .po-menu{position:absolute;right:0;bottom:40px;z-index:20;background:#fff;border:1px solid #ebeef5;border-radius:4px;
            box-shadow:0 2px 12px rgba(0,0,0,.1);min-width:170px;padding:4px 0;}
   .po-menu div{padding:9px 16px;font-size:14px;color:#303133;cursor:pointer;white-space:nowrap;}
@@ -4829,6 +4835,8 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
             </div>
             <div class="po-foot">
               <span v-for="(b,bi) in poActions" :key="bi" class="po-btn-w">
+                <!-- §2336 b.note:{text, needType?, needState?} → 按钮左侧一行灰字（样式同发票信息的灰字 .po-nf-none）；needType / needState 另按这单类型、开票状态筛，不配 = 按钮出现就显示 -->
+                <span v-if="poActNote(b)" class="po-nf-none po-foot-note">{{ poActNote(b) }}</span>
                 <!-- §v8.26（O）b.lock 超时 → 置灰不能点，悬停浮层说明原因和处理方法 -->
                 <el-tooltip v-if="poActLock(b)" placement="top" effect="dark" popper-class="th-tip-wide">
                   <template #content><div style="white-space:pre-line;max-width:440px;line-height:1.7">{{ poActLock(b) }}</div></template>
@@ -5440,6 +5448,17 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                 </span>
                 <!-- §v3.67 selected 表格里的删除图标真的移除那一行（原来只弹一句提示，行还在）
                      §v3.73 del：真系统这一列是「移除」两个字（灰色文字），不是垃圾桶图标 —— 写 del:true 走文字 -->
+                <!-- §v8.61 cells[] {histSeq:true, histPop:true} → 事件编号 + 「历史记录 ∨」下拉表格（样式、空状态同单张弹窗 valueHistory） -->
+                <div v-else-if="row[ci]&&row[ci].vh" class="fd-vh vh-cell"><span>{{ row[ci].t }}</span>
+                  <el-popover trigger="click" placement="bottom" :width="row[ci].popWidth||640" popper-class="vh-pop">
+                    <template #reference><a class="fd-vh-link">{{ L(row[ci].label||'历史记录') }} ∨</a></template>
+                    <el-table :data="row[ci].hist||[]" size="small" :empty-text="T('noData')||'暂无数据'">
+                      <el-table-column v-for="(hc,hi) in (row[ci].cols||[])" :key="hi" :label="L(hc.label!=null?hc.label:hc)" :width="hc.width||undefined">
+                        <template #default="{row:hr}">{{ L(hr[hi]) }}</template>
+                      </el-table-column>
+                    </el-table>
+                  </el-popover>
+                </div>
                 <span v-else-if="row[ci]&&row[ci].del" class="row-del" @click="delDlgRow(sec.table,$index)">{{ L(row[ci].delText)||T('remove')||'移除' }}</span>
                 <span v-else-if="row[ci]&&row[ci].icon" class="row-ic" @click="(sec.table&&sec.table.from==='selected') ? delDlgRow(sec.table,$index) : msg(T('deleted')||'已移除该行')">&#128465;</span>
                 <span v-else v-html="fillFail(cell(row[ci]))"></span>
@@ -6945,6 +6964,12 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           return b.needNf ? has : (b.needNoNf ? !has : true);
         });
       });
+      /* §2336 收银台订单底部按钮旁的灰字 b.note:{text, needType?:[单据类型…], needState?:字|[字…]}：类型按 L(o.type) 精确匹配，开票状态按 L(nf.state) 包含匹配。返回空串 = 不显示 */
+      function poActNote(b){ const n=b && b.note; const o=poOrder.value; if(!n || !o) return '';
+        if(n.needType && [].concat(n.needType).map(x=>String(L(x))).indexOf(String(L(o.type)))<0) return '';
+        const st=String(L((o.nf||{}).state)||'');
+        if(n.needState && ![].concat(n.needState).some(w=>st.indexOf(String(L(w)))>-1)) return '';
+        return String(L(n.text)||''); }
       /* §v8.26（O）收银台订单动作 lock：超过取消时限 → 按钮置灰、悬停浮层（文案同后台行内 lock，{auth}{limit}{over} 现算）。
          deadline:'voidLim' 取 posOrder.voidLim；一单多张票（nf.parts）全部超时才锁，浮层按第一张算。返回空串 = 不锁。不配不生效。 */
       function poActLock(b){ const k=b && b.lock; const o=poOrder.value; if(!k || !o) return '';
@@ -7104,17 +7129,21 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           const names=poRetNames.value, amt=poRetMax.value, origNf=(o.nf&&o.nf.no)||'—';
           const vars={NO:nfNo, ORDER:rtNo, ORIG:o.no, TYPE:L(o.type), STORE:L(o.store), GOODS:names, AMT:String(amt), NOW:now, ORIGNF:origNf};
           const fill=x=>JSON.parse(JSON.stringify(x==null?'':x).replace(/\{(NO|ORDER|ORIG|TYPE|STORE|GOODS|AMT|NOW|ORIGNF)\}/g,(m,k)=>String(vars[k]).replace(/"/g,'\\"')));
-          const nf = isInv ? { state:fill(ra.nfState), color:ra.nfColor||'green', no:nfNo, rows:fill(ra.nfRows) } : { state:fill(ra.nfState), color:ra.nfColor||'grey', empty:fill(ra.nfEmpty) };
+          /* §2336 ra.netOff:{nfState,nfColor,nfEmpty,tip,mirrors} → 收银台网络异常（顶栏切到离线 posOnline=false）时退货退款不开票：
+             发票状态/发票信息/完成提示改用 netOff 里的；mirrors 只同步 netOff.mirrors（不写 = 不同步，票没开出来）。不配不生效，网络正常不受影响。 */
+          const raOff = (isInv && !posOnline.value && ra.netOff) ? ra.netOff : null;
+          const nf = raOff ? { state:fill(raOff.nfState), color:raOff.nfColor||'orange', empty:fill(raOff.nfEmpty) }
+                   : isInv ? { state:fill(ra.nfState), color:ra.nfColor||'green', no:nfNo, rows:fill(ra.nfRows) } : { state:fill(ra.nfState), color:ra.nfColor||'grey', empty:fill(ra.nfEmpty) };
           all.unshift({ store:o.store, type:'退货订单', status:L(ra.status)||'退款完成', statusColor:'green', no:rtNo, summary:names, qtyText:'x'+(poRetQty.value||1)+' · 原单：'+L(o.type), amount:amt, totalText:'共 '+(poRetQty.value||1)+' 件，合计 '+amt,
             head:[{label:'原订单',value:o.no+'（'+L(o.type)+'）'}].concat((o.head||[]).filter(h=>h.label!=='挂账客户')), goods:JSON.parse(JSON.stringify((o.goods||[]).filter((g,i)=>poRetSel[i]))), sums:JSON.parse(JSON.stringify(o.sums||[])),
             info:[{label:'单号',value:rtNo},{label:'原订单号',value:o.no},{label:'退款类型',value:L(poRetWay.value.label)},{label:'创建时间',value:now},{label:'订单来源',value:'线下门店-售后'},{label:'销售门店',value:L(o.store)}], nf });
-          (ra.mirrors||[]).forEach(mc=>{ const pc=PC[mc.page]; let bs=pc&&(mc.status?(pc.byStatus&&pc.byStatus[mc.status]):pc); if(!bs) return;
+          ((raOff ? raOff.mirrors : ra.mirrors)||[]).forEach(mc=>{ const pc=PC[mc.page]; let bs=pc&&(mc.status?(pc.byStatus&&pc.byStatus[mc.status]):pc); if(!bs) return;
             const keys=(mc.tabs||[]).concat(mc.tabByType&&mc.tabByType[L(o.type)]?[mc.tabByType[L(o.type)]]:[]);
             vars.NOW=nowM; const one=fillAutoKey(fill(mc.row)); vars.NOW=now;
             if(!keys.length && Array.isArray(bs.rows)){ bs.rows.unshift(JSON.parse(JSON.stringify(one))); return; }
             (bs.statusTabs||[]).forEach(t=>{ if(keys.indexOf(K(t.key))>=0 && Array.isArray(t.rows)){ t.rows.unshift(JSON.parse(JSON.stringify(one))); if(Array.isArray(t.fails)) t.fails.unshift(null); if(t.count!=null) t.count=t.rows.length; } }); });
           poSel.value=0;
-          posTip(String(L(ra.tip)||'').replace('{no}',nfNo).replace('{orig}',origNf).replace('{order}',rtNo));
+          posTip(String(L((raOff||ra).tip)||'').replace('{no}',nfNo).replace('{orig}',origNf).replace('{order}',rtNo));
           return; }
         posTip(L(c.retDoneMsg)
           );
@@ -9635,6 +9664,10 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
            一次把所有错都标出来，不是遇到第一个就停。 */
         if(dlgFieldsInvalid(d)) return;   /* §v6.9 抽成函数，okButtons 的 transition 路径也要用 */
         /* §v6.12 收银台订单管理：d.posNf={state,color} → 确认后把当前这单的发票状态改掉（收银台的单子不是表格行，走不了 transition） */
+        /* §2336 posNf.netOff:{msg, onlyState?:[…]} → 收银台网络异常（posOnline=false）时点确定：不提交、这单开票状态不变、不发邮件，
+           关掉弹窗并提示 msg；onlyState 写了 = 这单开票状态含其中之一才拦（多语取 L）。不配不生效，网络正常不受影响。 */
+        if(d.posNf && d.posNf.netOff && !posOnline.value && poOrder.value){ const no=d.posNf.netOff, st0=String(L((poOrder.value.nf||{}).state)||'');
+          if(!no.onlyState || [].concat(no.onlyState).some(w=>st0.indexOf(String(L(w)))>-1)){ dialogName.value=''; posTip(L(no.msg)); return; } }
         if(d.posNf && poOrder.value && poOrder.value.nf){ const nf=poOrder.value.nf, pn=d.posNf;
           /* §v7.8 关联开票：pn.linked:{key,onlyState,empty?} → 这单 o[key] 记着关联单号，提交时那张单（状态含 onlyState 之一才算）一起改；
              文字里 {fv:字段名}=弹窗里填/选的值，{self}=本单号，{link}=关联单号，{no2}=关联单发票号（授权时生成） */
@@ -10463,7 +10496,10 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
             return (tb.cells||[]).map(c=>{
               if(c==null) return '';
               if(c.seq) return String(i+1);
-              if(c.histSeq) return String(dlgHistCount(dg, r)+1);   /* §v8.39（AG）本次事件编号 = 历史条数 + 1 */
+              if(c.histSeq){ const n=String(dlgHistCount(dg, r)+1);   /* §v8.39（AG）本次事件编号 = 历史条数 + 1 */
+                /* §v8.61 histPop:true → 数字旁带「历史记录 ∨」下拉（同单张弹窗 valueHistory 字段的列、文案、数据；不配仍只显示数字） */
+                if(!c.histPop) return n; const hf=dlgHistField(dg);
+                return { vh:true, t:n, hist: hf ? vhHist(hf, r) : [], cols: (hf && hf.historyCols) || [], label: (hf && hf.historyLabel) || '', popWidth: (hf && hf.popWidth) || 640 }; }
               if(c.deadline) return dd ? dd.html : '';
               /* §v3.89 noLabel:true → 去掉行首「开票：」这类标签，只留值（列表的一格里是「创建：…<br>开票：…」，弹窗里这一列只要时间） */
               if(c.col!=null && spl!=null && c.col===spl && lineOf[i]!=null) return lineOf[i];
@@ -10595,6 +10631,9 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         const hd=(cfg.value.dialogs||{})[d.historyFrom || ((d.effect||{}).history||{}).from]||d;
         const fd=[].concat(...(hd.sections||[]).map(x=>(x&&x.fields)||[])).find(f=>f&&f.type==='valueHistory');
         return !!(fd && vhHist(fd, r).length>0); }
+      /* §v8.61 historyFrom 指向弹窗里的 valueHistory 字段（没有 = null） */
+      function dlgHistField(d){ if(!d) return null; const hd=(cfg.value.dialogs||{})[d.historyFrom || ((d.effect||{}).history||{}).from]||d;
+        return [].concat(...(hd.sections||[]).map(x=>(x&&x.fields)||[])).find(f=>f&&f.type==='valueHistory') || null; }
       /* §v8.39（AG）某条记录的历史条数（取 historyFrom 指向弹窗的 valueHistory 字段；没有该字段 = 0） */
       function dlgHistCount(d, r){ if(!d || !r) return 0;
         const hd=(cfg.value.dialogs||{})[d.historyFrom || ((d.effect||{}).history||{}).from]||d;
@@ -10824,7 +10863,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       curPosHw,hwDetected,hwAddOpen,                                                   /* §v6.1 硬件设备页 */
       poFilterOpen,poFilterSel,poMenu,poMenuPick,poRet,poRetWay,poRetSel,poRetReason,poRetDesc,poRetQty,poRetAmt,   /* §v6.2 订单管理 */
       poRetCount,poRetAll,poRetNames,poRetMax,poRetMaxQty,poRetErr,poRetCheck,poRetTitle,poRetToggleAll,poRetBack,poRetPick,poRetDone,poRetAtCounter,
-      curPosOrder,poNfBadge,dlgShownRows,fbItemShow,dlgRadioVal,dlgRadioChange,dlgRadioOff,dlgRadioOffMsg,posTx,poNfHist,poNfView,poNfItems,poNfSecs,poNfCfg,poNfKey,posVoidRows,posVoidFill,actLock,secOpen,secToggle,secVisible,pageBtns,dlgFieldChange,poSel,poGoNo,poOrder,poOrders,poActions,poActLock,poAct,poReceipt,poRcpKind,poRcpBtn,posTip,statusTabByKey,poFilterReset,poFilterApply,poQ,poSearchApply,flowTip,metaOf,ak,go,closeTab,setSys,resetFilter,msg,onAnnoToggle,genPRD,annoShare,annoDevkit,annoGenCode,annoClear,annoRestore,
+      curPosOrder,poNfBadge,dlgShownRows,fbItemShow,dlgRadioVal,dlgRadioChange,dlgRadioOff,dlgRadioOffMsg,posTx,poNfHist,poNfView,poNfItems,poNfSecs,poNfCfg,poNfKey,posVoidRows,posVoidFill,actLock,secOpen,secToggle,secVisible,pageBtns,dlgFieldChange,poSel,poGoNo,poOrder,poOrders,poActions,poActLock,poActNote,poAct,poReceipt,poRcpKind,poRcpBtn,posTip,statusTabByKey,poFilterReset,poFilterApply,poQ,poSearchApply,flowTip,metaOf,ak,go,closeTab,setSys,resetFilter,msg,onAnnoToggle,genPRD,annoShare,annoDevkit,annoGenCode,annoClear,annoRestore,
         activeStatus,formVisible,activeFormTab,detailData,detailFP,detailAct,openFullPage,dialogName,activeAnchor,curAnchor,selCount,dlgOpen,btnLabel,fireBtn,needSel,closeDetail,detailSave,gotoAnchor,addTableRow,delTableRow,removePairedRow,dlgTblRows,dlgAllChecked,dlgSomeChecked,dlgCheckAll,
         dvBlur,dlgBlur,dlgCellBlur,dlgColShow,dlgPickSumText,dlgLineCalc,dlgFillAll,cellErr,cellTouch,anchorErr,minRowsErr,dvTick,sugFetch,cellAi,   /* §v3.94 离开输入框即校验 · §v5.9 建议输入 / AI 推 NCM */
         secIsPill,secActive,secGoTab,                /* §v3.96 胶囊式板块页签 */
