@@ -44,15 +44,13 @@ else {
   const hasExportGuard = /没有标注可导出/.test(css);
   hasExportGuard ? bad('导出分享版仍含「没有标注可导出」拦截 → 违反规则①②(没进行标注也应能导出只读副本)')
                  : ok('导出分享版不拦无标注 (①②没标注也能导·原型只读副本)');
-  //  ③ 别人打开分享版=标注【默认开启显示】·同时【普通版默认关】(二.1)：showPins=ref(__ANNO_READONLY__===true)
-  //    只读分享版(__ANNO_READONLY__=true)默认开·普通原型默认关。曾一刀切 ref(true) 破坏二.1 默认关，故禁 ref(true) 回归。
-  //    ★ 只认【真代码声明】：先剥 JS 块注释(版本注释里会写这段文字·别误匹配到注释成假绿) + 只认带 const 的真声明(注释写的是"改 showPins=ref"无 const)。
+  //  ③ 标注默认关闭（2026-11-17 用户定）：普通原型和只读分享版打开时都不显示标注号，打开顶栏「标注」开关才显示 → showPins=ref(false)。
+  //    旧规则（分享版默认开 ref(__ANNO_READONLY__===true)）已作废，禁回归；ref(true) 一刀切同样禁。
+  //    ★ 只认【真代码声明】：先剥 JS 块注释(版本注释里会写这段文字·别误匹配到注释成假绿) + 只认带 const 的真声明。
   const codeOnly = css.replace(/\/\*[\s\S]*?\*\//g, '');
-  const showPinsCond = /const\s+showPins\s*=\s*ref\(\s*window\.__ANNO_READONLY__\s*===\s*true\s*\)/.test(codeOnly);
-  const showPinsFlatTrue = /const\s+showPins\s*=\s*ref\(\s*true\s*\)/.test(codeOnly);
-  showPinsCond ? ok('分享版标注默认显示 且 普通版默认关 (showPins=ref(__ANNO_READONLY__===true)·③只读版默认显示·二.1普通版默认关)')
-    : showPinsFlatTrue ? bad('showPins=ref(true) 一刀切 → 普通原型也默认显示标注 → 违反二.1「默认标注不开启」(应 ref(__ANNO_READONLY__===true))')
-                       : bad('分享版标注非默认显示 (showPins 未设 ref(__ANNO_READONLY__===true)·如 ref(!__ANNO_READONLY__) 则只读版默认隐藏) → 违反规则③');
+  const showPinsOff = /const\s+showPins\s*=\s*ref\(\s*false\s*\)/.test(codeOnly);
+  showPinsOff ? ok('标注默认关闭 (showPins=ref(false)·普通原型和只读分享版打开都不显示标注号)')
+              : bad('标注没有默认关闭 (showPins 应为 ref(false)·普通原型和只读分享版打开时都不显示标注，开开关才显示)');
 }
 
 // ── B. anno-server writeShareVersion 打 body 类（best-effort：找不到 anno-server 就跳过）──

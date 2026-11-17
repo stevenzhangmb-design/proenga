@@ -1,5 +1,10 @@
 <!-- ╔══════════════════════════════════════════════════════════════════════╗
      原型骨架（装配器结构唯一源）· prototype-skeleton · v8.11 （2026-11-10）
+     （2342·待定版号）：收银台退货与后台列表联动，都不配不生效、原行为不变：
+            ① posOrder.refundAuto.headDrop:[标签…] → 生成退货订单时，原单抬头里这些行不抄（原单是换货订单时它的“原订单/退货订单”行）；
+            ② refundAuto.netOff.orderSet:{字段:值} → 断网生成的退货订单额外带上这些字段（可含 {ORDER}{ORIGNF} 等占位）；
+            ③ 弹窗 posNf.syncRows:[{page,ing:{status,col,only?,set},done:{…}}] → 收银台补开时，后台 page 列表里同单号的行提交时进 ing、授权时进 done（set 里 $no/$now）；
+            ④ transition.posSync / transition.then.posSync:{page?,onlyState?,state,color?,empty?,rows?,mailLabel?,sentText?} → 后台开票提交/授权时，收银台同单号订单的发票信息一起变（{no}=发票号，{ord:字段}=该订单字段值）；弹窗 {fv:字段名} 也认多语字段名的中文名。
      （2336·待定版号）：收银台网络状态（顶栏在线/离线开关 posOnline）接入两处，都不配不生效、网络正常不受影响：
             ① posOrder.refundAuto.netOff:{nfState,nfColor,nfEmpty,tip,mirrors} → 离线时退货退款生成的退货订单用这里的开票状态、发票信息和完成提示，只同步 netOff.mirrors；
             ② 弹窗 posNf.netOff:{msg,onlyState?} → 离线时点确定不提交、开票状态不变、不发邮件，关弹窗并提示 msg。
@@ -7134,9 +7139,14 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           const raOff = (isInv && !posOnline.value && ra.netOff) ? ra.netOff : null;
           const nf = raOff ? { state:fill(raOff.nfState), color:raOff.nfColor||'orange', empty:fill(raOff.nfEmpty) }
                    : isInv ? { state:fill(ra.nfState), color:ra.nfColor||'green', no:nfNo, rows:fill(ra.nfRows) } : { state:fill(ra.nfState), color:ra.nfColor||'grey', empty:fill(ra.nfEmpty) };
-          all.unshift({ store:o.store, type:'退货订单', status:L(ra.status)||'退款完成', statusColor:'green', no:rtNo, summary:names, qtyText:'x'+(poRetQty.value||1)+' · 原单：'+L(o.type), amount:amt, totalText:'共 '+(poRetQty.value||1)+' 件，合计 '+amt,
-            head:[{label:'原订单',value:o.no+'（'+L(o.type)+'）'}].concat((o.head||[]).filter(h=>h.label!=='挂账客户')), goods:JSON.parse(JSON.stringify((o.goods||[]).filter((g,i)=>poRetSel[i]))), sums:JSON.parse(JSON.stringify(o.sums||[])),
-            info:[{label:'单号',value:rtNo},{label:'原订单号',value:o.no},{label:'退款类型',value:L(poRetWay.value.label)},{label:'创建时间',value:now},{label:'订单来源',value:'线下门店-售后'},{label:'销售门店',value:L(o.store)}], nf });
+          /* §2342 ra.headDrop:['原订单','退货订单',…] → 原单抬头里这些行不抄进新退货订单（原单是换货订单时，它自己的“原订单/退货订单”两行不属于新单）。不配 = 只去掉挂账客户（旧行为）。 */
+          const _hd=['挂账客户'].concat((ra.headDrop||[]).map(x=>L(x)));
+          const _rtOrd={ store:o.store, type:'退货订单', status:L(ra.status)||'退款完成', statusColor:'green', no:rtNo, summary:names, qtyText:'x'+(poRetQty.value||1)+' · 原单：'+L(o.type), amount:amt, totalText:'共 '+(poRetQty.value||1)+' 件，合计 '+amt,
+            head:[{label:'原订单',value:o.no+'（'+L(o.type)+'）'}].concat((o.head||[]).filter(h=>_hd.indexOf(L(h&&h.label))<0)), goods:JSON.parse(JSON.stringify((o.goods||[]).filter((g,i)=>poRetSel[i]))), sums:JSON.parse(JSON.stringify(o.sums||[])),
+            info:[{label:'单号',value:rtNo},{label:'原订单号',value:o.no},{label:'退款类型',value:L(poRetWay.value.label)},{label:'创建时间',value:now},{label:'订单来源',value:'线下门店-售后'},{label:'销售门店',value:L(o.store)}], nf };
+          /* §2342 netOff.orderSet:{字段:值} → 断网生成的退货订单额外带上这些字段（如 link 标记，让【开票】按钮走断网补开那套弹窗）；值里可写 {NO}{ORDER}{ORIG}{ORIGNF}… 占位。不配不生效。 */
+          if(raOff && raOff.orderSet) Object.assign(_rtOrd, fill(raOff.orderSet));
+          all.unshift(_rtOrd);
           ((raOff ? raOff.mirrors : ra.mirrors)||[]).forEach(mc=>{ const pc=PC[mc.page]; let bs=pc&&(mc.status?(pc.byStatus&&pc.byStatus[mc.status]):pc); if(!bs) return;
             const keys=(mc.tabs||[]).concat(mc.tabByType&&mc.tabByType[L(o.type)]?[mc.tabByType[L(o.type)]]:[]);
             vars.NOW=nowM; const one=fillAutoKey(fill(mc.row)); vars.NOW=now;
@@ -9010,10 +9020,10 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           Object.keys(pc.byStatus).forEach(k=>{ const st=pc.byStatus[k]; if(!st) return; [st].concat(st.statusTabs||[]).forEach(t=>{ if(!t||!Array.isArray(t.rows)) return;
             for(let j=t.rows.length-1;j>=0;j--){ const q=t.rows[j]; if(idOf(q)!==id) continue; if(th.only && JSON.stringify(q[col]==null?'':q[col]).indexOf(th.only)<0) continue;
               Object.keys(set||{}).forEach(i=>{ q[+i]=JSON.parse(JSON.stringify(set[i])); }); if(hid==null && th.link && q[th.link.keyCol]!=null) hid=q[th.link.keyCol];
-              if(k!=='all' && k!==th.status){ t.rows.splice(j,1); if(Array.isArray(t.fails)) t.fails.splice(j,1); if(t!==st && t.key!=null) keys.add(K(t.key)); moved=moved||q; } } }); });
-          const ts=pc.byStatus[th.status]; if(moved && ts){ if(Array.isArray(ts.rows)) ts.rows.unshift(moved); (ts.statusTabs||[]).forEach(t=>{ if(t && Array.isArray(t.rows) && keys.has(K(t.key))){ t.rows.unshift(JSON.parse(JSON.stringify(moved))); if(Array.isArray(t.fails)) t.fails.unshift(null); } }); }
+              if(k!=='all' && k!==th.status){ t.rows.splice(j,1); if(Array.isArray(t.fails)) t.fails.splice(j,1); if(t.count!=null) t.count=t.rows.length; if(t!==st && t.key!=null) keys.add(K(t.key)); moved=moved||q; } } }); });
+          const ts=pc.byStatus[th.status]; if(moved && ts){ if(Array.isArray(ts.rows)) ts.rows.unshift(moved); (ts.statusTabs||[]).forEach(t=>{ if(t && Array.isArray(t.rows) && keys.has(K(t.key))){ t.rows.unshift(JSON.parse(JSON.stringify(moved))); if(Array.isArray(t.fails)) t.fails.unshift(null); if(t.count!=null) t.count=t.rows.length; } }); }   /* §2342 别的页触发（收银台补开）时当前页不是它，页签数字跟着改 */
           return hid; };
-        ids.forEach(id=>{ const hid=run(pcRef, id, th.set, th.col);
+        ids.forEach(id=>{ const hid=run(pcRef, id, th.set, th.col); let _no1=null;
           if(th.link && hid!=null){ const lid=String((hid&&typeof hid==='object'&&hid.__hidden)?hid.value:hid).replace(/^L\d+:/,'');
             const p2=(th.link.page===String(currentPage.value||'').split('@')[0] && cfg.value)?cfg.value:PAGECFG[th.link.page]; run(p2, lid, {[th.link.col]:th.link.val}, th.link.col); }
           /* §v8.4 th.invoices:[{page,from,to,col?,set}] → 税局授权后，发票页（如发票管理）from 状态里「单据信息」列（col，默认 8）写着本单或关联单单号的票，
@@ -9025,15 +9035,32 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                 for(let j=t.rows.length-1;j>=0;j--){ const q=t.rows[j]; const txt=JSON.stringify(q[ccol]==null?'':q[ccol]); if(!nos.some(n=>n&&txt.indexOf(n)>=0)) continue;
                   t.rows.splice(j,1); if(Array.isArray(t.fails)) t.fails.splice(j,1);
                   if(t===fromS) continue;   /* 状态级 rows 只删不搬，搬页签那份，避免一张票进两次 */
-                  const nr=JSON.parse(JSON.stringify(q)); const no=String(100000000+Math.floor(Math.random()*899999999)).slice(-9), now=efxNow();
+                  const nr=JSON.parse(JSON.stringify(q)); const no=String(100000000+Math.floor(Math.random()*899999999)).slice(-9), now=efxNow(); if(_no1==null) _no1=no;
                   Object.keys(iv.set||{}).forEach(i=>{ const old=nr[+i]; const sub=s=>String(s).replace(/\$now/g,now).replace(/\$no\b/g,no).replace(/\$old/g,(old&&typeof old==='object')?L(old):String(old==null?'':old));
                     const v=JSON.parse(JSON.stringify(iv.set[i])); nr[+i]=(v&&typeof v==='object'&&!Array.isArray(v))?(v.zh!=null?{zh:sub(v.zh),en:sub(v.en!=null?v.en:v.zh),pt:sub(v.pt!=null?v.pt:v.zh)}:v):sub(v); });
-                  const dt=(toS.statusTabs||[]).find(x=>x&&K(x.key)===K(t.key)); const dest=dt?dt.rows:toS.rows; if(Array.isArray(dest)){ dest.unshift(nr); if(dt&&Array.isArray(dt.fails)) dt.fails.unshift(null); } } }); }); } });
+                  const dt=(toS.statusTabs||[]).find(x=>x&&K(x.key)===K(t.key)); const dest=dt?dt.rows:toS.rows; if(Array.isArray(dest)){ dest.unshift(nr); if(dt&&Array.isArray(dt.fails)) dt.fails.unshift(null); } } }); }); }
+          /* §2342 th.posSync → 后台授权成功后，收银台订单管理里同号订单的发票信息一起变（见 posSyncApply；{no} 与发票管理里那张票同号） */
+          if(th.posSync) posSyncApply(th.posSync, id, _no1 || String(100000000+Math.floor(Math.random()*899999999)).slice(-9)); });
         try{ syncTabCounts(); }catch(e){}
         if(th.done) ElementPlus.ElMessage({message:L(th.done), type:'success', duration:4000});
       }
+      /* §2342 posSyncApply(spec, 单号, 发票号)：后台列表开票时，收银台 订单管理（spec.page，默认 pos-order 的 posOrder.orders）里 no=单号 的订单发票信息跟着变。
+         spec={page?, onlyState?:[…], state, color?, empty?, rows?, mailLabel?, sentText?}：onlyState 写了 = 这单当前开票状态含其一才改；
+         有 rows → 换成已开票信息（{no}=发票号 {now}=当前时间 {amount}=订单金额；订单登记过邮箱且配了 mailLabel 时追加“已自动发送”一行）；否则只换 empty 文字。不配不生效。 */
+      function posSyncApply(spec, id, no){ try{
+        const pp=PAGECFG[spec.page||'pos-order'], po=pp&&pp.posOrder; if(!po || !id) return;
+        const o=(po.orders||[]).find(x=>x && x.no===id); if(!o) return; const nf=o.nf||(o.nf={});
+        if(spec.onlyState && ![].concat(spec.onlyState).some(w=>String(L(nf.state)||'').indexOf(String(L(w)))>-1)) return;
+        const now=posNow(); const sub=x=>JSON.parse(JSON.stringify(x).replace(/\{no\}/g, no||'').replace(/\{now\}/g, now).replace(/\{amount\}/g, String(L(o.amount)||'').replace(/"/g,'')).replace(/\{ord:([\w.]+)\}/g,(m,k)=>String(L(o[k])==null?'':L(o[k])).replace(/"/g,'')));   /* {ord:字段}=这单自己的字段值 */
+        nf.state=sub(spec.state); if(spec.color) nf.color=spec.color; delete nf.tip; delete nf.goNo;
+        if(spec.rows){ const rows=sub(spec.rows); if(o.mail && spec.mailLabel) rows.push({label:L(spec.mailLabel)||'', value:o.mail+'（'+(L(spec.sentText)||'')+' '+now+'）'});
+          nf.rows=rows; if(no) nf.no=no; delete nf.empty; }
+        else if(spec.empty!=null){ nf.empty=sub(spec.empty); delete nf.rows; }
+      }catch(e){} }
       function doTransition(b,row){
         const tr = (b&&b.transition)||{};
+        /* §2342 tr.posSync → 提交时收银台同号订单一起变（如“开票中”），见 posSyncApply */
+        if(tr.posSync){ (row?[row]:(selRows.value||[])).map(r=>(r&&r.__src)||r).forEach(r=>{ const c=r&&r[0]; const t=(c&&typeof c==='object')?(c.t!=null?L(c.t):L(c)):c; posSyncApply(tr.posSync, String(t==null?'':t).replace(/<[^>]*>/g,'').trim(), null); }); }
         /* §v8.2 税局返回结果（见 thenStage） */
         if(tr.then){ const _ids=(row?[row]:(selRows.value||[])).map(r=>(r&&r.__src)||r).map(r=>{ const c=r&&r[0]; const t=(c&&typeof c==='object')?(c.t!=null?L(c.t):L(c)):c; return String(t==null?'':t).replace(/<[^>]*>/g,'').trim(); });
           const _pc=cfg.value; setTimeout(()=>thenStage(_pc,_ids,tr.then), tr.then.after||2500); }
@@ -9672,7 +9699,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           /* §v7.8 关联开票：pn.linked:{key,onlyState,empty?} → 这单 o[key] 记着关联单号，提交时那张单（状态含 onlyState 之一才算）一起改；
              文字里 {fv:字段名}=弹窗里填/选的值，{self}=本单号，{link}=关联单号，{no2}=关联单发票号（授权时生成） */
           const _ord=poOrder.value, _fv={};
-          [].concat(...(d.sections||[]).map(s=>(s&&s.fields)||[]), Array.isArray(d.fields)?d.fields:[]).forEach(f=>{ if(f&&f.label!=null) _fv[L(f.label)]=String(L(f.value)==null?'':L(f.value)); });
+          [].concat(...(d.sections||[]).map(s=>(s&&s.fields)||[]), Array.isArray(d.fields)?d.fields:[]).forEach(f=>{ if(f&&f.label!=null){ const _v=String(L(f.value)==null?'':L(f.value)); _fv[L(f.label)]=_v; if(typeof f.label==='object' && f.label.zh!=null) _fv[f.label.zh]=_v; } });   /* §2342 多语字段名也认中文名：{fv:中文字段名} 切英文/葡文时照样取到 */
           const _lkNo = pn.linked ? String(L(_ord[pn.linked.key])||'') : '';
           let _lk = _lkNo ? (((curPosOrder.value||{}).orders)||[]).find(x=>x && x.no===_lkNo) : null;
           if(_lk && pn.linked.onlyState){ const _ls=String(L((_lk.nf||{}).state)||''); if(![].concat(pn.linked.onlyState).some(w=>_ls.indexOf(L(w))>-1)) _lk=null; }
@@ -9698,6 +9725,10 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
             const r=JSON.parse(_fx(JSON.stringify(iv.ing)).replace(/\{now\}/g, efxNow()).replace(/\{amount\}/g, String(L(_ord.amount)||'')).replace(/\{lamount\}/g, String(L((_lk||{}).amount)||'')));
             r.forEach(c=>{ if(c && typeof c==='object' && c.autoKey!=null){ const m=String(c.autoKey).match(/55|65/); c.autoKey=m?m[0]:'55'; } }); fillAutoKey(r);
             t.rows.unshift(r); if(Array.isArray(t.fails)) t.fails.unshift(null); _ivs.push({iv, ip, t, r}); });
+          /* §2342 posNf.syncRows:[{page, ing:{status,col,only?,set}, done:{status,col,only?,set}}] → 收银台补开时，后台列表里单号（第 0 列）= 本单号的那一行跟着变：
+             提交时按 ing 改列并挪到 ing.status 面板，税局授权时按 done 改列并挪到 done.status（set 值里 $no=本票发票号、$now=授权时间）。走 thenStage 同一套挪行规则。不配不生效。 */
+          const _srs=(pn.syncRows||[]).filter(sr=>sr && PAGECFG[sr.page]);
+          _srs.forEach(sr=>{ if(sr.ing) thenStage(PAGECFG[sr.page], [_ord.no], {status:sr.ing.status, col:sr.ing.col, only:sr.ing.only, set:sr.ing.set}); });
           /* §v6.14 posNf.thenAuth:{after,state,color,rows,mailLabel,mailMsg,noMailMsg} → 过一会儿税局授权成功变「已开票」；
              这单结账时登记过邮箱（order.mail）就自动把发票发过去，发票信息里显示「已自动发送到 …」，没登记的提示另行交付 */
           if(pn.thenAuth){ const ord=poOrder.value, ta=pn.thenAuth, lk=_lk;
@@ -9718,6 +9749,8 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                 const dr=JSON.parse(_fx(JSON.stringify(x.iv.done)).replace(/\{now\}/g, nowM).replace(/\{no\}/g, myNo).replace(/\{amount\}/g, String(L(ord.amount)||'')).replace(/\{lamount\}/g, String(L((lk||{}).amount)||'')));
                 if(x.r[3] && typeof x.r[3]==='object') dr[3]=JSON.parse(JSON.stringify(x.r[3]));   /* Key 沿用开票中那一行 */
                 t2.rows.unshift(dr); if(Array.isArray(t2.fails)) t2.fails.unshift(null); });
+              _srs.forEach(sr=>{ if(!sr.done) return; const st=JSON.parse(JSON.stringify(sr.done.set||{}).replace(/\$now/g, nowM).replace(/\$no\b/g, no));
+                thenStage(PAGECFG[sr.page], [ord.no], {status:sr.done.status, col:sr.done.col, only:sr.done.only, set:st}); });
               const _m = (lk && (ta.linkMailMsg||ta.linkNoMailMsg)) ? (ord.mail ? ta.linkMailMsg : ta.linkNoMailMsg) : (ord.mail ? ta.mailMsg : ta.noMailMsg);
               posTip(fill(String(L(_m)||'').replace('{mail}', ord.mail||''))); }, ta.after||1500); } }
         /* §v3.87 弹窗表格里的输入框也校验（下面那段） */
