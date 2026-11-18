@@ -1,5 +1,13 @@
 <!-- ╔══════════════════════════════════════════════════════════════════════╗
      原型骨架（装配器结构唯一源）· prototype-skeleton · v8.11 （2026-11-10）
+     （2375·待定版号）：多语与关联单，都不配不生效、中文界面原行为不变：
+            ① stHas(状态, 条件)：收银台订单底部按钮 needState/hideState、按钮灰字 note.needState、posSync/posNf.netOff/linked 的 onlyState 改为“当前语言或中文任一包含”，英葡界面下写中文条件的按钮不再消失；
+            ② 详情表 emptyBy / tipBy 的状态与行文字同时按中文比对（英葡界面下提示不再丢）；
+            ③ 详情表 table.relLine:{col,re,page,stateCol,stateMap,text} → 表格下方一行灰字“关联××订单 {no}（…：{state}）→”，状态取对方单据实时值，点单号打开对方详情；
+            ⑦ 行内按钮 showIfCol 同时按中文判断（英葡界面下后台【开票】等行按钮不再消失）；
+            ⑥ 收银台换货 exchangeAuto.viaPos 模板新增占位符 {DUE}（离线开具时间 + viaPos.dueHours 小时，默认 24）；
+            ⑤ 弹窗字段 editRe:'正则' → editFrom 带出的值再按正则取第 1 组；
+            ④ 收银台 posOrder.relLine:[{type,key,text,stateMap}] → 发票信息表格下方同样一行，点单号跳到那一单。
      （2362·待定版号）：发票信息表两边统一，都不配不生效、原行为不变：
             ⓪ 收银台离线开票生成单 pos.offOrder.dueHours:N → {due} = 离线开具时间 + N 小时（格式同 {now}）；不配仍是第一个工作日 23:59:59；
             ⓪′ 新发票号（后台/收银台补开授权、发票管理同步）改为收银台订单最大发票号 +1（9 位带前导零），跳过已有号；订单管理页金额格式取收银页的货币和格式（不再退成 ¥）；
@@ -1606,7 +1614,8 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
   .dv-errsum-in{margin-top:6px;color:#3363FF;} .dv-errsum-in em{font-style:normal;color:#606266;}
   /* §v6.26 发票表格下面的提示 / 收银台历史发票下面的提示：同一套样式（橙色文字·与「待开票」状态色一致） */
   .dv-tb-tip,.po-nf-tip{margin:-6px 0 16px;font-size:14px;line-height:22px;color:#e6a23c;}
-  .dv-tb-tip{margin-top:8px;}   /* §v8.55 详情表格下方提示：表格有横向滚动条时上收 6px 会被滚动条盖住，改为下移 8px */
+  .dv-tb-tip{margin-top:8px;}
+  .dv-tb-rel,.po-nf-rel{margin:8px 0 16px;font-size:13px;line-height:20px;color:#909399;}   /* §2375 关联单灰字行 */   /* §v8.55 详情表格下方提示：表格有横向滚动条时上收 6px 会被滚动条盖住，改为下移 8px */
   .po-nf-tip{margin:8px 0 0;}
   .dv-errsum{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;background:#fef0f0;border:1px solid #fbc4c4;border-radius:6px;padding:10px 16px;margin-bottom:12px;font-size:14px;}
   .dv-errsum b{color:#f56c6c;}
@@ -2835,6 +2844,8 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
               </el-table>
               <!-- §v6.26 表格下面一行提示（取消 / 开退票冲销后回到待开票：先列历次发票，下面告诉用户去哪儿重开；与收银台订单管理同一句） -->
               <div v-if="pn.table && pn.table.tip" class="dv-tb-tip">{{ L(pn.table.tip) }}</div>
+              <!-- §2375 table.relLine → 表格下方关联单一行灰字，单号可点（跳到对方单据详情） -->
+              <div v-if="pn.table && pn.table.rel" class="dv-tb-rel"><template v-for="(seg,si) in relSegs(pn.table.rel)" :key="'rl'+si"><a v-if="seg.no" class="cell-link" style="cursor:pointer" @click.stop="dvRelGo(pn.table.rel)">{{ seg.t }}</a><span v-else>{{ seg.t }}</span></template></div>
               <!-- §v8.30（S）table.minRowsInline:true → 点了提交后行数不够 minRows 时，表格下面红字显示 minSubmitMsg/minMsg，锚点也变红（不配不生效） -->
               <div v-if="minRowsErr(pn)" class="cell-err" style="margin-top:6px;white-space:normal">{{ minRowsErr(pn) }}</div>
               <!-- §v3.61 detailData.reqStarAfter:true → 必填红星放在字段名后面（某跨境电商 ERP 创建手工发票：「发票账号*」） -->
@@ -4792,6 +4803,8 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                 </table>
                 <div v-else class="po-nf-none">{{ L(poOrder.nf.empty) }}</div>
                 <div v-if="poOrder.nf.tip" class="po-nf-tip">{{ L(poOrder.nf.tip) }}</div>
+                <!-- §2375 posOrder.relLine → 表格下方关联单一行灰字（换货订单 ↔ 换货生成的退货订单），单号可点跳到那一单 -->
+                <div v-if="poRel" class="po-nf-rel"><template v-for="(seg,si) in relSegs(poRel)" :key="'prl'+si"><a v-if="seg.no" class="cell-link" style="cursor:pointer" @click.stop="poGoNo(seg.t)">{{ seg.t }}</a><span v-else>{{ seg.t }}</span></template></div>
               </template>
               <template v-else>
               <template v-if="(poOrder.nf.blocks||[]).length">
@@ -5686,6 +5699,9 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
   const isI18n = v => !!v && typeof v==='object' && !Array.isArray(v) && Object.keys(v).length>0 && Object.keys(v).every(k=>LOCALE_KEYS.includes(k));
   /* L(v)：解析当前语言文案；普通字符串/数字原样返回（向后兼容） */
   function L(v){ if(v==null) return ''; if(isI18n(v)) return v[lang.value] || v[DEFAULT_LOCALE] || v.zh || v[Object.keys(v)[0]] || ''; return v; }
+  /* §2375 开票状态等条件按“值本身”比对：当前语言文字包含条件，或中文文字包含条件中文（条件写中文时英葡界面也能命中）。中文界面行为不变。 */
+  function _zhOf(v){ if(v==null) return ''; if(typeof v==='object' && !Array.isArray(v)){ if(v.__hidden) return _zhOf(v.value); if(v.t!=null) return _zhOf(v.t); if(v.zh!=null) return String(v.zh); return ''; } return String(v); }
+  function stHas(s, w){ const a=String(L(s)==null?'':L(s)), b=String(L(w)==null?'':L(w)); if(a.indexOf(b)>-1) return true; const zb=_zhOf(w); return !!zb && _zhOf(s).indexOf(zb)>-1; }
   /* 说明浮层（listHelp）每一项：字符串 / 多语对象照旧按纯文本显示（转义）；
      也可写结构化对象 {title, text, items:[…]}：title 加粗、text 跟在后面、items 渲染成圆点列表，
      items 里每项同样可以是字符串 / 多语对象 / 结构化对象（可多层嵌套，自动逐层缩进）。只输出转义后的文字，不吃 HTML。 */
@@ -6375,7 +6391,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
          结算完成（posResultDone）→ 按 viaPos.ret / viaPos.exc 模板生成【退货订单】+【换货订单】两张互相关联的单，
          放回订单管理列表最上面并选中换货订单；viaPos.mirrors 同步到别的页（后台退货订单/换货订单、发票管理）。
          按原订单类型覆盖：viaPos.byOrigType['原单类型']={ret:{…},exc:{…}}；离线开票覆盖：viaPos.offline={ret:{…},exc:{…}}。
-         模板占位符：{RNO}{XNO}{ORIG}{TYPE}{STORE}{RGOODS}{XGOODS}{RAMT}{XAMT}{DIFF}{RQTY}{XQTY}{NOW}{RNF}{SNF}{RKEY}{SKEY}{ORIGNF}{USER}{PAY}{GOT}{CHG}；mirrors 另可用 {XST}{RST}（两张单的 backStatus，不配取 status） */
+         模板占位符：{RNO}{XNO}{ORIG}{TYPE}{STORE}{RGOODS}{XGOODS}{RAMT}{XAMT}{DIFF}{RQTY}{XQTY}{NOW}{DUE}（§2375 = {NOW}+vp.dueHours 小时，默认 24）{RNF}{SNF}{RKEY}{SKEY}{ORIGNF}{USER}{PAY}{GOT}{CHG}；mirrors 另可用 {XST}{RST}（两张单的 backStatus，不配取 status） */
       const posExch = ref(null);         /* {vp, cfg, from, orig, goods, amt, names, qty, reason, desc} */
       function posParseMoney(v){ let s=String(L(v)==null?'':L(v)).trim(); if(/,\d{1,2}$/.test(s)) s=s.replace(/\./g,'').replace(',','.'); return +(s.replace(/[^\d.\-]/g,''))||0; }
       const posExchDiff = computed(()=> Math.round(posTotal.value*100)/100);
@@ -6409,10 +6425,10 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           let s=0,w=2; for(let i=k43.length-1;i>=0;i--){ s+=(+k43[i])*w; w=w===9?2:w+1; } return k43+((s%11<2)?0:11-s%11); };
         const pm=((curPos.value&&curPos.value.payMethods)||[])[posPm.value];
         const vars={ RNO:rNo, XNO:xNo, ORIG:o.no, TYPE:L(o.type), STORE:L(o.store), RGOODS:x.names, XGOODS:ex.map(r=>L(r.name)).join('、')||'—',
-          RAMT:L(posMoney(x.amt)), XAMT:L(posMoney(xamtN)), DIFF:L(posMoney(Math.abs(xamtN-x.amt))), RQTY:x.qty, XQTY:xqty, NOW:now,
+          RAMT:L(posMoney(x.amt)), XAMT:L(posMoney(xamtN)), DIFF:L(posMoney(Math.abs(xamtN-x.amt))), RQTY:x.qty, XQTY:xqty, NOW:now, DUE:(()=>{ /* §2375 {DUE} = {NOW} + vp.dueHours（默认 24）小时，格式同 {NOW} */ const m=String(now).match(/(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d):(\d\d)/); if(!m) return now; const d=new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6]); d.setTime(d.getTime()+(+(vp.dueHours||24))*3600000); const z=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes())+':'+z(d.getSeconds()); })(),
           RNF:rNf, SNF:sNf, RKEY:mk('55',rNf), SKEY:(off && res.chave) ? res.chave : mk('65',sNf), ORIGNF:(o.nf&&o.nf.no)||'—',
           USER:L(curPos.value&&curPos.value.user)||'--', PAY:L(pm&&pm.label)||'--', GOT:L(posMoney(Math.max(0,+posGot.value||0))), CHG:L(posMoney(Math.max(0,Math.max(0,+posGot.value||0)-posTotal.value))) };
-        const fill=t=>JSON.parse(JSON.stringify(t==null?'':t).replace(/\{(RNO|XNO|ORIG|TYPE|STORE|RGOODS|XGOODS|RAMT|XAMT|DIFF|RQTY|XQTY|NOW|RNF|SNF|RKEY|SKEY|ORIGNF|USER|PAY|GOT|CHG|XST|RST)\}/g,(m,k)=>String(vars[k]==null?'':vars[k]).replace(/["\\]/g,'\\$&')));
+        const fill=t=>JSON.parse(JSON.stringify(t==null?'':t).replace(/\{(RNO|XNO|ORIG|TYPE|STORE|RGOODS|XGOODS|RAMT|XAMT|DIFF|RQTY|XQTY|NOW|DUE|RNF|SNF|RKEY|SKEY|ORIGNF|USER|PAY|GOT|CHG|XST|RST)\}/g,(m,k)=>String(vars[k]==null?'':vars[k]).replace(/["\\]/g,'\\$&')));
         const by=(vp.byOrigType||{})[L(o.type)]||{};
         const spec=w=>{ const s=Object.assign({}, vp[w]||{}, by[w]||{}, off ? ((vp.offline||{})[w]||{}) : {});
           s.base=Object.assign({}, (vp[w]||{}).base||{}, (by[w]||{}).base||{}, off ? (((vp.offline||{})[w]||{}).base||{}) : {}); return s; };
@@ -6957,6 +6973,25 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
            这一列显示【查看】，点开 page 那页 posOrder.nfTable 的同一个“发票详情”弹窗；弹窗内容按这一行各格现取（开票/取消后行被改了也跟着变）。
            rows[]: {label:明细行名, col:列下标, pop:'Key'（取该格浮层值）, slice:[a,b], re:'正则'（取第 1 组或整段）,
                     pre:[前缀…]（该格按 <br> 分行，取以前缀开头的那行后半段）, twin:true（取不到时找同发票号 nfView.twinCol 的其它行）, sub:true（取 <br> 后第一段灰字）, map:[{has,show}]（按中文文字包含）, onlyState:[中文状态…]（只在这些状态取）, mono} */
+      /* §2375 方案 B 关联单：在某页所有列表里按单号找那一行（优先“全部”面板的页签行，同单号多份副本时取它） */
+      function _findPageRow(page, no){ const pc=(PC||{})[page]; if(!pc || !no) return null; let best=null, rank=99;
+        const take=(rows, rk)=>{ (rows||[]).forEach(r=>{ if(Array.isArray(r) && r[0]===no && rk<rank){ best=r; rank=rk; } }); };
+        const bs=pc.byStatus||{}; Object.keys(bs).forEach(k=>{ const b=bs[k]||{}; (b.statusTabs||[]).forEach((t,ti)=>{ take(t&&t.rows, (k==='all'?0:2)+(ti===0?0:1)); ((t&&t.subTabs)||[]).forEach(u=>take(u&&u.rows, 4)); }); take(b.rows, 5); });
+        (pc.statusTabs||[]).forEach(t=>take(t&&t.rows, 6)); take(pc.rows, 7); return best; }
+      /* relLine 文字按 {no} 切段（单号那段可点），{state} 换成对方单据的开票状态 */
+      function relSegs(rel){ if(!rel) return []; const t=String(L(rel.text)||'').replace(/{state}/g, String(L(rel.state)||'')); const p=t.split('{no}'); const out=[];
+        p.forEach((x,i)=>{ if(x) out.push({t:x}); if(i<p.length-1) out.push({t:rel.no, no:true}); }); return out; }
+      /* 点单号 → 跳到对方单据所在页并打开那一行的详情（同列表【查看】） */
+      function dvRelGo(rel){ if(!rel) return; const row=_findPageRow(rel.page, rel.no); if(!row){ msg((L({zh:'找不到单据 ',en:'Document not found: ',pt:'Documento não encontrado: '}))+rel.no); return; }
+        const _ts=_sysOfPage(rel.page); if(_ts && _ts!==currentSystem.value) setSys(_ts); dialogName.value=''; detailData.value=null; go(rel.page);
+        setTimeout(()=>{ try{ const tp=PC[rel.page]||{}; const act=(curActions.value||[]).find(a=>a && a.opens==='detailView') || (tp.actions||[]).find(a=>a && a.opens==='detailView') || {opens:'detailView'}; fireBtn(act, row); }catch(e){} }, 260); }
+      /* §2375 收银台订单 posOrder.relLine:[{type:'换货订单', key:'retNo', text:{…{no}…{state}…}, stateMap:[{has,show}]}]
+         → 发票信息表格下方一行灰字，单号取这单 o[key]，状态取收银台同单号那一单的实时开票状态；点单号跳到那一单。不配不生效。 */
+      const poRel = computed(()=>{ const c=curPosOrder.value||{}; const o=poOrder.value; if(!o || !Array.isArray(c.relLine)) return null;
+        const it=c.relLine.find(x=>x && [].concat(x.type||[]).indexOf(String(o.type||''))>-1 && o[x.key]); if(!it) return null; const no=String(o[it.key]);
+        if(no===o.no) return null; const tg=(c.orders||[]).find(x=>x && x.no===no); const sz=tg ? _zhOf((tg.nf||{}).state) : '';
+        const hit=(it.stateMap||c.relStateMap||[]).find(x=>sz.indexOf(String(x.has))>=0);
+        return { no, text: it.text, state: hit ? hit.show : (tg && tg.nf && tg.nf.state ? tg.nf.state : '--') }; });
       const dvNfView = ref(null);
       const _dvNfCfg = tb => { const v=tb && tb.nfView; if(!v || !v.page) return {}; const pc=(PC||{})[v.page]; const n=pc && pc.posOrder && pc.posOrder.nfTable; return (n && typeof n==='object') ? n : {}; };
       const _dvZh = c => (c && typeof c==='object' && !Array.isArray(c)) ? (c.zh!=null ? c.zh : (c.t!=null ? c.t : '')) : (c==null ? '' : c);
@@ -7064,10 +7099,11 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           { const nfs=JSON.stringify(((o.nf||{}).rows)||[]);
             if (b.needNfHas && ![].concat(b.needNfHas).some(w=>nfs.indexOf(L(w))>-1)) return false;
             if (b.hideNfHas && [].concat(b.hideNfHas).some(w=>nfs.indexOf(L(w))>-1)) return false; }
+          /* §2375 按状态值本身比对（stHas：当前语言或中文任一包含），英葡界面下写中文条件的按钮不再消失 */
           if (b.needState){ const ws=Array.isArray(b.needState)?b.needState:[b.needState];
-            if(!ws.some(w=>st.indexOf(L(w))>-1)) return false; }
+            if(!ws.some(w=>stHas((o.nf||{}).state, w))) return false; }
           /* §v8.21（H）hideState:[字…] → 开票状态含这些字就不显示（needState:'已开票' 不给“离线已开票（待上传）”）；不配不生效 */
-          if (b.hideState && [].concat(b.hideState).some(w=>L(w) && st.indexOf(L(w))>-1)) return false;
+          if (b.hideState && [].concat(b.hideState).some(w=>L(w) && stHas((o.nf||{}).state, w))) return false;
           return b.needNf ? has : (b.needNoNf ? !has : true);
         });
       });
@@ -7075,7 +7111,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       function poActNote(b){ const n=b && b.note; const o=poOrder.value; if(!n || !o) return '';
         if(n.needType && [].concat(n.needType).map(x=>String(L(x))).indexOf(String(L(o.type)))<0) return '';
         const st=String(L((o.nf||{}).state)||'');
-        if(n.needState && ![].concat(n.needState).some(w=>st.indexOf(String(L(w)))>-1)) return '';
+        if(n.needState && ![].concat(n.needState).some(w=>stHas((o.nf||{}).state, w))) return '';
         return String(L(n.text)||''); }
       /* §v8.26（O）收银台订单动作 lock：超过取消时限 → 按钮置灰、悬停浮层（文案同后台行内 lock，{auth}{limit}{over} 现算）。
          deadline:'voidLim' 取 posOrder.voidLim；一单多张票（nf.parts）全部超时才锁，浮层按第一张算。返回空串 = 不锁。不配不生效。 */
@@ -7572,23 +7608,28 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           /* §v6.12 后台字段（{value,__hidden}）也能当条件：调拨【开票】按隐藏的 CFOP 选开票页（列表上已不显示 CFOP）。2026-10-20 */
           const raw=(raw0 && typeof raw0==='object' && raw0.__hidden) ? raw0.value : raw0;
           /* §v7.7 w.text:true → 按这一格的全部文字判断（后台表格字段，如发票记录 col 143：看当前有效发票是不是 NF-e 55） */
-          const val=w.text ? cellAllText(raw0).trim()
-                   : String(L(raw && typeof raw==='object' && raw.t!=null ? raw.t : raw)||'')
-                     .replace(/<[^>]*>/g,'').trim();
+          /* §2375 单元格有中文值时统一按中文值和条件的中文比对（与界面语言无关；中文界面与原来完全一致），没有中文值才按当前语言比对 */
+          const _hid=(val, LX)=>{
           /* §v6.9 补 notIn（排除式）：用户要求「开票失败的行只显示 查看｜重新开票」，
              那就得给其余按钮一个"这些值时不显示"的条件。原来只认 in/eq，
              传 notIn 会让 list 变空数组 → !some() 恒为 true → 整列按钮全被隐藏。 */
           if(w.notIn){
-            const nlist=w.notIn.map(x=>String(L(x)));
+            const nlist=w.notIn.map(x=>String(LX(x)));
             return w.startsWith ? nlist.some(s=> val.indexOf(s)===0)
                                 : nlist.some(s=> val===s);
           }
-          const list=(w.in||(w.eq!=null?[w.eq]:[])).map(x=>String(L(x)));
+          const list=(w.in||(w.eq!=null?[w.eq]:[])).map(x=>String(LX(x)));
           if(w.contains) return !list.some(s=> val.indexOf(s)>-1);
           /* notContains：该列包含这些字就不显示（采购退货单「已提交 1/2 张」的行，【开票】要打开第 2 张的页面，不是第 1 张） */
-          if(w.notContains) return w.notContains.map(x=>String(L(x))).some(s=> val.indexOf(s)>-1) || (list.length ? !list.some(s=> w.startsWith ? val.indexOf(s)===0 : val===s) : false);
+          if(w.notContains) return w.notContains.map(x=>String(LX(x))).some(s=> val.indexOf(s)>-1) || (list.length ? !list.some(s=> w.startsWith ? val.indexOf(s)===0 : val===s) : false);
           if(w.startsWith) return !list.some(s=> val.indexOf(s)===0);
-          return !list.some(s=> val===s);
+          return !list.some(s=> val===s); };
+          const val=w.text ? cellAllText(raw0).trim()
+                   : String(L(raw && typeof raw==='object' && raw.t!=null ? raw.t : raw)||'')
+                     .replace(/<[^>]*>/g,'').trim();
+          if(w.text) return _hid(val, L);
+          const valZh=_zhOf(raw).replace(/<[^>]*>/g,'').trim();
+          return valZh ? _hid(valZh, x=>_zhOf(x)) : _hid(val, L);
         }
         if(a.showIf){
           /* v3.23：showIf 可写单值或【数组】—— 一个动作常要对应多种行状态
@@ -7723,14 +7764,21 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
             tb.rows = (h && h.__hidden && Array.isArray(h.value)) ? JSON.parse(JSON.stringify(h.value)) : []; }
             /* §v6.26 table.emptyBy={col:[列下标…], by:{'待开票':'文案'}} → 空表文字按这一行的状态选（调拨单详情是所有状态共用一份，
                「还没有开票，请在待开票状态进行【开票】操作！」只该在待开票时出现·用户 10-29）；对不上就保留原来的 empty */
-            if(tb && tb.emptyBy && tb.emptyBy.by){ const st=[].concat(tb.emptyBy.col==null?[]:tb.emptyBy.col).map(ci=>String(cell(row[ci])||'').replace(/<[^>]+>/g,' ')).join(' ');
+            /* §2375 状态文字同时按中文比对（_zhOf），英葡界面下按中文写的键也能命中；中文界面行为不变 */
+            if(tb && tb.emptyBy && tb.emptyBy.by){ const st=[].concat(tb.emptyBy.col==null?[]:tb.emptyBy.col).map(ci=>String(cell(row[ci])||'').replace(/<[^>]+>/g,' ')+' '+_zhOf(row[ci]).replace(/<[^>]+>/g,' ')).join(' ');
               const key=Object.keys(tb.emptyBy.by).find(k=>st.indexOf(k)>=0); if(key) tb.empty=tb.emptyBy.by[key]; }
             /* §v6.26 table.tipBy={col:[列下标…], when:'待开票', pick:[{has:'已开退票冲销',text},{has:'已取消',text}]} → 表格【下面】一行提示：
                单据是 when 状态、表里已有以前开过的票时，按表里出现的票状态挑一句（取消 / 开退票冲销后回到待开票·用户 10-29：先历次发票、下面提示） */
             if(tb && tb.tipBy && Array.isArray(tb.tipBy.pick)){ tb.tip='';
-              const st=[].concat(tb.tipBy.col==null?[]:tb.tipBy.col).map(ci=>String(cell(row[ci])||'').replace(/<[^>]+>/g,' ')).join(' ');
-              const rowsTxt=(tb.rows||[]).map(r=>Array.isArray(r)?r.map(c=>String(cell(c)||'')).join(' '):'').join(' ');
-              if(tb.tipBy.when && st.indexOf(L(tb.tipBy.when))>=0 && (tb.rows||[]).length){ const p=tb.tipBy.pick.find(x=>x && rowsTxt.indexOf(x.has)>=0); if(p) tb.tip=p.text; } }
+              const st=[].concat(tb.tipBy.col==null?[]:tb.tipBy.col).map(ci=>String(cell(row[ci])||'').replace(/<[^>]+>/g,' ')+' '+_zhOf(row[ci]).replace(/<[^>]+>/g,' ')).join(' ');
+              const rowsTxt=(tb.rows||[]).map(r=>Array.isArray(r)?r.map(c=>String(cell(c)||'')+' '+_zhOf(c)).join(' '):'').join(' ');
+              if(tb.tipBy.when && (st.indexOf(L(tb.tipBy.when))>=0 || (_zhOf(tb.tipBy.when) && st.indexOf(_zhOf(tb.tipBy.when))>=0)) && (tb.rows||[]).length){ const p=tb.tipBy.pick.find(x=>x && rowsTxt.indexOf(x.has)>=0); if(p) tb.tip=p.text; } }
+            /* §2375 table.relLine:{col, re, page, stateCol, stateMap:[{has,show}], text:{zh,en,pt}（{no}{state}）}
+               → 表格下方一行灰字“关联××订单 {no}（…：{state}）→”：单号按这一行第 col 格（中文文字）用 re 取第 1 组；
+                 状态取 page 页同单号那一行第 stateCol 格的实时值（按 stateMap 中文包含换成多语文字）；点单号跳到对方单据详情。取不到单号就不显示。不配不生效。 */
+            if(tb && tb.relLine){ tb.rel=null; const rl=tb.relLine; const src=_zhOf(row[rl.col]).replace(/<[^>]+>/g,' '); let m=null; try{ m=src.match(new RegExp(rl.re)); }catch(e){}
+              if(m && m[1]){ const no=m[1]; const tr=_findPageRow(rl.page, no); const sz=tr ? _zhOf(tr[rl.stateCol]).replace(/<[^>]+>/g,' ') : '';
+                const hit=(rl.stateMap||[]).find(x=>sz.indexOf(String(x.has))>=0); tb.rel={ no, page:rl.page, text:rl.text, state: hit ? hit.show : (sz.trim()||'--') }; } }
             /* §v6.16 addFrom.rowsFrom=列下标 → 选择器的候选也换成这一行后台字段里存的（发票主体「关联门店/仓库」按主体所在地给各自的候选·2026-10-26） */
             if(tb && tb.addFrom && tb.addFrom.rowsFrom!=null){ const h2=row[tb.addFrom.rowsFrom];
               tb.addFrom.rows = (h2 && h2.__hidden && Array.isArray(h2.value)) ? JSON.parse(JSON.stringify(h2.value)) : []; } }); });
@@ -9152,7 +9200,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       function posSyncApply(spec, id, no){ try{
         const pp=PAGECFG[spec.page||'pos-order'], po=pp&&pp.posOrder; if(!po || !id) return;
         const o=(po.orders||[]).find(x=>x && x.no===id); if(!o) return; const nf=o.nf||(o.nf={});
-        if(spec.onlyState && ![].concat(spec.onlyState).some(w=>String(L(nf.state)||'').indexOf(String(L(w)))>-1)) return;
+        if(spec.onlyState && ![].concat(spec.onlyState).some(w=>stHas(nf.state, w))) return;
         const now=posNow(); const sub=x=>JSON.parse(JSON.stringify(x).replace(/\{no\}/g, no||'').replace(/\{now\}/g, now).replace(/\{amount\}/g, String(L(o.amount)||'').replace(/"/g,'')).replace(/\{ord:([\w.]+)\}/g,(m,k)=>String(L(o[k])==null?'':L(o[k])).replace(/"/g,'')));   /* {ord:字段}=这单自己的字段值 */
         nf.state=sub(spec.state); if(spec.color) nf.color=spec.color; delete nf.tip; delete nf.goNo;
         if(spec.rows){ const rows=sub(spec.rows); if(o.mail && spec.mailLabel) rows.push({label:L(spec.mailLabel)||'', value:o.mail+'（'+(L(spec.sentText)||'')+' '+now+'）'});
@@ -9357,7 +9405,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         dlgRow.value = row||null;
         /* §v6.11 弹窗字段也支持 editFrom=列下标：打开时从点的那一行取值（批发订单【开票】弹窗：单据号、接收方、CNPJ、金额是这一张的） */
         if(row){ const d=cfg.value.dialogs[name]; const fl=(d.fields||[]).concat(...(d.sections||[]).map(s=>(s&&s.fields)||[]));
-          fl.forEach(f=>{ if(f && f.editFrom!=null){ const v=(row[f.editFrom]==null||row[f.editFrom]==='') && f.editDefault!=null ? f.editDefault : row[f.editFrom]; f.value = v==null ? '' : (typeof v==='object' ? (v.__hidden ? v.value : (v.t!=null ? L(v.t) : L(v))) : v); if(typeof f.value==='string') f.value=f.value.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(); f._err=''; } }); }
+          fl.forEach(f=>{ if(f && f.editFrom!=null){ const v=(row[f.editFrom]==null||row[f.editFrom]==='') && f.editDefault!=null ? f.editDefault : row[f.editFrom]; f.value = v==null ? '' : (typeof v==='object' ? (v.__hidden ? v.value : (v.t!=null ? L(v.t) : L(v))) : v); if(typeof f.value==='string') f.value=f.value.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(); if(f.editRe && typeof f.value==='string'){ try{ const _m=f.value.match(new RegExp(f.editRe)); if(_m) f.value=_m[1]!=null?_m[1]:_m[0]; }catch(e){} } f._err=''; } }); }   /* §2375 fd.editRe:'正则' → 带出的值再按正则取第 1 组（原订单号格是“单号 + 类型”，只取单号）；不配不生效 */
         /* §v8.54（BA）fd.failFrom=列下标：这一行该格有内容 → 打开即标红并显示原因；记下打开时的值，没改就仍拦下。fd.failGroup 同组任一改过就一起撤销。不配不生效 */
         { const d3=cfg.value.dialogs[name]; [].concat(...(d3.sections||[]).map(s=>(s&&s.fields)||[]), d3.fields||[]).forEach(f=>{ if(!f || f.failFrom==null) return;
             const m = row ? row[f.failFrom] : null; const msg = (m==null || m==='') ? '' : String(typeof m==='object' ? (L(m)||'') : m).trim();
@@ -9796,7 +9844,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         /* §2336 posNf.netOff:{msg, onlyState?:[…]} → 收银台网络异常（posOnline=false）时点确定：不提交、这单开票状态不变、不发邮件，
            关掉弹窗并提示 msg；onlyState 写了 = 这单开票状态含其中之一才拦（多语取 L）。不配不生效，网络正常不受影响。 */
         if(d.posNf && d.posNf.netOff && !posOnline.value && poOrder.value){ const no=d.posNf.netOff, st0=String(L((poOrder.value.nf||{}).state)||'');
-          if(!no.onlyState || [].concat(no.onlyState).some(w=>st0.indexOf(String(L(w)))>-1)){ dialogName.value=''; posTip(L(no.msg)); return; } }
+          if(!no.onlyState || [].concat(no.onlyState).some(w=>stHas((poOrder.value.nf||{}).state, w))){ dialogName.value=''; posTip(L(no.msg)); return; } }
         if(d.posNf && poOrder.value && poOrder.value.nf){ const nf=poOrder.value.nf, pn=d.posNf;
           /* §v7.8 关联开票：pn.linked:{key,onlyState,empty?} → 这单 o[key] 记着关联单号，提交时那张单（状态含 onlyState 之一才算）一起改；
              文字里 {fv:字段名}=弹窗里填/选的值，{self}=本单号，{link}=关联单号，{no2}=关联单发票号（授权时生成） */
@@ -9804,7 +9852,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           [].concat(...(d.sections||[]).map(s=>(s&&s.fields)||[]), Array.isArray(d.fields)?d.fields:[]).forEach(f=>{ if(f&&f.label!=null){ const _v=String(L(f.value)==null?'':L(f.value)); _fv[L(f.label)]=_v; if(typeof f.label==='object' && f.label.zh!=null) _fv[f.label.zh]=_v; } });   /* §2342 多语字段名也认中文名：{fv:中文字段名} 切英文/葡文时照样取到 */
           const _lkNo = pn.linked ? String(L(_ord[pn.linked.key])||'') : '';
           let _lk = _lkNo ? (((curPosOrder.value||{}).orders)||[]).find(x=>x && x.no===_lkNo) : null;
-          if(_lk && pn.linked.onlyState){ const _ls=String(L((_lk.nf||{}).state)||''); if(![].concat(pn.linked.onlyState).some(w=>_ls.indexOf(L(w))>-1)) _lk=null; }
+          if(_lk && pn.linked.onlyState){ if(![].concat(pn.linked.onlyState).some(w=>stHas((_lk.nf||{}).state, w))) _lk=null; }   /* §2375 按状态值本身比对 */
           const _fx = s => String(s).replace(/\{fv:([^}]+)\}/g,(m,k)=>_fv[k]!=null?_fv[k]:'').replace(/\{self\}/g,_ord.no||'').replace(/\{link\}/g,_lkNo);
           delete nf.goNo;
           if(_lk){ const ln=_lk.nf||(_lk.nf={}); ln.state=JSON.parse(JSON.stringify(pn.state)); if(pn.color) ln.color=pn.color;
@@ -10998,7 +11046,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       curPosHw,hwDetected,hwAddOpen,                                                   /* §v6.1 硬件设备页 */
       poFilterOpen,poFilterSel,poMenu,poMenuPick,poRet,poRetWay,poRetSel,poRetReason,poRetDesc,poRetQty,poRetAmt,   /* §v6.2 订单管理 */
       poRetCount,poRetAll,poRetNames,poRetMax,poRetMaxQty,poRetErr,poRetCheck,poRetTitle,poRetToggleAll,poRetBack,poRetPick,poRetDone,poRetAtCounter,
-      curPosOrder,poNfBadge,poNfHasRid,dvNfView,dvNfCan,dvNfOpen,dvNfNoText,dvNfCfgT,dlgShownRows,fbItemShow,dlgRadioVal,dlgRadioChange,dlgRadioOff,dlgRadioOffMsg,posTx,poNfHist,poNfView,poNfItems,poNfSecs,poNfCfg,poNfKey,posVoidRows,posVoidFill,actLock,secOpen,secToggle,secVisible,pageBtns,dlgFieldChange,poSel,poGoNo,poOrder,poOrders,poActions,poActLock,poActNote,poAct,poReceipt,poRcpKind,poRcpBtn,posTip,statusTabByKey,poFilterReset,poFilterApply,poQ,poSearchApply,flowTip,metaOf,ak,go,closeTab,setSys,resetFilter,msg,onAnnoToggle,genPRD,annoShare,annoDevkit,annoGenCode,annoClear,annoRestore,
+      curPosOrder,poNfBadge,poNfHasRid,relSegs,dvRelGo,poRel,dvNfView,dvNfCan,dvNfOpen,dvNfNoText,dvNfCfgT,dlgShownRows,fbItemShow,dlgRadioVal,dlgRadioChange,dlgRadioOff,dlgRadioOffMsg,posTx,poNfHist,poNfView,poNfItems,poNfSecs,poNfCfg,poNfKey,posVoidRows,posVoidFill,actLock,secOpen,secToggle,secVisible,pageBtns,dlgFieldChange,poSel,poGoNo,poOrder,poOrders,poActions,poActLock,poActNote,poAct,poReceipt,poRcpKind,poRcpBtn,posTip,statusTabByKey,poFilterReset,poFilterApply,poQ,poSearchApply,flowTip,metaOf,ak,go,closeTab,setSys,resetFilter,msg,onAnnoToggle,genPRD,annoShare,annoDevkit,annoGenCode,annoClear,annoRestore,
         activeStatus,formVisible,activeFormTab,detailData,detailFP,detailAct,openFullPage,dialogName,activeAnchor,curAnchor,selCount,dlgOpen,btnLabel,fireBtn,needSel,closeDetail,detailSave,gotoAnchor,addTableRow,delTableRow,removePairedRow,dlgTblRows,dlgAllChecked,dlgSomeChecked,dlgCheckAll,
         dvBlur,dlgBlur,dlgCellBlur,dlgColShow,dlgPickSumText,dlgLineCalc,dlgFillAll,cellErr,cellTouch,anchorErr,minRowsErr,dvTick,sugFetch,cellAi,   /* §v3.94 离开输入框即校验 · §v5.9 建议输入 / AI 推 NCM */
         secIsPill,secActive,secGoTab,                /* §v3.96 胶囊式板块页签 */

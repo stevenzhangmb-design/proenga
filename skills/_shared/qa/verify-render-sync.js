@@ -278,7 +278,10 @@ async function protoMode(o) {
 const PRD_READY = () => document.readyState === 'complete' && !!document.querySelector('main');
 const PRD_EXTRACT = async function () {
   const W = t => new Promise(z => setTimeout(z, t));
-  for (let i = 0; i < 150; i++) { const ps = [...document.querySelectorAll('pre.mermaid')]; if (ps.every(p => p.querySelector('svg') || p.getAttribute('data-processed'))) break; await W(200); }
+  /* 等流程图全部画完再取字（11-18：线上 mermaid 脚本是延后注入的，3 秒时页面里还是 code.language-mermaid 原始代码、没有 pre.mermaid，
+     旧写法对空集合直接放行，取到的是原始代码，33 节流程图误报不一致；改为：只要还有未渲染的流程图源码就继续等，最多 90 秒） */
+  const rawLeft = () => [...document.querySelectorAll('pre.mermaid, .mermaid, code.language-mermaid')].filter(p => !p.querySelector('svg') && !p.getAttribute('data-processed') && /^\s*(flowchart|graph|sequenceDiagram|stateDiagram)/.test(p.textContent)).length;
+  for (let i = 0; i < 450; i++) { if (rawLeft() === 0) break; await W(200); }
   const main = document.querySelector('main') || document.body;
   const H = [...main.querySelectorAll('h1,h2,h3,h4,h5,h6,.hx')];
   const txt = frag => {
