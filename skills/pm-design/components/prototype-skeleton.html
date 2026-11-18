@@ -1263,6 +1263,18 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
   .efx-tb td{color:#444;padding:8px 10px;border-bottom:1px solid #ebeef5;vertical-align:top;}
   .dlg-info-more{flex:0 0 auto;color:var(--el-color-primary);cursor:pointer;font-size:14px;white-space:nowrap;user-select:none;}
   .dlg-count{color:#303133;font-size:14px;margin:0 0 16px;}
+  /* §2383 真实打印：只打 #prt-root 里的票据（每张一页），其余页面内容打印时隐藏 */
+  #prt-root{display:none}
+  @media print{
+    html:has(body.prt-on), body.prt-on{height:auto !important;overflow:visible !important;background:#fff !important}
+    body.prt-on{margin:0 !important}
+    body.prt-on > *:not(#prt-root){display:none !important}
+    body.prt-on #prt-root{display:block !important}
+    #prt-root .prt-sheet{break-after:page;page-break-after:always;break-inside:avoid}
+    #prt-root .prt-sheet:last-child{break-after:auto;page-break-after:auto}
+    #prt-root, #prt-root *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    #prt-root .prt-label{margin:0 !important;border:0 !important}
+  }
   /* §v3.79 只读整页的字段值：纯文字，不画输入框 */
   .fd-ro-v{color:#333;font-size:14px;line-height:22px;padding-top:4px;word-break:break-word;}
   .dlg-lform .el-form-item{margin-bottom:22px;}
@@ -5029,6 +5041,8 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
     <el-dialog :class="['fdlg', cfg.dialogs[dialogName]&&cfg.dialogs[dialogName].noHeader?'no-header':'']" v-if="dialogName && cfg.dialogs && cfg.dialogs[dialogName]" v-model="dlgOpen" :title="L(cfg.dialogs[dialogName].title)" :width="cfg.dialogs[dialogName].width||'620px'" append-to-body :before-close="dlgBeforeClose" :data-annotation="ak('弹窗')">
       <!-- §v7.1 单条提交失败：弹窗不关、已填内容保留，失败原因用红字显示在弹窗顶部（2026-11-06 用户定；原来飘一条几秒就消失的提示） -->
       <el-alert v-if="dlgErrMsg" class="dlg-err" type="error" :title="dlgErrMsg" :closable="false" show-icon style="margin-bottom:12px"></el-alert>
+      <!-- §2383 离线开出的票打热敏小票：顶部提示打两份（一份交顾客、一份留店），份数默认 print.offCopies -->
+      <div v-if="cfg.dialogs[dialogName].print && prtOff" class="tf-alert prt-off" style="margin:0 0 14px;align-items:center"><i class="tf-alert-ic">&#9432;</i><span style="flex:1">{{ L(cfg.dialogs[dialogName].print.offNote) }}</span><span style="margin:0 8px 0 16px;color:#606266">{{ L(cfg.dialogs[dialogName].print.copiesText)||'份数' }}</span><el-input-number v-model="prtCopies" :min="1" :max="9" size="small" style="width:100px"></el-input-number></div>
       <!-- §v3.48 弹窗标签位置可配：labelPos:'left' + labelWidth（真系统导出弹窗是「发票账号」在左、控件在右） -->
       <el-form v-if="cfg.dialogs[dialogName].fields" :label-position="cfg.dialogs[dialogName].labelPos||'top'"
                :label-width="cfg.dialogs[dialogName].labelWidth||undefined"
@@ -5528,7 +5542,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       <!-- 按钮文案可配（真系统新增向导是「继续」不是「确定」）：dialogs.x.okText / cancelText。
            dialogs.x.viewOnly=true → 只读明细弹窗，隐藏底部取消/确定，只留右上角×关闭。2026-07-31 -->
       <template #footer v-if="!cfg.dialogs[dialogName].viewOnly"><!-- §v3.48 footLink：底部左侧的次要链接（真系统导出弹窗左下角「前往【历史发票】>>」） --><a v-if="cfg.dialogs[dialogName].footLink" class="dlg-footlink" @click="fireBtn(cfg.dialogs[dialogName].footLink)">{{ L(cfg.dialogs[dialogName].footLink.label) }}</a><!-- §v4.3 noCancel:true → 只留一个按钮（真系统的「不允许删除」说明窗只有【关闭】，没有取消） --><el-button v-if="!cfg.dialogs[dialogName].noCancel" @click="dlgCancel()">{{ L(cfg.dialogs[dialogName].cancelText)||T('cancel') }}</el-button><!-- §okButtons(v2.0)：项可写字符串，也可写 {label, goto|opens|download|act} → 走 fireBtn，能真跳转/真下载 -->
-        <template v-if="cfg.dialogs[dialogName].okButtons"><el-button v-for="(b,bi) in cfg.dialogs[dialogName].okButtons" :key="bi" v-show="btnVisible(b)" :type="(b&&b.btnType)||'primary'" @click="(b&&typeof b==='object'&&(b.goto||b.opens||b.download||b.act||b.copy||b.setFlag||b.confirm)) ? fireBtn(b, dlgRow) : (dlgClose(),msg(L((b&&typeof b==='object') ? (b.done||b.label) : b)))">{{ btnLabel(b) }}</el-button></template><el-button v-else-if="!cfg.dialogs[dialogName].noOk" type="primary" :disabled="dlgOkDisabled()" :loading="dlgBusy" @click="dlgOk()">{{ L(cfg.dialogs[dialogName].okText)||T('confirm') }}</el-button></template>
+        <template v-if="cfg.dialogs[dialogName].okButtons"><el-button v-for="(b,bi) in cfg.dialogs[dialogName].okButtons" :key="bi" v-show="btnVisible(b)" :type="(b&&b.btnType)||'primary'" @click="dlgOkBtn(b)">{{ btnLabel(b) }}</el-button></template><el-button v-else-if="!cfg.dialogs[dialogName].noOk" type="primary" :disabled="dlgOkDisabled()" :loading="dlgBusy" @click="dlgOk()">{{ L(cfg.dialogs[dialogName].okText)||T('confirm') }}</el-button></template>
     </el-dialog>
     <!-- §v3.73 editText 的编辑浮层：整页一个，挂到刚点的那支笔上（virtual-ref）。
          点【保存】才写回单元格，点【取消】/换弹窗直接丢弃草稿。 -->
@@ -6675,6 +6689,9 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       function posPrint(kind){
         const c = curPos.value||{};
         if (!hwDetected.value) { posTip(c.noPrinterMsg || '没有连接打印机 —— 先去「硬件设备」添加小票打印机，或改用邮箱 / 扫码交付'); return; }
+        /* §2383 pos.printNfDlg / pos.printRcpDlg 配了 → 已连接打印机时先弹打印预览（同一张票，A4 / 热敏两种版式），在预览里点【打印】才真实打印 */
+        const dn = kind==='nf' ? c.printNfDlg : c.printRcpDlg;
+        if (dn && (cfg.value.dialogs||{})[dn] && posResult.value && posResult.value.chave) { dialogName.value=''; dlgOpenSub(dn, null); return; }   /* 没开出票（门店预订只收定金）时不弹 NFC-e 预览，仍是原提示 */
         posTip(kind==='nf' ? L(c.printedNfMsg)
                            : (c.printedRcpMsg || '小票（热敏版 DANFE）已送打印，请交给顾客'));
       }
@@ -6737,9 +6754,13 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
             reason:String(L(p.failMsg)||'').replace('{n}', L(bad.name)) };
           return;
         }
-        posResult.value={ kind:'ok', no:no, chave:key,
+        /* §2383 配了 keyHead（或 offKeyHead）→ 正常开出的票也按 65 模型 + tpEmis=1 现算 44 位 Key、票号顺排（原来随机拼的 Key 只有 31 位，票面打不出 11 组） */
+        let okNo=no, okKey=key; const _kh=p.keyHead||p.offKeyHead;
+        if(_kh){ okNo=posNextNfNos(1)[0]; const k43=String(_kh)+'65'+'001'+okNo+'1'+String(10000000+(+okNo*7919)%89999999).slice(-8);
+          let s=0,w=2; for(let i=k43.length-1;i>=0;i--){ s+=(+k43[i])*w; w=w===9?2:w+1; } okKey=k43+((s%11<2)?0:11-s%11); }
+        posResult.value={ kind:'ok', no:okNo, chave:okKey,
           title:L(p.okTitle)||'NFC-e 开具成功，已授权', reason:L(p.okMsg)||'DANFE NFC-e 已送打印，请交给顾客' };
-        posIssued.value={ no:no, chave:key, kind:'ok' };
+        posIssued.value={ no:okNo, chave:okKey, kind:'ok', at:posNow() };
       }
       function posResultDone(){
         /* §v6.14 断网结账完成 → 在收银台 › 订单管理 最上面生成这张单（发票「开票失败」，带上登记的邮箱），事后补开 */
@@ -7283,6 +7304,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
             head:[{label:'原订单',value:o.no+'（'+L(o.type)+'）'}].concat((o.head||[]).filter(h=>_hd.indexOf(L(h&&h.label))<0)), goods:JSON.parse(JSON.stringify((o.goods||[]).filter((g,i)=>poRetSel[i]))), sums:JSON.parse(JSON.stringify(o.sums||[])),
             info:[{label:'单号',value:rtNo},{label:'原订单号',value:o.no},{label:'退款类型',value:L(poRetWay.value.label)},{label:'创建时间',value:now},{label:'订单来源',value:'线下门店-售后'},{label:'销售门店',value:L(o.store)}], nf };
           /* §2342 netOff.orderSet:{字段:值} → 断网生成的退货订单额外带上这些字段（如 link 标记，让【开票】按钮走断网补开那套弹窗）；值里可写 {NO}{ORDER}{ORIG}{ORIGNF}… 占位。不配不生效。 */
+          if(!raOff && ra.orderSet) Object.assign(_rtOrd, fill(ra.orderSet));   /* §2383 refundAuto.orderSet:{字段:值} → 正常（联网）生成的退货订单也可额外带字段（如 origNf 引用原票），写法同 netOff.orderSet。不配不生效 */
           if(raOff && raOff.orderSet) Object.assign(_rtOrd, fill(raOff.orderSet));
           all.unshift(_rtOrd);
           ((raOff ? raOff.mirrors : ra.mirrors)||[]).forEach(mc=>{ const pc=PC[mc.page]; let bs=pc&&(mc.status?(pc.byStatus&&pc.byStatus[mc.status]):pc); if(!bs) return;
@@ -7307,11 +7329,13 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         if(b&&b.menu){ poMenu.value = (poMenu.value===poActions.value.indexOf(b)) ? -1 : poActions.value.indexOf(b); return; }
         if(a==='return'||a==='exchange'){ poRet.value=1; poRetWay.value=null;
           Object.keys(poRetSel).forEach(k=>delete poRetSel[k]); poRetReason.value=-1; poRetDesc.value=''; return; }
-        if(a==='print'){ poRcpBtn.value=b||null; poRcpKind.value='nf'; poReceipt.value=true; return; }
+        /* §2383 打印按钮写了 opens（且弹窗存在）→ 打开标准打印预览弹窗（走下面 opens 那条），不再用自画浮层 */
+        const _prtDlg = /^print/.test(a||'') && b && b.opens && (cfg.value.dialogs||{})[b.opens];
+        if(a==='print' && !_prtDlg){ poRcpBtn.value=b||null; poRcpKind.value='nf'; poReceipt.value=true; return; }
         /* §v6.9 打印拆成两个平铺按钮（用户 10-11）：真系统那个「打印」下拉里的标签/分单小票本原型用不上。
            同一张 65，两种版式：发票版＝A4 DANFE（顾客报账用）／小票版＝热敏小票（日常给）。 */
-        if(a==='printnf'){ poRcpBtn.value=b||null; poRcpKind.value='nf'; poReceipt.value=true; return; }
-        if(a==='printrcp'){ poRcpBtn.value=b||null; poRcpKind.value='rcp'; poReceipt.value=true; return; }
+        if(a==='printnf' && !_prtDlg){ poRcpBtn.value=b||null; poRcpKind.value='nf'; poReceipt.value=true; return; }
+        if(a==='printrcp' && !_prtDlg){ poRcpBtn.value=b||null; poRcpKind.value='rcp'; poReceipt.value=true; return; }
         if(a==='xml'){ posTip(b.tip||'XML 已导出，可直接给会计'); return; }
         if(a==='excel'){ posTip(b.tip||'EXCEL 已导出'); return; }
         /* §v6.12 按钮写 opens:'弹窗名' → 打开那个弹窗（收银台【开发票】【重新开票】与后台 订单›收银订单 用同一个开票弹窗，2026-10-20 用户要求一致） */
@@ -8349,11 +8373,300 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         return '<span style="display:flex;align-items:stretch;width:100%;height:' + (h || 52) + 'px">' + out + '</span>';
       }
       /* §v6.27 打印预览批量：fd.perRow=true → 工具栏打开时，每张可打印的票（勾选行去掉 selExclude 命中的）各出一份；行上打开仍只出这一张。2026-11-02 */
-      function fillPrint(fd){ const v=L(fd.value); if(!fd.perRow || dlgRow.value) return fillRow(v);
-        const d=(cfg.value.dialogs||{})[dialogName.value]; const rules=(d&&d.selExclude)||[];
-        const kept=(selRows.value||[]).filter(r=>!rules.some(rule=>{ const t=cellLines(r[rule.col!=null?rule.col:0]).join(' '); return (rule.any||[]).some(k=>t.indexOf(L(k))>=0); }));
-        if(!kept.length) return fillRow(v);
-        return kept.map(r=>fillRow(v,r)).join('<div style="border-top:2px dashed #999;margin:18px 0"></div>'); }
+      /* §2383 预览与打印共用同一份「每张票」清单：printSheets 返回 [{html, paper?, copies?, off?}]，预览按张连续显示，打印按张分页 */
+      function prtKeptRows(){ const d=(cfg.value.dialogs||{})[dialogName.value]; const rules=(d&&d.selExclude)||[];
+        return (selRows.value||[]).filter(r=>!rules.some(rule=>{ const t=cellLines(r[rule.col!=null?rule.col:0]).join(' '); return (rule.any||[]).some(k=>t.indexOf(L(k))>=0); })); }
+      function prtSrcRows(fd){ if(dlgRow.value || !fd.perRow) { const r=dlgSrcRow(); return r ? [r] : []; } const kept=prtKeptRows(); if(kept.length) return kept; const r=dlgSrcRow(); return r ? [r] : []; }
+      function printSheets(fd){
+        if(!fd) return [];
+        if(fd.nfce) return prtDocs(fd.nfce, fd).filter(Boolean).map(t=>({ html:nfceDanfe(t, fd.nfce.paper), paper:fd.nfce.paper||'A4', off:!!t.off }));
+        if(fd.labels) return labelSheets(fd);
+        const v = fd.tplFrom ? prtTpl(fd.tplFrom) : L(fd.value);
+        /* docRow.rowCols:{列下标:'模板'} → 不经票据数据，直接用当前行的 {r.N} 占位拼出目标表的一行（采购发票 / 采购退票套发票管理的 DANFE 模板） */
+        if(fd.docRow && fd.docRow.rowCols) return prtSrcRows(fd).map(r=>{ const tr=[]; Object.keys(fd.docRow.rowCols).forEach(i=>{ tr[+i]={ value:String(fillRow(L(fd.docRow.rowCols[i]), r)), __hidden:true }; }); for(let i=0;i<tr.length;i++) if(tr[i]==null) tr[i]=''; return { html:prtFv(fillRow(v, tr)) }; });
+        if(fd.docRow) return prtDocs(fd.docRow, fd).filter(Boolean).map(t=>({ html:fillRow(v, rowFromDoc(t, fd.docRow.cols||{}, fd.docRow)) }));
+        if(!fd.perRow || dlgRow.value) return [{ html:prtFv(fillRow(v)) }];
+        const kept=prtKeptRows();
+        if(!kept.length) return [{ html:prtFv(fillRow(v)) }];
+        return kept.map(r=>({ html:prtFv(fillRow(v,r)) })); }
+      /* {fv:字段名} → 弹窗里该字段当前选的值（打印订单的“单据类型”切换后预览标题跟着变） */
+      function prtFv(h){ return (typeof h==='string' && h.indexOf('{fv:')>=0) ? h.replace(/\{fv:([^}]+)\}/g,(m,k)=>{ const d=(cfg.value.dialogs||{})[dialogName.value]||{};
+          const f=[].concat(d.fields||[], ...(d.sections||[]).map(s=>(s&&s.fields)||[])).find(x=>x && x.label!=null && (x.label.zh===k || L(x.label)===k));
+          return prtEsc(f ? String(L(f.value)==null?'':L(f.value)) : ''); }) : h; }
+      function fillPrint(fd){ const sh=printSheets(fd);
+        if(sh.length===1 && !fd.nfce && !fd.labels && !fd.docRow) return sh[0].html;
+        return sh.map(s=>s.html).join(fd.labels ? '' : '<div style="border-top:2px dashed #999;margin:18px 0"></div>'); }
+      /* ════ §2383 打印预览 + 真实打印（都不配不生效，原行为不变）════
+         ① dialogs.x.print:{paper:'A4'|'80mm'|'100mm 150mm', single?, offCopies?, offNote?, copiesText?}
+            → 弹窗里的【打印】（okText 那颗；okButtons 里写 print:true / act:'print' / 名字叫“打印”的那颗）调用浏览器 window.print()：
+              只打票据区域（弹窗里 type:'html' 字段算出的每一张），弹窗外框和页面其他内容打印时隐藏；@page 按 paper 设纸张；批量每张分页、超宽按纸宽等比缩小。
+              single:true → 没有行来源（收银台结账结果页）时“本次打印 {n} 张”按 1 张算。
+              offCopies:N + offNote → 离线开出的票（热敏小票）预览顶部显示 offNote 和份数（默认 N），打印按份数重复。
+         ② html 字段写 nfce:{paper, from:'row'|'posOrder'|'posSale', model?:'65', map?} → 按巴西 DANFE NFC-e 手册 4.2 的 9 个区生成票面（A4 与热敏纸宽同一套内容），
+            数据取这张票真值（抬头按 Key 第 7~20 位的 CNPJ 去发票主体找，找不到按门店找；商品/金额/付款/找零取订单；Key 44 位 11 组；QR 同 {qr.N}）；
+            离线票两处印 EMITIDA EM CONTINGÊNCIA / Pendente de autorização，不印授权协议。
+            map（from:'row'）两种写法：发票列表行 {serie,no,key,total,time,prot,items,pay,cons,doc,emit:{name,cnpj,ie,street,bairro,city,uf},tax:{fed,est}}（列下标，time 可写 '10#2'）；
+            订单列表行 {nfList:true, goods:[{key,desc,code,codeAfter,descAfter,price,qty,total,disc}], goodsCol, payKey, storeCol}（发票明细取该行后台字段里的票列表，按 model 挑那一张）。
+         ③ html 字段写 docRow:{from, model, map?, cols:{列下标:'模板'}} + tplFrom:{page,dialog,after?:{text,add}} → 把这张单（同 ② 的取数）拼成 page 那张表的一行，
+            用那一页现成的预览模板（收银台退货单的 A4 DANFE 用发票管理的 DANFE 模板）；模板里 {字段.子字段} 取这张单的值，{itemsDanfe} = DANFE 商品行。
+         ④ html 字段写 labels:{kind:'tag'|'barcode', name:{col,after}, code:{col,after}, price:{col}, paperFrom, contentFrom, copiesFrom} → 商品价签 / 条形码按勾选行生成，纸张取弹窗里所选规格。
+         ⑤ 任一页写 printCfg:{emitPage, emitCols:{cnpj,name,ie,street,no,bairro,city,uf,cep,stores}, urlByUF:{'35':网址}, taxPct:{fed,est}, payMap:{中文:葡文}}。 */
+      const prtCopies = ref(1);
+      const prtOff = ref(false);
+      function prtCfg(){ try{ const k=Object.keys(PAGECFG||{}).find(x=>PAGECFG[x] && PAGECFG[x].printCfg); return k ? PAGECFG[k].printCfg : {}; }catch(e){ return {}; } }
+      const prtPT = v => (v && typeof v==='object' && !Array.isArray(v)) ? (v.pt!=null ? v.pt : L(v)) : v;   /* 票面是葡语法定格式：多语值取葡语 */
+      function prtTxt(v){ if(v==null) return ''; let s = v;
+        if(typeof v==='object'){ if(v.__hidden) s = (v.value && typeof v.value==='object') ? prtPT(v.value) : v.value; else if(v.t!=null) s = prtPT(v.t); else s = prtPT(v); }
+        return fillRelTime(String(s==null?'':s)).replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').replace(/[ \t]+/g,' ').trim(); }
+      const prtEsc = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      function prtKey(s){ const m=String(s==null?'':s).replace(/\s+/g,'').match(/\d{44}/); return m ? m[0] : ''; }
+      function prtNum(s){ let x=String(s==null?'':s).replace(/[^\d,.\-]/g,''); if(x.indexOf(',')>=0) x=x.replace(/\./g,'').replace(',','.'); return +x||0; }
+      function prtMoney(n){ return Number(n||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
+      /* 证件号格式、行标签、票面文字全部取 printCfg（项目数据），骨架只留机制：
+         printCfg.docIds:[{len,re,fmt,prefix}] / ord:{key,no,serie,auth,offAt,recv,doc,kind,model,cfop,refKey,ref:[行标签…], sumFreight,sumDue,sumWay,sumTroco}
+         / offRe / inRe / anonRe / consRe / cfopRe / modelText:{'55','65'} / unit:{def,localRe} / tx:{票面文字} */
+      const PCF = () => prtCfg();
+      const prtRe = (k, def) => { const s=PCF()[k]; try{ return new RegExp(s!=null?s:def, 'i'); }catch(e){ return new RegExp(def, 'i'); } };
+      const prtTx = k => { const t=PCF().tx||{}; return t[k]!=null ? String(L(t[k])) : ''; };
+      function prtDocTxt(s){ const d=String(s==null?'':s).replace(/\D/g,'');
+        const hit=(PCF().docIds||[]).find(x=>+x.len===d.length); if(!hit) return '';
+        let f=d; try{ f=d.replace(new RegExp(hit.re), hit.fmt); }catch(e){} return String(hit.prefix||'')+f; }
+      function prtDate(s){ s=String(s||'').trim(); const m=s.match(/(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}:\d{2}(?::\d{2})?))?/); if(m) return m[3]+'/'+m[2]+'/'+m[1]+(m[4]?' '+m[4]:'');
+        const b=s.match(/\d{2}\/\d{2}\/\d{4}(?: \d{2}:\d{2}(?::\d{2})?)?/); return b ? b[0] : s; }
+      /* 订单里没存授权协议号：按 Key 派生 15 位（原型示意，每张票固定、互不相同） */
+      function prtProt(key){ let z=7; for(const c of String(key)) z=(z*31+c.charCodeAt(0))>>>0; return '1'+String(key).slice(0,4)+String(z).padStart(10,'0').slice(-10); }
+      function prtPay(w){ const t=String(prtPT(w)==null?'':prtPT(w)).replace(/\s*(R\$|BRL)?\s*[\d.,]+\s*$/,'').trim(); const m=PCF().payMap||{}; return m[t]!=null ? m[t] : t; }
+      function prtFmtId(d){ const n=String(d||'').replace(/\D/g,''); const h=(PCF().docIds||[]).find(y=>+y.len===n.length); if(!h) return n; try{ return n.replace(new RegExp(h.re), h.fmt); }catch(e){ return n; } }
+      /* 抬头主体：按 Key 第 7~20 位的主体税号找；找不到再按门店编码找（关联门店那一格里有这个编码） */
+      function prtEmit(key, store, fb){ const c=PCF(), ec=c.emitCols||{}; const pg=PAGECFG[c.emitPage||''];
+        const rows=(pg && pg.rows)||[]; const tid=String(key||'').slice(6,20); const dig=x=>String(x||'').replace(/\D/g,'');
+        let hit = tid.length===14 ? rows.find(r=>dig(cellLines(r[ec.taxId!=null?ec.taxId:1]).join(''))===tid) : null;
+        const sc=String(store||'').trim().split(/\s+/)[0];
+        if(!hit && sc) hit = rows.find(r=>[].concat(ec.stores!=null?ec.stores:[]).some(i=>{ const c2=r[i]; return c2!=null && JSON.stringify(c2).indexOf('"'+sc+'"')>=0; }));
+        const g=i=> (hit && i!=null) ? cellLines(hit[i]).join(' ') : '';
+        if(hit) return { name:g(ec.name), taxId:g(ec.taxId), ie:g(ec.ie), street:g(ec.street), no:g(ec.no), bairro:g(ec.bairro), city:g(ec.city), uf:g(ec.uf), cep:g(ec.cep), phone:g(ec.phone) };
+        return Object.assign({ name:'', taxId: tid.length===14 ? prtFmtId(tid) : '' }, fb||{}); }
+      function prtTax(due){ const p=PCF().taxPct; if(!p) return null; return { fed:prtMoney(due*(+p.fed||0)/100), est:prtMoney(due*(+p.est||0)/100), fedPct:p.fed, estPct:p.est }; }
+      function prtUnit(u){ u=String(u||'').trim(); const un=PCF().unit||{}; let local=false; try{ local=!!(un.localRe && new RegExp(un.localRe).test(u)); }catch(e){} return (!u || local) ? String(un.def||u||'') : u; }
+      const prtOrd = k => [].concat((PCF().ord||{})[k]||[]);
+      /* ── 收银台订单管理的一单 → 票据数据 ── */
+      function docFromOrder(o, model){ if(!o) return null; const nf=o.nf||{}; model=String(model||'65');
+        let rows=nf.rows||[];
+        if(Array.isArray(nf.parts) && nf.parts.length){ const p=nf.parts.find(x=>JSON.stringify(x).indexOf(model)>=0)||nf.parts[0]; if(p && p.rows) rows=p.rows; }
+        const labs=r=>[L(r&&r.label), r&&r.label&&r.label.zh].filter(x=>x!=null).map(String);
+        const get=k=>{ for(const n of prtOrd(k)){ const r=rows.find(x=>x && labs(x).indexOf(n)>=0); if(r) return prtTxt(r.value); } return ''; };
+        const key = prtKey(get('key')) || prtKey(JSON.stringify(rows));
+        const auth = get('auth'), offAt = get('offAt');
+        const stz = String(L(nf.state)||'')+' '+String((nf.state&&nf.state.zh)||'');
+        const off = prtRe('offRe','$^').test(stz) || (!auth && !!offAt);
+        const sums=o.sums||[]; const sum=k=>sums.find(s=>s && prtOrd(k).some(n=>labs(s).indexOf(n)>=0)) || null;
+        const items=(o.goods||[]).map(g=>{ const q=prtNum(g.qty)||1, pr=prtNum(g.price); return { code:String(g.barcode||g.code||''), desc:String(prtPT(g.name)||''), qty:q, un:prtUnit(g.unit), price:pr, total:g.sub!=null?prtNum(g.sub):pr*q }; });
+        const gross=items.reduce((a,i)=>a+i.total,0);
+        const disc=sums.filter(s=>s && s.minus).reduce((a,s)=>a+Math.abs(prtNum(s.value)),0);
+        const frR=sum('sumFreight'); const freight=frR?prtNum(frR.value):0;
+        const dueR=sum('sumDue'); const due=dueR?prtNum(dueR.value):(gross-disc+freight);
+        const wayR=sum('sumWay'); const way=wayR?prtTxt(wayR.value):'';
+        const payR=wayR ? sums.find(s=>s && s!==wayR && labs(s).indexOf(String(L(wayR.value)))>=0) : null;
+        const tcR=sum('sumTroco'); const troco=tcR?prtNum(tcR.value):0;
+        const recv=get('recv'); const rc=o.rcv||{}; const docRaw=get('doc') || o.bDoc || rc.doc || '';
+        const anon=prtRe('anonRe','$^').test(recv);
+        return { model:key.slice(20,22)||model, key, no:get('no')||String(nf.no||''), serie:get('serie')||'001',
+          dt:prtDate(auth||offAt||''), prot:(off||!key)?'':prtProt(key), protDt:prtDate(auth), off,
+          emit:prtEmit(key, L(o.store), { name:String(L(o.store)||'') }), items, gross, disc, freight, due,
+          pays:[{ way:prtPay(way&&way!=='--'?way:''), amt: payR?prtNum(payR.value):(due+troco) }], troco,
+          consumer:anon ? '' : prtDocTxt(docRaw), tax:prtTax(due),
+          dest:{ name:(anon?prtTx('anon'):(rc.name||o.bName||recv||'')), doc:String(docRaw||''), street:[rc.street||o.bStreet, rc.no||o.bNo].filter(Boolean).join(', '),
+                 bairro:rc.bairro||o.bBairro||'', cep:rc.cep||o.bCep||'', city:String(rc.city||o.bCity||'').replace(/（.*$/,''), uf:rc.uf||o.bUF||'', ie:o.bIEno||'' },
+          dirIn:prtRe('inRe','$^').test(get('model')), kind:get('kind'), cfop:(get('cfop').match(/\d\.\d{3}/)||[''])[0], ref:prtKey(get('refKey')) || get('ref') };
+      }
+      /* ── 收银台结账结果页这一单 → 票据数据 ── */
+      function docFromSale(){ const p=curPos.value||{}; const iss=posIssued.value||{}; const res=posResult.value||{};
+        const key=prtKey(res.chave||iss.chave); const off=res.kind==='offline' || iss.kind==='offline';
+        const items=(posCart.value||[]).filter(r=>!r._ret).map(r=>{ const q=+r.qty||1, pr=+r.price||0; return { code:String(r.code||r.barcode||''), desc:String(prtPT(r.name)||''), qty:q, un:prtUnit(r.unit), price:pr, total:pr*q }; });
+        const due=items.reduce((a,i)=>a+i.total,0); const pm=(p.payMethods||[])[posPm.value];
+        const got=+posGot.value||0; const paid=got>0?got:due;
+        const dt=prtDate(iss.at||posNow());
+        return { model:'65', key, no:String(res.no||iss.no||''), serie:'001', dt, prot:(off||!key)?'':prtProt(key), protDt:dt, off,
+          emit:prtEmit(key, L(p.store), { name:String(L(p.store)||'') }), items, gross:due, disc:0, freight:0, due,
+          pays:[{ way:prtPay(pm&&pm.label), amt:paid }], troco:Math.max(0, paid-due), consumer:prtDocTxt(posCpf.value), tax:prtTax(due) };
+      }
+      /* ── 列表的一行 → 票据数据（单据列表行 / 订单列表行两种） ── */
+      function rowNfEntry(row, model){ const want=String(((PCF().modelText||{})[String(model||'65')])||model||'');
+        for(const c of (row||[])){ const v=(c && c.__hidden && Array.isArray(c.value)) ? c.value : null; if(!v || !v.length || !Array.isArray(v[0])) continue;
+          const ent=v.filter(e=>Array.isArray(e) && e.some(x=>x && typeof x==='object' && Array.isArray(x.pop))); if(!ent.length) continue;
+          return ent.find(e=>cellAllText(e[3]).indexOf(want)>=0) || null; } return null; }   /* 没有这个模型的票就不出票面（不拿别的模型的票冒充） */
+      function rowKeyed(row,k){ const c=(row||[]).find(x=>x && typeof x==='object' && x.__hidden && x.key===k); return c ? c.value : null; }
+      function docFromRow(row, map, model){ if(!row) return null; map=map||{}; model=String(model||'65');
+        const cl=(i)=>{ if(i==null) return ''; const m=String(i).match(/^(\d+)(?:#(\d+))?$/); if(!m) return ''; const ls=cellLines(row[+m[1]]); return m[2] ? (ls[+m[2]-1]||'') : ls.join(' '); };
+        const keyOfCell=c=>{ const p=(c && c.pop || []).find(x=>/key/i.test(String(L(x.label)))); return prtKey(p ? L(p.value) : cellLines(c).join('')); };
+        let d;
+        if(map.nfList){ const e=rowNfEntry(row, model); if(!e) return null; const key=keyOfCell(e[2]); const st=prtTxt(e[7]); const tm=prtTxt(e[8]);
+          const off=prtRe('offRe','$^').test(st+tm+cellAllText(e[7]));
+          const at=(tm.match(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?|\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}(:\d{2})?/)||[''])[0];
+          let items=[];
+          for(const g of (map.goods||[])){ const v=rowKeyed(row, g.key); if(!Array.isArray(v) || !v.length) continue;
+            items=v.map(r=>{ const t=i=>prtTxt(r[i]); const raw=cellLines(r[g.desc!=null?g.desc:0]);
+              let desc=raw[0]||''; if(g.descAfter && desc.indexOf(g.descAfter)>=0) desc=desc.slice(desc.indexOf(g.descAfter)+g.descAfter.length).trim();
+              const cd=g.codeAfter ? (raw.find(x=>x.indexOf(g.codeAfter)>=0)||'').split(g.codeAfter)[1] : '';
+              const q=prtNum(t(g.qty))||1, pr=prtNum(t(g.price)); const qu=String(t(g.qty)).replace(/[\d.,\s]/g,'');
+              return { code:String(cd||'').trim(), desc, qty:q, un:prtUnit(qu), price:pr, total:g.total!=null?prtNum(t(g.total)):pr*q, disc:g.disc!=null?prtNum(t(g.disc)):0 }; });
+            break; }
+          const amt=prtNum(prtTxt(e[6]));
+          if(!items.length && map.goodsCol!=null){ const ls=cellLines(row[map.goodsCol]); const names=String(ls[0]||'').split(map.nameSep||'、').map(s=>s.trim()).filter(Boolean);
+            let n=0; try{ n=+((String(ls.slice(1).join(' ')).match(new RegExp(map.qtyRe||'(\\d+)'))||[])[1]); }catch(e){} n=n||names.length||1; const uniq=[...new Set(names)];
+            const cnt=uniq.map(u=>names.filter(x=>x===u).length); const extra=n-cnt.reduce((a,b)=>a+b,0); if(cnt.length) cnt[cnt.length-1]+=Math.max(0,extra);
+            const unit=amt/(n||1); items=uniq.map((u,i)=>({ code:'', desc:u, qty:cnt[i], un:prtUnit(''), price:unit, total:unit*cnt[i] })); }
+          const gross=items.reduce((a,i)=>a+i.total,0), disc=items.reduce((a,i)=>a+(i.disc||0),0);
+          const due=amt||(gross-disc); const pw=map.payKey ? rowKeyed(row, map.payKey) : '';
+          const docRaw=prtTxt(e[5]); const rn=prtTxt(e[4]); const ty=cellAllText(e[3]);
+          d={ model:key.slice(20,22)||model, key, no:prtTxt(e[1]), serie:String(prtTxt(e[0])||'1').padStart(3,'0'), dt:prtDate(at), prot:(off||!key)?'':prtProt(key), protDt:prtDate(at), off,
+              emit:prtEmit(key, cl(map.storeCol), { name:String(cl(map.storeCol)||'') }), items, gross, disc, freight:0, due,
+              pays:[{ way:prtPay(pw), amt:due }], troco:0, consumer:prtDocTxt(docRaw), tax:prtTax(due),
+              dest:{ name:(prtDocTxt(docRaw)?rn:prtTx('anon')), doc:docRaw==='--'?'':docRaw, street:'', bairro:'', cep:'', city:'', uf:'', ie:'' },
+              dirIn:prtRe('inRe','$^').test(ty), kind:ty, cfop:(ty.match(prtRe('cfopRe','$^'))||['',''])[1]||'',
+              ref:(e[2] && Array.isArray(e[2].pop)) ? prtKey(L((e[2].pop.find(x=>/ref/i.test(String(L(x.label))))||{}).value)) : '' };
+        } else {
+          const key=(()=>{ const c=row[map.key]; return keyOfCell(c); })();
+          const items=[]; const h=String((row[map.items]&&row[map.items].__hidden) ? row[map.items].value : L(row[map.items])||'');
+          const re=/<div>([^<]*)<\/div><div class=nr><span>([\d.,]+)\s+(\S+)\s+x\s+([\d.,]+)<\/span><span>([\d.,]+)<\/span><\/div>/g; let m;
+          while((m=re.exec(h))){ const nm=m[1].trim(); const sp=nm.indexOf(' '); const hasCode=sp>0 && /\d|-/.test(nm.slice(0,sp));
+            items.push({ code:hasCode?nm.slice(0,sp):'', desc:hasCode?nm.slice(sp+1):nm, qty:prtNum(m[2]), un:m[3], price:prtNum(m[4]), total:prtNum(m[5]) }); }
+          const due=prtNum(cl(map.total)); const gross=items.reduce((a,i)=>a+i.total,0)||due;
+          const tm=cl(map.time); const at=(tm.match(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?|\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}(:\d{2})?/)||[''])[0];
+          const cons=cl(map.cons); const em=map.emit||{};
+          const emit = em.taxId!=null ? { name:cl(em.name), taxId:cl(em.taxId), ie:cl(em.ie), street:cl(em.street), no:'', bairro:cl(em.bairro), city:cl(em.city), uf:cl(em.uf), cep:'' } : prtEmit(key, '', {});
+          const off=prtRe('offRe','$^').test(cellAllText(row[map.state!=null?map.state:9])+' '+cellAllText(row[map.type!=null?map.type:4]));
+          const tx=map.tax ? { fed:cl(map.tax.fed), est:cl(map.tax.est), fedPct:(PCF().taxPct||{}).fed, estPct:(PCF().taxPct||{}).est } : prtTax(due);
+          const cr=prtRe('consRe','$^');
+          d={ model:key.slice(20,22)||model, key, no:cl(map.no), serie:cl(map.serie)||'001', dt:prtDate(at), prot:off?'':(cl(map.prot)||prtProt(key)), protDt:prtDate(at), off,
+              emit, items, gross, disc:Math.max(0,gross-due), freight:0, due, pays:[{ way:prtPay(cl(map.pay)), amt:due }], troco:0,
+              consumer:(cr.test(cons) && !prtRe('anonRe','$^').test(cons)) ? cons.replace(cr,'') : prtDocTxt(cl(map.doc)), tax:tx };
+        }
+        return d; }
+      function prtDocs(spec, fd){ const from=spec.from||'row';
+        if(from==='posSale') return [docFromSale()];
+        if(from==='posOrder') return [docFromOrder(poOrder.value, spec.model)];
+        return prtSrcRows(Object.assign({ perRow:fd && fd.perRow }, fd||{})).map(r=>docFromRow(r, spec.map, spec.model)); }
+      /* ── 消费者小票式票面（巴西 DANFE NFC-e 手册 4.2：Ⅰ抬头 Ⅱ商品 Ⅲ合计 Ⅳ查询网址+Key Ⅴ消费者 Ⅵ票号与授权 Ⅶ QR Code Ⅷ离线标记 Ⅸ商家信息，XML 以外内容放最后）
+         版式是机制，票面上的每一句文字取 printCfg.tx（项目数据） ── */
+      function nfceDanfe(t, paper){ if(!t) return '';
+        const X=prtTx; const a4 = String(paper||'A4').toUpperCase()==='A4';
+        const W = a4 ? 'width:186mm;font-size:13px;line-height:19px;padding:6mm 7mm;border:1px solid #000' : 'width:72mm;font-size:11px;line-height:15px;padding:1mm 0';
+        const hr = '<div style="border-top:1px dashed #000;margin:5px 0"></div>';
+        const ce = (s,st)=>'<div style="text-align:center'+(st?';'+st:'')+'">'+s+'</div>';
+        const kv = (k,v,b)=>'<div style="display:flex;justify-content:space-between;gap:8px'+(b?';font-weight:700':'')+'"><span>'+k+'</span><span style="white-space:nowrap">'+v+'</span></div>';
+        const e=t.emit||{}; const addr=[[e.street,e.no].filter(Boolean).join(', '), e.bairro, [e.city,e.uf].filter(Boolean).join(' - '), e.cep?(X('cepLb')+' '+e.cep):''].filter(Boolean).join(', ');
+        const cont = '<div style="text-align:center;font-weight:700;border:1px solid #000;padding:2px 4px;margin:5px 0">'+X('cont')+'</div>';
+        let h='<div class="nfce-danfe" style="font-family:\'Courier New\',Consolas,monospace;color:#000;background:#fff;box-sizing:border-box;margin:0 auto;'+W+'">';
+        /* Ⅰ 抬头 */
+        h+=ce('<b>'+prtEsc(e.name)+'</b>')+ce(X('taxIdLb')+' '+prtEsc(e.taxId)+(e.ie?'&nbsp;&nbsp;'+X('ieLb')+' '+prtEsc(e.ie):''))+(addr?ce(prtEsc(addr)):'')+ce('<b>'+X('title')+'</b>','margin-top:4px');
+        /* Ⅷ 离线标记（第 1 处：抬头下方） */
+        if(t.off) h+=cont;
+        h+=hr;
+        /* Ⅱ 商品明细 */
+        const items=t.items||[]; const C=[].concat((PCF().tx||{}).cols||[]).map(x=>String(L(x)));
+        if(a4){ const th='style="text-align:left;border-bottom:1px solid #000;padding:2px 4px"', td='style="padding:2px 4px;vertical-align:top"', tr='style="padding:2px 4px;vertical-align:top;text-align:right;white-space:nowrap"';
+          h+='<table style="width:100%;border-collapse:collapse;font-size:12px"><tr><th '+th+'>'+(C[0]||'')+'</th><th '+th+'>'+(C[1]||'')+'</th><th '+th.replace('left','right')+'>'+(C[2]||'')+'</th><th '+th+'>'+(C[3]||'')+'</th><th '+th.replace('left','right')+'>'+(C[4]||'')+'</th><th '+th.replace('left','right')+'>'+(C[5]||'')+'</th></tr>'
+            +items.map(i=>'<tr><td '+td+'>'+prtEsc(i.code)+'</td><td '+td+'>'+prtEsc(i.desc)+'</td><td '+tr+'>'+prtEsc(String(i.qty).replace('.',','))+'</td><td '+td+'>'+prtEsc(i.un)+'</td><td '+tr+'>'+prtMoney(i.price)+'</td><td '+tr+'>'+prtMoney(i.total)+'</td></tr>').join('')+'</table>'; }
+        else { h+='<div style="font-weight:700">'+X('rcpHd1')+'</div><div style="display:flex;justify-content:space-between;font-weight:700"><span>'+X('rcpHd2')+'</span><span>'+X('rcpHd3')+'</span></div>';
+          h+=items.map(i=>'<div>'+prtEsc([i.code,i.desc].filter(Boolean).join(' '))+'</div>'+kv(prtEsc(String(i.qty).replace('.',','))+' '+prtEsc(i.un)+' x '+prtMoney(i.price), prtMoney(i.total))).join(''); }
+        h+=hr;
+        /* Ⅲ 合计 */
+        h+=kv(X('nItems'), String(items.length))+kv(X('total'), prtMoney(t.gross!=null?t.gross:t.due));
+        if(t.disc>0) h+=kv(X('disc'), prtMoney(t.disc));
+        if(t.freight>0) h+=kv(X('freight'), prtMoney(t.freight));
+        h+=kv(X('due'), prtMoney(t.due), true)+kv('<b>'+X('payHd')+'</b>','<b>'+X('paidHd')+'</b>')+(t.pays||[]).map(p=>kv(prtEsc(p.way||'--'), prtMoney(p.amt))).join('')+kv(X('troco'), prtMoney(t.troco||0));
+        h+=hr;
+        /* Ⅳ 查询网址 + Key（44 位，11 组每组 4 位） */
+        const uf=String(t.key||'').slice(0,2); const url=(PCF().urlByUF||{})[uf]||'';
+        h+=ce('<b>'+X('consult')+'</b>')+ce(prtEsc(url), a4?'':'font-size:10px;word-break:break-all')+ce(String(t.key||'').replace(/(\d{4})(?=\d)/g,'$1 '));
+        h+=hr;
+        /* Ⅴ 消费者 */
+        h+=ce(t.consumer ? X('consumer')+' '+prtEsc(t.consumer) : X('anon'),'font-weight:700');
+        h+=hr;
+        /* Ⅵ 票号 / 序列 / 开具时间 / 授权（离线不印授权，第 2 处离线标记） */
+        h+=ce('<b>'+X('no')+' '+prtEsc(String(t.no||'').replace(/^0+(?=\d)/,''))+'&nbsp;&nbsp;'+X('serie')+' '+prtEsc(t.serie||'')+'&nbsp;&nbsp;'+prtEsc(t.dt||'')+'</b>');
+        if(t.off) h+=cont; else h+=ce('<b>'+X('prot')+'</b> '+prtEsc(t.prot||''))+ce('<b>'+X('protDt')+'</b> '+prtEsc(t.protDt||t.dt||''));
+        /* Ⅶ QR Code */
+        h+=qrMock(t.key||t.no||'').replace('width="110" height="110"', a4?'width="140" height="140"':'width="116" height="116"');
+        /* Ⅸ 商家信息（税额说明）—— 放最后 */
+        if(t.tax) h+=hr+'<div style="font-size:'+(a4?'12px':'10px')+'">'+X('taxLine').replace('{fed}',prtEsc(t.tax.fed)).replace('{fedPct}',t.tax.fedPct!=null?' ('+t.tax.fedPct+'%)':'').replace('{est}',prtEsc(t.tax.est)).replace('{estPct}',t.tax.estPct!=null?' ('+t.tax.estPct+'%)':'')+'</div>';
+        return h+'</div>'; }
+      /* ── 把一张单拼成别的页那张表的一行（docRow.cols：{列下标:'模板'}，{字段.子字段} 取值，{itemsDanfe} DANFE 商品行） ── */
+      function rowFromDoc(t, cols, spec){ spec=spec||{}; const kd=String((t&&t.kind)||'').replace(/^[^·]*·\s*([^·]+?)\s*·[\s\S]*$/,'$1').trim();
+        const ctx=Object.assign({}, t||{}, { dueTxt:prtMoney((t||{}).due), nItems:String(((t||{}).items||[]).length), dirTxt:(t&&t.dirIn)?'入库':'出库', kindTxt:kd,
+          nature:(spec.natureMap||{})[kd]||kd, refLine:(t&&t.ref) ? (L(spec.refText)||'Documento referenciado: ')+(/^\d{44}$/.test(t.ref)?String(t.ref).replace(/(\d{4})(?=\d)/g,'$1 '):t.ref) : '' });
+        ctx.cfop=(t&&t.cfop) || (spec.cfopMap||{})[kd] || '';
+        ctx.itemsDanfe=((t&&t.items)||[]).map(i=>'<div class=dr><i>'+prtEsc(i.code)+'</i><i>'+prtEsc(i.desc)+'</i><i></i><i></i><i>'+prtEsc(String(ctx.cfop||'').replace('.',''))+'</i><i>'+prtEsc(i.un)+'</i><i>'+prtEsc(String(i.qty).replace('.',','))+'</i><i>'+prtMoney(i.price)+'</i><i>'+prtMoney(i.total)+'</i><i>0,00</i><i>0,00</i><i>0,00</i><i>0,00</i><i>0,00</i></div>').join('');
+        const fill=s=>String(L(s)==null?'':L(s)).replace(/\{([a-zA-Z_][\w.]*)\}/g,(m,p)=>{ const v=p.split('.').reduce((a,k)=>a==null?a:a[k], ctx); return v==null?'':String(typeof v==='object'?L(v):v); });
+        const row=[]; Object.keys(cols||{}).forEach(i=>{ row[+i]={ value:fill(cols[i]), __hidden:true }; });
+        for(let i=0;i<row.length;i++) if(row[i]==null) row[i]='';
+        return row; }
+      function prtTpl(tf){ const pc=PAGECFG[tf.page]; const d=pc && pc.dialogs && pc.dialogs[tf.dialog];
+        const fd=d && [].concat(d.fields||[], ...(d.sections||[]).map(s=>(s&&s.fields)||[])).find(f=>f && f.type==='html');
+        let v=fd ? String(L(fd.value)||'') : ''; if(tf.after && v && v.indexOf(tf.after.text)>=0) v=v.replace(tf.after.text, tf.after.text+String(L(tf.after.add)||'')); return v; }
+      /* ── 商品价签 / 条形码（勾选行各一张；份数、纸张取弹窗里的选择） ── */
+      function labelSheets(fd){ const c=fd.labels||{}; const d=(cfg.value.dialogs||{})[dialogName.value]||{};
+        const fl=[].concat(d.fields||[], ...(d.sections||[]).map(s=>(s&&s.fields)||[]));
+        const fv=lb=>{ if(!lb) return ''; const f=fl.find(x=>x && x.label!=null && (L(x.label)===lb || x.label.zh===lb)); return f ? String(L(f.value)==null?'':L(f.value)) : ''; };
+        const paperTxt=fv(c.paperFrom)||c.paper||'50×30mm'; const pm=paperTxt.match(/(\d+)\s*[×x*]\s*(\d+)/); const paper=pm ? pm[1]+'mm '+pm[2]+'mm' : '50mm 30mm';
+        const w=pm?+pm[1]:50, hgt=pm?+pm[2]:30; const content=fv(c.contentFrom); const copies=Math.max(1, parseInt(fv(c.copiesFrom),10)||1);
+        const rows=dlgRow.value ? [dlgRow.value] : ((selRows.value||[]).length ? selRows.value : [((curRows.value||[])[0])].filter(Boolean));
+        const pick=(r,s)=>{ if(!s) return ''; const ls=cellLines(r[s.col]); const hit=s.after ? (ls.find(x=>x.indexOf(s.after)>=0)||'') : ls[0]||''; return s.after && hit ? hit.slice(hit.indexOf(s.after)+s.after.length).trim() : hit; };
+        return rows.map(r=>{ const nm=pick(r,c.name), cd=pick(r,c.code), pr=pick(r,c.price);
+          const box='display:inline-flex;flex-direction:column;justify-content:center;vertical-align:top;margin:0 8px 8px 0;box-sizing:border-box;width:'+w+'mm;height:'+hgt+'mm;padding:1.5mm 2mm;border:1px dashed #bbb;background:#fff;color:#000;font-family:Arial,sans-serif;overflow:hidden';
+          let h;
+          if(c.kind==='barcode') h='<div class="prt-label" style="'+box+'">'+barcodeAny(cd, Math.round(hgt*2.2))+'<div style="text-align:center;font-size:10px;letter-spacing:1px;margin-top:2px">'+prtEsc(cd)+'</div></div>';
+          else { const priceOnly=/仅价格|Price only|Só preço/.test(content);
+            h='<div class="prt-label" style="'+box+'">'+(priceOnly?'':'<div style="font-size:10px;font-weight:700;line-height:12px;max-height:24px;overflow:hidden">'+prtEsc(nm)+'</div>')
+              +'<div style="font-size:'+(priceOnly?18:15)+'px;font-weight:700;margin:1mm 0">'+prtEsc(String(pr).replace(/^BRL\s*/,'R$ '))+'</div>'
+              +(priceOnly?'':barcodeAny(cd, Math.round(hgt*0.9))+'<div style="text-align:center;font-size:9px">'+prtEsc(cd)+'</div>')+'</div>'; }
+          return { html:h, paper, copies }; }); }
+      /* CODE-128：纯数字走 C 码集（同 {bar.N}），带字母走 B 码集 */
+      function barcodeAny(s, h){ s=String(s==null?'':s).trim(); if(!s) return ''; if(/^\d+$/.test(s)) return barcode128(s, h);
+        const codes=[104]; let sum=104; for(let i=0;i<s.length;i++){ const v=Math.max(0, Math.min(94, s.charCodeAt(i)-32)); codes.push(v); sum+=v*(i+1); }
+        codes.push(sum%103); codes.push(106); let out='';
+        for(const cc of codes){ const pat=C128[cc]||C128[0]; for(let k=0;k<pat.length;k++) out+='<i style="flex:'+pat[k]+' 0 0;background:'+(k%2===0?'#000':'transparent')+'"></i>'; }
+        return '<span style="display:flex;align-items:stretch;width:100%;height:'+(h||52)+'px">'+out+'</span>'; }
+      /* ── 真实打印：只打票据区域，@page 设纸张，批量每张分页，超宽按纸宽等比缩小 ── */
+      function prtPaperCss(p){ p=String(p||'A4').trim(); if(/^A\d$/i.test(p)) return { size:p.toUpperCase()+' portrait', margin:'8mm', w:({A4:194,A5:132,A3:281})[p.toUpperCase()]||194 };
+        const m=p.match(/^(\d+)mm(?:\s+(\d+)mm)?$/); if(!m) return { size:'A4 portrait', margin:'8mm', w:194 };
+        return m[2] ? { size:m[1]+'mm '+m[2]+'mm', margin:'0', w:+m[1] } : { size:m[1]+'mm 297mm', margin:'2mm', w:+m[1]-4 }; }
+      function realPrint(sheets, opt){ opt=opt||{}; const list=[];
+        (sheets||[]).forEach(s=>{ if(!s || !s.html) return; const n=Math.max(1, +(s.copies||opt.copies||1)); for(let i=0;i<n;i++) list.push(s); });
+        if(!list.length) return false;
+        const pc=prtPaperCss(list[0].paper||opt.paper);
+        let root=document.getElementById('prt-root'); if(!root){ root=document.createElement('div'); root.id='prt-root'; document.body.appendChild(root); }
+        root.innerHTML=list.map(s=>'<div class="prt-sheet">'+s.html+'</div>').join('');
+        /* 超出纸宽的票面（DANFE 1050px 等）按纸宽等比缩小 */
+        root.style.cssText='display:block;position:absolute;left:-100000px;top:0;visibility:hidden';
+        const maxPx=pc.w*96/25.4;
+        Array.from(root.children).forEach(sh=>{ const w=Math.max(0, ...Array.from(sh.children).filter(x=>!/^(STYLE|SCRIPT)$/.test(x.tagName)).map(x=>x.offsetWidth||0)); if(w>maxPx+1) sh.style.zoom=String(Math.floor(maxPx/w*1000)/1000); });   /* 按票面自身的版面宽（offsetWidth），不按内部溢出 */
+        root.style.cssText='';
+        let st=document.getElementById('prt-page'); if(!st){ st=document.createElement('style'); st.id='prt-page'; document.head.appendChild(st); }
+        st.textContent='@page{size:'+pc.size+';margin:'+pc.margin+'}';
+        document.body.classList.add('prt-on');
+        let fin=false; const done=()=>{ if(fin) return; fin=true; document.body.classList.remove('prt-on'); root.innerHTML=''; window.removeEventListener('afterprint', done); };
+        window.addEventListener('afterprint', done);
+        try{ window.print(); }catch(e){}
+        setTimeout(done, 1500);
+        return true; }
+      function dlgPrintSheets(d){ if(!d) return []; const out=[];
+        [].concat(d.fields||[], ...(d.sections||[]).map(s=>(s&&s.fields)||[])).forEach(fd=>{ if(fd && fd.type==='html') printSheets(fd).forEach(s=>out.push(Object.assign({}, s, { html:fillFail(s.html) }))); });
+        return out; }
+      function dlgDoPrint(d){ const pc=(d&&d.print)||{}; const sh=dlgPrintSheets(d);
+        sh.forEach(s=>{ if(s.copies==null) s.copies=(pc.offCopies && !s.off) ? 1 : (prtCopies.value||1); });
+        return realPrint(sh, { paper:pc.paper }); }
+      function prtIsBtn(b){ if(!b) return false;
+        if(typeof b==='object'){ if(b.print!=null) return !!b.print; if(b.download || b.goto || b.opens) return false; if(b.act==='print') return true; }
+        const z=(b && typeof b==='object') ? (b.label && b.label.zh!=null ? b.label.zh : L(b.label)) : b; return String(z==null?'':z).trim()==='打印'; }
+      /* okButtons 点击：先按需真实打印，再走原来的逻辑（fireBtn / 关窗 + 提示） */
+      function dlgOkBtn(b){ const d=(cfg.value.dialogs||{})[dialogName.value];
+        if(d && d.print && prtIsBtn(b)){ dlgDoPrint(d);
+          /* 只有 act:'print'、没有别的动作的【打印】：打完关掉预览并提示（原来停在预览上） */
+          if(b && typeof b==='object' && b.act==='print' && !(b.goto||b.opens||b.download||b.copy||b.setFlag||b.confirm)){ dlgClose(); msg(L(b.done||b.label)); return; } }
+        if(b && typeof b==='object' && (b.goto||b.opens||b.download||b.act||b.copy||b.setFlag||b.confirm)) return fireBtn(b, dlgRow.value);
+        dlgClose(); msg(L((b && typeof b==='object') ? (b.done||b.label) : b)); }
       /* §v6.27 {qr.列下标}：原型示意用的 QR 图样（按 Key 生成，每张不同，打开时才算，不存进数据；不能真实扫码） */
       function qrMock(key){ let z=7; for(const c of String(key)) z=(z*31+c.charCodeAt(0))>>>0; let o='';
         for(let y=0;y<25;y++) for(let x=0;x<25;x++){ z=(z*1103515245+12345)>>>0; const a=x<7?0:(x>=18?18:-1), b=y<7?0:(y>=18?18:-1); const eye=a>=0&&b>=0&&!(a===18&&b===18);
@@ -9840,6 +10153,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
            错误文案挂在 fd._err 上（与骨架既有的直接改 fd.value 同一套写法），由模板渲染在控件下方；
            一次把所有错都标出来，不是遇到第一个就停。 */
         if(dlgFieldsInvalid(d)) return;   /* §v6.9 抽成函数，okButtons 的 transition 路径也要用 */
+        if(d.print) dlgDoPrint(d);   /* §2383 打印预览的【打印】：调用浏览器真实打印，只打票据区域；之后照常关窗 + 提示已送打印 */
         /* §v6.12 收银台订单管理：d.posNf={state,color} → 确认后把当前这单的发票状态改掉（收银台的单子不是表格行，走不了 transition） */
         /* §2336 posNf.netOff:{msg, onlyState?:[…]} → 收银台网络异常（posOnline=false）时点确定：不提交、这单开票状态不变、不发邮件，
            关掉弹窗并提示 msg；onlyState 写了 = 这单开票状态含其中之一才拦（多语取 L）。不配不生效，网络正常不受影响。 */
@@ -10744,6 +11058,9 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         if(!v.trim()){ ElementPlus.ElMessage({message:L(fa.emptyMsg)||T('fixFirst'), type:'warning'}); return; }
         (tb.rows||[]).forEach(row=>{ const c=row[fa.col]; if(c && typeof c==='object' && 'ctrl' in c && !c.disabled){ c.value=v; if(c._err) dlgCellBlur(tb, fa.col, c); } }); }
       watch(dialogName, n=>{ if(n) buildSelTables(n); });
+      /* §2383 打开打印预览：离线开出的票（热敏小票）份数默认 print.offCopies */
+      watch(dialogName, n=>{ prtCopies.value=1; prtOff.value=false; const d=n && (cfg.value.dialogs||{})[n];
+        if(d && d.print && d.print.offCopies){ try{ if(dlgPrintSheets(d).some(s=>s.off)){ prtOff.value=true; prtCopies.value=+d.print.offCopies||2; } }catch(e){} } });
       /* §v3.73 editText 单元格的编辑浮层。
          etRefs 用 WeakMap 把「单元格对象 → 那支笔的 DOM」记下来，点哪支笔浮层就挂哪支笔；
          buildSelTables 每次重建单元格对象，旧的自动被回收，不用手工清。 */
@@ -10802,6 +11119,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       function dlgSelStats(){
         const dg = ((cfg.value.dialogs)||{})[dialogName.value] || {};
         const src = dlgRow.value ? [dlgRow.value] : (selRows.value||[]);
+        if(!src.length && dg.print && dg.print.single) return { n:1, f:0, s:1 };   /* §2383 收银台结账结果页的打印预览没有行来源：按 1 张算 */
         const rules = Array.isArray(dg.selExclude) ? dg.selExclude : [];
         const kept = src.filter(r=> !rules.some(rule=>{
           const t = cellLines(r[rule.col!=null?rule.col:0]).join(' ');
@@ -11028,7 +11346,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       Vue.watch(()=>[currentPage.value, activePanel.value], ()=>{ Object.keys(filterModel).forEach(k=>delete filterModel[k]); Object.keys(msDraft).forEach(k=>delete msDraft[k]); try{ mfClear(mfSaved); }catch(e){} __filterKw.value=[]; __queryKw.value=[]; qfOn.value=0; });
       Vue.watch(()=>[currentPage.value, activeStatus.value, curQuickFilters.value], ()=>{ const q=curQuickFilters.value;
         if(q && Array.isArray(q.items) && q.items.length){ qfOn.value=0; __filterKw.value = qfKwOf(q.items[0]); } }, {immediate:true});
-      return { cell,colShowRe,isCtrl,actIcon,colLabel,colWidth,navOf,goSys,menuMode,menuRef,activeMenuId,setMenuMode,userName,notifCount,bellCfg,bellOpen,bellItems,bellIsUnread,bellUnread,bellClick,bellReadAll,bellOpenMsg,activePanel,panelOpen,panelQ,panelItems,curPanel,curRows,curTotal,curCardMeta,cardMetaOf,cardSel,aiQuery,aiAnswer,aiShown,askAI,noticeTab,curNotice,unreadOf,L,K,T,lang,locales,localeName,setLang:uiSetLang,epLocale,systems,views:_VW,curView,setView,viewLabel,brandName,brandBadge,brandLogo,tbHide,topbarExtra,viewFooter,userMenu,userIconMode,FLAGS,currentSystem,homePage,currentPage,openTabs,annoOn,pageSize,pageNo,filterModel,curNoSearchBtn,curTabsPos,detailRow,detailFail,fillFailD,fieldErr,errSumItems,gotoField,btnOpensRow,fillFail,dlgFail,btnVisible,fillRow,fillPrint,curAlertCollapsible,alertFolded,ltChecks,applyListFilter,detailRadio,detailRadios,radioRowOk,fdShow,fdDisabled,fdRequired,secShow,anchorShow,nav,cfg:ecfg,
+      return { cell,colShowRe,isCtrl,actIcon,colLabel,colWidth,navOf,goSys,menuMode,menuRef,activeMenuId,setMenuMode,userName,notifCount,bellCfg,bellOpen,bellItems,bellIsUnread,bellUnread,bellClick,bellReadAll,bellOpenMsg,activePanel,panelOpen,panelQ,panelItems,curPanel,curRows,curTotal,curCardMeta,cardMetaOf,cardSel,aiQuery,aiAnswer,aiShown,askAI,noticeTab,curNotice,unreadOf,L,K,T,lang,locales,localeName,setLang:uiSetLang,epLocale,systems,views:_VW,curView,setView,viewLabel,brandName,brandBadge,brandLogo,tbHide,topbarExtra,viewFooter,userMenu,userIconMode,FLAGS,currentSystem,homePage,currentPage,openTabs,annoOn,pageSize,pageNo,filterModel,curNoSearchBtn,curTabsPos,detailRow,detailFail,fillFailD,fieldErr,errSumItems,gotoField,btnOpensRow,fillFail,dlgFail,btnVisible,fillRow,fillPrint,prtCopies,prtOff,dlgOkBtn,curAlertCollapsible,alertFolded,ltChecks,applyListFilter,detailRadio,detailRadios,radioRowOk,fdShow,fdDisabled,fdRequired,secShow,anchorShow,nav,cfg:ecfg,
       curPos,posScanMode,posCart,posSel,posPick,posScan,posCat,posBatch,posHold,posPayOpen,posPm,posGot,posSc,posToast,
       posExch,posExchDiff,posExchText,posExchCancel,posPayStart,posRefund,posPayLabel,
       posMoney,posTotal,posQty,posGoods,posToolList,posToolOff,posBadge,posAdd,posScanAdd,posDel,posStep,posTool,posKeys,posKey,posChange,
