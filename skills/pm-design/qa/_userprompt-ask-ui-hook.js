@@ -27,6 +27,10 @@ process.stdin.on('end', () => {
     '④ 支持哪些语言：单语中文 ["zh"] / 中英葡 ["zh","en","pt"] / 中英葡西 ["zh","en","pt","spa"]？默认显示哪种？\n' +
     '   → 选多语则每条文案(含 custom 页整块 HTML)必须写成 {"zh":…,"en":…,"pt":…}；mock 业务数据不翻译；region=BR 的多语原型必须含 pt。\n' +
     '问齐再开画；缺项先问、禁臆测。四答作为 choice 传给 assemble-prototype.js（烙成 __DESIGN_CHOICE__）。\n' +
+    '⛔【2026-11-18 用户立规·严禁杜绝】禁沿用历史答案：上一轮刚问过、同一天同一项目、用户之前说过"都默认"、\n' +
+    '   上下文里看得到别的原型的 __DESIGN_CHOICE__/plan.json —— 这些都不算"已经问过"，照样当场重新问一遍。\n' +
+    '   禁把历史答案当默认值写进 plan.json；禁用一句"还是上次那套吧？"替用户作答。只有【改已有原型】不重问；分不清就按新原型问。\n' +
+    '⛔ 四问的选项文字里禁止出现真实客户名/系统名/域名（工具包是公开发布的）——写通用措辞"1:1 复刻你指定的参照系统"。\n' +
     '画完/生成PRD后按 SKILL.md 跑 qa/deliver-gate.js 全绿再交付。';
   process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: reminder } }));
   process.exit(0);
