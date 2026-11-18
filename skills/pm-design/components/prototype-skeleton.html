@@ -1,5 +1,8 @@
 <!-- ╔══════════════════════════════════════════════════════════════════════╗
      原型骨架（装配器结构唯一源）· prototype-skeleton · v8.11 （2026-11-10）
+     v8.62（2392）：查询区【更多筛选】漏斗位置按默认规范 §5.3u 固定：漏斗只在最后一个查询条件后面、紧挨【查询】【重置】前面。
+            v3.63 的 moreFilter.pos:'afterCombo'（漏斗紧跟第一个组合搜索框）已作废，因为它把漏斗夹在查询条件中间，违反默认规范。
+            写了 pos 不报错，只是不再生效，一律按默认位置渲染。检查：render-fidelity-gate.js 见到 afterCombo 或渲染后漏斗不在【查询】前就判红。
      （2375·待定版号）：多语与关联单，都不配不生效、中文界面原行为不变：
             ① stHas(状态, 条件)：收银台订单底部按钮 needState/hideState、按钮灰字 note.needState、posSync/posNf.netOff/linked 的 onlyState 改为“当前语言或中文任一包含”，英葡界面下写中文条件的按钮不再消失；
             ② 详情表 emptyBy / tipBy 的状态与行文字同时按中文比对（英葡界面下提示不再丢）；
@@ -350,7 +353,7 @@
             {key.列下标}（完整 Key 按 4 位分组），可加过滤 |date |time |num |after:X。行来源：行操作→该行，工具栏→勾选行，否则列表第一行。
      v3.63 （2026-09-15）
      v3.63：① 固定宽度格子里的组合搜索不再被压扁（左侧字段名 150 / 右侧匹配方式 130 固定，中间输入框伸缩）；
-            ② f.match 写成单个多语对象时不再把 zh/en/pt 当三个选项；③ moreFilter.pos:'afterCombo' 漏斗紧跟组合搜索输入框。
+            ② f.match 写成单个多语对象时不再把 zh/en/pt 当三个选项；③ moreFilter.pos:'afterCombo' 漏斗紧跟组合搜索输入框（v8.62 起作废，见文件头 v8.62 条）。
      v3.62：列表单元格悬停浮层 —— 单元格写 {t, pop:[{label,value}]}，鼠标移上去显示逐行「标签 值」（发票列表 Key → 完整 Key + ID）。
      v3.61：整页表单补齐 —— type:'datetime' 日期时间控件（时分秒）；type:'inputSelect' 前置下拉+输入（phBy 按所选切占位符）；
             fd.suffix 输入框内右侧单位（BRL）；detailData.reqStarAfter 必填星号放字段名后；pn.summary 合计区单独一块。
@@ -3381,23 +3384,17 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
               <el-input v-else v-model="filterModel[i]" :placeholder="L(f.ph||f.label||'')"><template v-if="f.search" #suffix><span class="combo-search-ic">⌕</span></template></el-input>
               <!-- §v3.45 f.suffix：控件后的单位后缀（真系统金额筛选是「[价格] BRL - [价格] BRL」） -->
               <span v-if="f.suffix" class="f-sep">{{ L(f.suffix) }}</span>
-              <!-- §v3.63 moreFilter.pos:'afterCombo' → 漏斗紧跟在组合搜索输入框后面。
-                   ⚠ 必须放在控件 v-if/v-else-if/v-else 链之外（插在链中间会让组合搜索格子多渲染出一个兜底输入框，把组合挤扁） -->
-              <span v-if="f.type==='combo' && curMoreFilter && curMoreFilter.pos==='afterCombo' && i===curFilters.findIndex(x=>x.type==='combo')" class="mf-trigger-wrap">
-                <span class="mf-trigger" :ref="setMfRef" :class="{'is-open':mfOpen}" :title="L(curMoreFilter.title||'更多筛选')" @click="mfToggle">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M3.5 4.5h17l-6.5 8v6l-4 2v-8z"></path></svg>
-                </span>
-              </span>
+              <!-- §v8.62 v3.63 的 moreFilter.pos:'afterCombo'（漏斗紧跟第一个组合搜索输入框）已作废：违反默认规范 §5.3u
+                   （漏斗只能在最后一个查询条件后面、紧挨【查询】【重置】前面）。写了也不再生效，一律按默认位置渲染，不报错。 -->
             </el-form-item>
             <!-- §v3.25 报表页没有查询/重置（改条件即时出数）：写 cfg.noSearchBtn:true 隐藏这一对按钮 -->
             <el-form-item v-if="!curNoSearchBtn">
               <!-- §v3.57 更多筛选（漏斗）：写 moreFilter={title,width,fields:[{label,type:'range'|'select'|'input',ph,options,value}]}
                    → 查询按钮前出现漏斗图标，点开是「更多筛选」浮层（字段 + 重置/确定）。确定才生效，关掉不点确定不改。 -->
-              <!-- §v3.63 pos:'afterCombo' 时漏斗在组合搜索后面（那里只放按钮），浮层用 virtual-ref 挂到那个按钮上 -->
+              <!-- §v8.62 漏斗一律渲染在这里（最后一个查询条件后面、【查询】前面）；pos 写什么都不改位置（afterCombo 已作废） -->
               <el-popover v-if="curMoreFilter" :visible="mfOpen" placement="bottom-start" :width="curMoreFilter.width||490"
-                          popper-class="mf-pop" trigger="manual" :teleported="true" transition="none"
-                          :virtual-triggering="curMoreFilter.pos==='afterCombo'" :virtual-ref="curMoreFilter.pos==='afterCombo' ? mfRefEl : undefined">
-                <template v-if="curMoreFilter.pos!=='afterCombo'" #reference>
+                          popper-class="mf-pop" trigger="manual" :teleported="true" transition="none">
+                <template #reference>
                   <span class="mf-trigger" :class="{'is-open':mfOpen}" :title="L(curMoreFilter.title||'更多筛选')" @click="mfToggle">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M3.5 4.5h17l-6.5 8v6l-4 2v-8z"></path></svg>
                   </span>
@@ -6184,7 +6181,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
          §v6.11 点开式浮层自己内部滚动不算（否则一滚就没了） */
       window.addEventListener('scroll', ev=>{ if(__cellPopEl && __cellPopEl.contains(ev.target)) return; if(Date.now()-__cellPopAt > 300){ __popSticky=false; cellPopHide(); } }, true);
       const mfOpen = ref(false), mfDraft = Vue.reactive({}), mfSaved = Vue.reactive({});
-      /* §v3.63 漏斗在组合搜索后面时，浮层靠 virtual-ref 定位到这个按钮 */
+      /* §v3.63 漏斗在组合搜索后面时，浮层靠 virtual-ref 定位到这个按钮。§v8.62 afterCombo 已作废，模板不再用这两个，只为兼容保留 */
       const mfRefEl = Vue.shallowRef(null);
       function setMfRef(el){ if(el && mfRefEl.value!==el) mfRefEl.value = el; }
       /* §v3.63 组合搜索的匹配方式：必须是数组；单个多语对象包成数组，没写就用默认 */

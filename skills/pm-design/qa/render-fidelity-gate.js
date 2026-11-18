@@ -21,6 +21,8 @@
      4. 状态页签是卡片式、在列表上方（95% / 93%）
      5. 表单 label 在上、字号 14px（96% / 98%）
      6. 表单页脚按钮固定在底部、居中（97% / 85%）
+     7. 【更多筛选】漏斗在最后一个查询条件后面、紧挨【查询】前面（2026-11-18 用户定·规范 §5.3u）：
+        project-data 写了 moreFilter.pos:'afterCombo'（已作废）直接判红，不用开浏览器；渲染后漏斗不在【查询】前也判红
    一致率不到 80% 的项**不判红**（它们本来就随页面变），只在报告里列出来参考。
 
    ⚠️ 只对【模式 C：默认 UI 规范】生效。复刻模式 A 以对方系统实测为基线，
@@ -56,6 +58,29 @@ const choiceStr = JSON.stringify(data.__DESIGN_CHOICE__ || data._choice || data.
 if (/模式\s*A|"mode"\s*:\s*"A"|复刻|replica/i.test(choiceStr)) {
   console.log('【⓵ 渲染保真闸】复刻模式 A —— 以对方系统实测为基线，本闸跳过');
   process.exit(0);
+}
+
+/* ⑦【更多筛选】漏斗位置（2026-11-18 用户定·规范 §5.3u）—— 先查配置，不用开浏览器：
+   漏斗只能在最后一个查询条件后面、紧挨【查询】【重置】前面。骨架 v3.63 的
+   moreFilter.pos:'afterCombo' 会把漏斗夹在第一个组合搜索框后面，已作废（骨架不再按它渲染），
+   但写着它的 project-data 说明画原型时照着错误写法写了，要删掉，这里直接判红。 */
+const WARN_ONLY_PRE = process.argv.includes('--warn-only');
+const afterComboAt = [];
+(function walkMf(node, trail) {
+  if (!node || typeof node !== 'object') return;
+  if (Array.isArray(node)) { node.forEach((v, i) => walkMf(v, trail + '[' + i + ']')); return; }
+  const mf = node.moreFilter;
+  if (mf && typeof mf === 'object' && mf.pos === 'afterCombo') afterComboAt.push((trail ? trail + '.' : '') + 'moreFilter.pos');
+  Object.keys(node).forEach(k => walkMf(node[k], trail ? trail + '.' + k : k));
+})(data, '');
+if (afterComboAt.length) {
+  console.log('【⓵ 渲染保真闸】🔴 【更多筛选】漏斗位置写错了（' + afterComboAt.length + ' 处）：');
+  afterComboAt.slice(0, 15).forEach(p => console.log('     ' + p + ' = "afterCombo"'));
+  if (afterComboAt.length > 15) console.log('     …另 ' + (afterComboAt.length - 15) + ' 处');
+  console.log('   规范 §5.3u：漏斗要放在最后一个查询条件后面，紧挨【查询】【重置】前面，不许夹在组合搜索框等中间条件后面。');
+  console.log('   修法：把这些 moreFilter 里的 "pos": "afterCombo" 删掉（不写 pos，骨架默认就渲染在【查询】前面）。');
+  if (!WARN_ONLY_PRE) process.exit(1);
+  console.log('   ⚠ 只警告不判红：这份源不是本次显式要交付的项目（从 ledgers 猜的）。');
 }
 
 /* 列表页 / 表单页清单（和 list-standard-gate 同一套认法：有 columns 且不在弹窗/详情里） */
@@ -135,7 +160,10 @@ const PROBE = `(function(){
   o.hasExport=/导出|Export|Exportar/.test(o.stdTxt) ||
     [].slice.call(document.querySelectorAll('.sel-toolbar button,.sel-toolbar .el-button')).filter(vis)
       .some(function(b){return /导出|Export|Exportar/.test(b.textContent||'');});
-  o.hasColCfg=/自定义列|Customize|Personalizar/.test(o.stdTxt);
+  /* 【自定义列】：骨架 v7.1 起只显示齿轮图标（.tb-cols-ic，悬停提示“自定义列”）、不显示文字；
+     原来只找“自定义列”文字，结果每个列表页都误红。现在看齿轮图标在不在，以前显示文字的写法也继续认 */
+  o.hasColCfg=/自定义列|Customize|Personalizar/.test(o.stdTxt) ||
+    [].slice.call(document.querySelectorAll('.tb-std .tb-cols-ic')).some(vis);
   o.hasRefresh=!!document.querySelector('.tb-std .tb-refresh-ic');
   /* ② 分页对齐 */
   var pg=[].slice.call(document.querySelectorAll('.el-pagination')).filter(vis)[0];
@@ -143,6 +171,14 @@ const PROBE = `(function(){
   /* ③ 筛选区有没有展开/收起（真系统 100% 没有） */
   var sb=document.querySelector('.search-box,.filter-box');
   o.filterFold=!!(sb&&/展开|收起|Expandir|Recolher/.test(sb.textContent||''));
+  /* ⑦ 【更多筛选】漏斗：必须和【查询】在同一格里、排在【查询】前面，那一格里不许再有查询条件（规范 §5.3u） */
+  var mfs=[].slice.call(document.querySelectorAll('.search-box .mf-trigger,.filter-box .mf-trigger')).filter(vis);
+  o.mfCount=mfs.length;
+  if(mfs.length){ var mf=mfs[0], it=mf.closest('.el-form-item'),
+      qb=it&&[].slice.call(it.querySelectorAll('.el-button--primary')).filter(vis)[0];
+    o.mfBeforeSearch=!!(qb && (mf.compareDocumentPosition(qb)&4) &&
+      !it.querySelector('.el-input,.el-select,.el-date-editor,.combo-filter,.ms-trigger'));
+  }
   /* ④ 状态页签 */
   var tabs=[].slice.call(document.querySelectorAll('.status-tabs .stab')).filter(vis);
   o.statusTabs=tabs.length;
@@ -169,7 +205,7 @@ const PROBE = `(function(){
 
 (async () => {
   const cdp = await connect(PORT); await require('./_anno-isolate').isolateAnnoServer((m, p) => cdp.send(m, p)); /* 隔离真 anno-server(3799)：防标注层 /anno-persist 改写用户真实原型 */
-  const base = 'file:///' + OUT.replace(/\\/g, '/');
+  const base = 'file:///' + require('path').resolve(OUT).replace(/\\/g, '/');
   const bad = [], warn = [];
   let checked = 0;
 
@@ -209,6 +245,11 @@ const PROBE = `(function(){
             warn.push({ 页: id, 项: '状态页签计数', 实际: '页签没带 (N)', 期望: '真系统页签后面都有计数，如「全部 (478)」' });
         }
       }
+      /* ⑦ 【更多筛选】漏斗渲染位置（规范 §5.3u；不限列表页，有漏斗就查） */
+      if (r.mfCount > 1)
+        bad.push({ 页: id, 项: '【更多筛选】漏斗', 实际: '渲染出 ' + r.mfCount + ' 个漏斗', 期望: '只有 1 个，放在最后一个查询条件后面、紧挨【查询】前面（规范 §5.3u）' });
+      else if (r.mfCount === 1 && !r.mfBeforeSearch)
+        bad.push({ 页: id, 项: '【更多筛选】漏斗', 实际: '不在【查询】按钮前面（夹在查询条件中间）', 期望: '放在最后一个查询条件后面、紧挨【查询】【重置】前面（规范 §5.3u）；moreFilter 不要写 pos' });
       /* ⑤⑥ 表单（列表页里的新增弹窗也可能有，有 label 就查） */
       if (r.labFont && r.labFont !== '14px')
         bad.push({ 页: id, 项: '表单 label 字号', 实际: r.labFont, 期望: '14px（真系统 108 样本 98%）' });
