@@ -1,7 +1,7 @@
 # AI 原型 + PRD 协作工具
 
-> **版本：v1.0.0**　发布日期：2026-06-19　维护者：[作者主页](https://github.com/)
-> 当前版本以根目录的 `VERSION` 文件为准。如需更新，跟 AI 说“帮我更新 Proenga”，或运行根目录的 `update-proenga.ps1`（Windows）/ `update-proenga.sh`（macOS / Linux），见 AGENTS.md“更新 Proenga”。
+> 当前版本见 VERSION 文件。维护者：[作者主页](https://github.com/)
+> 如需更新，跟 AI 说“帮我更新 Proenga”，或运行根目录的 `update-proenga.ps1`（Windows）/ `update-proenga.sh`（macOS / Linux），见 AGENTS.md“更新 Proenga”。
 
 跨工具通用规则见 AGENTS.md，Claude Code 通过下面这一行一并读入：
 

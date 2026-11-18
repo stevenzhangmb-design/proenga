@@ -12,7 +12,7 @@ description: 更新 Proenga 工具包到 GitHub 上的最新版，或检查有�
 Proenga 文件夹是根目录里有 `update-proenga.ps1`、`update-proenga.sh`、`AGENTS.md` 和 `skills` 文件夹的那个文件夹，默认名字是 `proenga` 或 `proenga-main`。
 
 - 用户在话里说了位置，就用用户说的位置。
-- 当前打开的文件夹就是 Proenga 文件夹，就用当前文件夹。
+- 当前打开的文件夹是 Proenga 文件夹，用当前文件夹。
 - 都不是，就问用户：“Proenga 文件夹在哪里？请告诉我完整位置，例如 D:\proenga。”。不要自己在整个磁盘里乱找，也不要猜。
 - 找到的文件夹里没有 `update-proenga.ps1` 和 `update-proenga.sh`，说明是 2026 年 11 月 18 日以前装的老版本。先从 https://github.com/stevenzhangmb-design/proenga 下载最新版的 `update-proenga.ps1`（macOS / Linux 下载 `update-proenga.sh`）放到这个文件夹的根目录，再往下做。下载地址是 `https://raw.githubusercontent.com/stevenzhangmb-design/proenga/main/update-proenga.ps1`（或把最后的文件名换成 `update-proenga.sh`）。
 
@@ -33,7 +33,7 @@ Proenga 文件夹是根目录里有 `update-proenga.ps1`、`update-proenga.sh`�
 
 | 退出码 | 意思 | 怎么跟用户说 |
 |---|---|---|
-| 0 | 更新成功，或者已经是最新版 | 用白话说清：从哪个版本更新到哪个版本、更新了什么、备份放在哪里、同步服务是否正常、下一步要不要重开 AI 工具。已是最新版就直接说已是最新版。 |
+| 0 | 更新成功，或者已经是最新版。 | 用白话说清：从哪个版本更新到哪个版本、更新了什么、备份放在哪里、同步服务是否正常、下一步要不要重开 AI 工具。已是最新版就直接说已是最新版。 |
 | 1 | 没更新成功 | 转述脚本给的原因，比如网络不通、下载不完整。告诉用户现有文件没被改动，或者已经自动用备份还原。 |
 | 2 | 需要用户先处理 | 一般是用 git 下载的文件夹里改过工具包文件。把脚本列出的文件和提示原样转述，问用户这些改动是撤销还是保留，等用户说了再处理。 |
 

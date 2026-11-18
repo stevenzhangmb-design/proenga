@@ -7,10 +7,12 @@
 - 工具包根目录新增 VERSION 文件，记录当前版本，每次发布自动更新。
 - 新增更新脚本：Windows 用 `update-proenga.ps1`，Mac / Linux 用 `update-proenga.sh`，都放在工具包根目录。加 `-Check` 只检查有没有新版并列出更新了什么，不加参数就完整更新。
 - 完整更新会依次停掉本地同步服务，取回新版文件，重新复制做过全局安装的技能，再重启同步服务并自检，最后告诉你从哪个版本更新到哪个版本、更新了什么、备份放在哪里。
-- 用 git clone 下载的直接 git pull；用 ZIP 下载的自动下载最新 ZIP，先把整个工具包备份到同级的“proenga-备份-日期时间”文件夹，再按清单替换工具包自己的文件。
-- 任何一步失败都会自动用备份还原。
-- 你自己的东西不会被动：archive 文件夹、anno-server/anno-config.json、.claude/ledgers.txt、.mcp.json、learned-specs 里自己学的规范；改过的 .claude/settings.json 会保留，新版另存为 settings.json.new 并提示合并。
+- 用 git clone 下载的直接 git pull；文件夹里改过工具包文件时会停下，先处理本地改动再更新。用 ZIP 下载的自动下载最新 ZIP，先把整个工具包备份到同级的“proenga-备份-日期时间”文件夹，再按清单替换工具包自己的文件，删掉新版不再有的工具包文件。
+- 任何一步失败都会自动还原：ZIP 下载的用备份还原，git 下载的退回更新前的版本。
+- 你自己的东西不会被动：archive 文件夹、anno-server/anno-config.json、.claude/ledgers.txt、.mcp.json、learned-specs 里自己学的规范；改过的 .claude/settings.json 和 learned-specs/README.md 会保留，新版另存为同名 .new 文件并提示合并。
 - 也可以在 AI 工具里打开 proenga 文件夹，说“帮我更新 Proenga”或“检查 Proenga 有没有新版”，AI 会运行脚本并转述结果。
+- 新增 `proenga-update` 技能，OpenClaw 等只复制技能的工具也能听懂“帮我更新 Proenga”，会先问 Proenga 文件夹在哪里。
+- 11 月 18 日以前装的，包里还没有更新脚本，第一次更新要让 AI 先从 GitHub 下载 update-proenga.ps1（Mac 用 update-proenga.sh）再运行，说法见 README 的“更新到新版本”。
 - README、INSTALL.md、使用指南.md 新增“更新到新版本”一节。INSTALL.md 修正“诚实边界”标题和上一句挤在同一行、显示不出标题的问题。
 
 ## 2026-11-18
@@ -26,6 +28,8 @@
 - 画新原型时每次都要当场问四个问题，不能沿用以前的答案；四个问题的选项里不出现客户名、系统名和域名。
 - 渲染检查修了自定义列误判和相对路径的问题。
 - 线上核对工具改为等流程图画完再读取文字。
+- 原型规范：每个看得见的控件点了都要有反应，行操作必须写清点了去哪；导出放在工具栏左排末尾；画新原型前的四个问题必须当场问，选项里不出现客户名。
+- 检查工具：交互回归检查加入死控件探测，目前还有已知盲区（见规范），暂时不能完全拦住点了没反应的控件。
 
 ## 2026-11-17
 

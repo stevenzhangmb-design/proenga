@@ -1,6 +1,6 @@
 {
  "_说明": "本文件由发布脚本自动生成，不要手工改。update-proenga.ps1 / update-proenga.sh 用它核对新版是否完整、判断哪些旧文件可以删除。",
- "version": "2026.11.18.1",
+ "version": "2026.11.18.2",
  "files": {
   ".agents/skills/dev-codegen/SKILL.md": "4ecaea1fd3899373f76ecd2cf6f84b03b13386ba",
   ".agents/skills/dev-prompts/SKILL.md": "624f7c3c3da8cc69e5a19863bb1d51c66ad93279",
@@ -52,12 +52,12 @@
   ".gitignore": "4c79d5bcfe93dbe43aa70c1ed11649d9d713fee9",
   ".mcp.json.example": "166f13e31ffc38be1a73b7ac9cb898f2ec19605d",
   "AGENTS.md": "19bcbcb566f1fd5413424372f5ef031b9d2b8767",
-  "CHANGELOG.md": "4458ee53599309ff2b4abc56afcb3e5a8b69a2a0",
-  "CLAUDE.md": "89ca99f3db286bf14b58b7cf1568a5900737d007",
-  "INSTALL.md": "2c9d6c28ff7f4d5d3ad3911881a77ab998d1855e",
+  "CHANGELOG.md": "b82b3d3a7439d85f84976e97a0ed88413c3425d7",
+  "CLAUDE.md": "ad5e8defb33150668118689c14eadef81a48a645",
+  "INSTALL.md": "ff7da8ec32ac5e79af4478ba485cd0f0e94f88d4",
   "LICENSE": "af7501a71a5774098519eee4324ab75cc73d9a4a",
-  "README.md": "fef990514900c9362ca56df53b0f49d3ddb28195",
-  "VERSION": "2e7fee9cc6f6b51de7556e74daf3168ae056f529",
+  "README.md": "ed02d4286d218b3d03ceddc41e8cb84ffc1efabe",
+  "VERSION": "46dfa09d170f0d4fbd4004cb10864d5e0700aebd",
   "anno-server/anno-config.example.json": "53f8a23cf9689de61d17667d2dac99bc0cc64b9f",
   "anno-server/assemble-once.js": "9df4eb3cde539a64cdb92deb723283ad82ffa5c4",
   "anno-server/build-shared-generator.js": "14d491f41d75ed20df4f0e88a34eefa83915b639",
@@ -75,7 +75,7 @@
   "skills/_shared/dev-stack-spec.md": "d3c3c8d7568472ead3de5fda5dd1809c7ca792a4",
   "skills/_shared/downstream-skill-conventions.md": "e07a98e41f05749905254b11ae7e4eb9014bde5b",
   "skills/_shared/efficiency-cheatsheet.md": "52ac3cd090d705fc1fc87bdabf89c2d008bd43e6",
-  "skills/_shared/fix-and-upstream-protocol.md": "de344159bbbcfbc88fa3df999f9ad59cce260af9",
+  "skills/_shared/fix-and-upstream-protocol.md": "f6ff6ea04e7e87b075900df1e94a67b109efe479",
   "skills/_shared/qa/_no-throwaway-script-hook.js": "1c47a3ab40b998c6cf79e699bb7a947fe7ca540a",
   "skills/_shared/qa/_stop-ledger-check.js": "3b6862899850c7b5e74afd52f379799c5c6f9c00",
   "skills/_shared/qa/_stop-speed-budget.js": "69977aedd79d2bec4a96d917edfd7e966c652f4b",
@@ -291,7 +291,7 @@
   "skills/prd/verify-anno-anchors.js": "0fe2fb87a8a50253926dc885c420d217031a88c7",
   "skills/product-pitch/SKILL.md": "a3a8e621872babebc776bd0fafd43e0edbcb85d0",
   "skills/product-pitch/template.md": "73140ff8e39505f3cd38123ce5ff5f70cd99074a",
-  "skills/proenga-update/SKILL.md": "85dff5a11ac0fe715310405b00f1003cc582d726",
+  "skills/proenga-update/SKILL.md": "3dc1b0f1cc583182a9a608d7fd2c3fc7b4da1a22",
   "skills/rpa/SKILL.md": "b87f978e678e2e0b16f41c9df99377ba370db10e",
   "skills/rpa/_cdp.js": "a3fa47577aa580886d28aba3346a133b81d929d2",
   "skills/rpa/act.js": "381d8a779d104ca6193aec4b1df534245b07078c",
@@ -329,8 +329,8 @@
   "skills/verify-prototype/SKILL.md": "32aa997f3f97e793757cebe91f150f0442391c5a",
   "update-proenga.ps1": "0fdde9d53e2e3a75246bfc1ca628c76dfd4d4ae8",
   "update-proenga.sh": "b09e5790841e09a265c71f93a9431b5dd2b35a8d",
-  "使用指南.docx": "3910df4e34ef9c54c6bdd7dab4be1c503a6a3264",
-  "使用指南.md": "f77d336e66ecba291f8913be9839f114ad7e2e4f"
+  "使用指南.docx": "f9aa777d808b859991599b398b1cbe93a918e692",
+  "使用指南.md": "f11361b6a41c4b039810de6a28fb225061a97391"
  },
  "history": {
   ".gitignore": [
@@ -347,18 +347,21 @@
   "CHANGELOG.md": [
    "191544ea4c0c21860ddbfc69a7be79e9c401834f",
    "4279f4c22cd993629c5ab556f39b58ad5a966707",
+   "4458ee53599309ff2b4abc56afcb3e5a8b69a2a0",
    "a4e95af4f3131dd05970b1af020e48067b086bd5",
    "b27b532c4eea9ed6ad5920898d9294a0fb993d8a"
   ],
   "CLAUDE.md": [
    "10466d3cbfe58013e75e31eb29270a0a79cc1809",
    "6afcf5be234072ee82beaede84754114d35bcff4",
+   "89ca99f3db286bf14b58b7cf1568a5900737d007",
    "9240e72eb1d663aaa8a174b53c2a9b9d37306587",
    "cfd3cc36933b0dd8cfde43267e0fda877f4abed9"
   ],
   "INSTALL.md": [
    "0c5a1a3c54c0d5253164cc24bd9ab4391e92355e",
    "177d952f22fe88a97590b5c4bd9224be9c09fe63",
+   "2c9d6c28ff7f4d5d3ad3911881a77ab998d1855e",
    "67737db8cba984501dc54502dd50801dafed21e1",
    "6b0815060cfc81287a6ccf07bf79f64bb8ee70e0",
    "a74efbe120a0af5521e5dfb3c1fe7aa758d29cf0",
@@ -375,7 +378,8 @@
    "8271b75dac4dca62355530003747dbb6d08c0f12",
    "8d0d84506b5111d77f36437458e4d96996d6eb2a",
    "bb27933d35017f9477aadd963fd0318d60c19ae7",
-   "f67cca0e89a30e90fd63c0a200d25e1be8fe3b77"
+   "f67cca0e89a30e90fd63c0a200d25e1be8fe3b77",
+   "fef990514900c9362ca56df53b0f49d3ddb28195"
   ],
   "anno-server/build-shared-generator.js": [
    "f87e93f8d7c5c3359d8a98d50996c1402ca465d6"
@@ -404,6 +408,7 @@
    "7aff6ee868544f95fff8592255860015b1aa4234"
   ],
   "skills/_shared/fix-and-upstream-protocol.md": [
+   "de344159bbbcfbc88fa3df999f9ad59cce260af9",
    "e5302b8e7526f260017841fafe1d6f01e0a3dafd"
   ],
   "skills/_shared/qa/verify-render-sync.js": [
@@ -716,6 +721,9 @@
    "8db8a9b6050fd12b22f41a60f9ef827cf145aeb1",
    "dc5c3b656e30a2503093e20051e5cd9ecac5540e"
   ],
+  "skills/proenga-update/SKILL.md": [
+   "85dff5a11ac0fe715310405b00f1003cc582d726"
+  ],
   "skills/rpa/SKILL.md": [
    "a522d6ebfd1eb249480dc911800a396884d58ed4",
    "aca18dbc84da21ee2b53d81e34c1d0a20a261b17",
@@ -742,6 +750,7 @@
   ],
   "使用指南.docx": [
    "105f631383e1abe4a7d36ea4c59289cf40658582",
+   "3910df4e34ef9c54c6bdd7dab4be1c503a6a3264",
    "dda5d8b2245f1461e3ad98e10d71fd956e3dc0b9"
   ],
   "使用指南.md": [
@@ -749,7 +758,8 @@
    "48edba743aa3beff805ae2c487e8045925cd6769",
    "4e2504f559c218e604437ec076e7e2b457c34989",
    "b862cc2a6ec1e791e852c541022eded72ef50536",
-   "c203311b7486b60cff8fbea75cdc03623511e567"
+   "c203311b7486b60cff8fbea75cdc03623511e567",
+   "f77d336e66ecba291f8913be9839f114ad7e2e4f"
   ]
  }
 }
