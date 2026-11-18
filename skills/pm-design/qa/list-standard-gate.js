@@ -66,13 +66,43 @@ function deepHas(page, pred) {
   return false;
 }
 
+/* 2026-11-18 改判法。起因：骨架 v7.0 起【导出/自定义列/刷新】已是 listStd 标配——
+   不写就有。可这道闸还在要求「必须在 listTools 里写出来」，等于逼着人去配一套多余的，
+   结果右端渲染出第二套「⚙ 导出▾」，和标配的 ⚙⟳ 挤在一起（用户在应收应付原型截图里逮到），
+   而且位置也错了（规范定的是导出在左排末尾）。
+   现在反过来判：三件默认算有，只有被 listStd 显式关掉才报；另外**把导出/自定义列写进
+   listTools 直接判红**——那条路渲染成右端蓝字链，是已经废弃的老写法。 */
+function stdOff(page, key) {
+  const read = (p) => {
+    const v = p && p.listStd;
+    if (v === false) return true;
+    if (v && typeof v === 'object' && key in v) return !v[key];
+    return false;
+  };
+  if (read(page)) return true;
+  const bs = page.byStatus;
+  if (bs && typeof bs === 'object') { for (const k of Object.keys(bs)) { if (read(bs[k])) return true; } }
+  return false;
+}
+/* 只摊平 listTools（含 byStatus 里的），用来抓"写错槽位"的老写法 */
+function listToolsText(page) {
+  let s = '';
+  const add = (p) => { if (p && p.listTools != null) { try { s += JSON.stringify(p.listTools); } catch (_) {} } };
+  add(page);
+  const bs = page.byStatus;
+  if (bs && typeof bs === 'object') { for (const k of Object.keys(bs)) add(bs[k]); }
+  return s;
+}
+
 function checkPage(page) {
   const miss = [];
   if (!deepHas(page, p => p.selectable === true)) miss.push('勾选列(selectable:true)');
-  const txt = slotsText(page) + JSON.stringify(page.byStatus || {});
-  if (!EXPORT_RE.test(txt)) miss.push('导出入口');
-  if (!COLCFG_RE.test(txt)) miss.push('列配置(自定义列)');
-  if (!deepHas(page, p => p.table && p.table.refresh === true)) miss.push('刷新图标(table.refresh:true)');
+  if (stdOff(page, 'export'))  miss.push('导出（被 listStd 关掉了，要关必须写明理由）');
+  if (stdOff(page, 'cols'))    miss.push('列配置（被 listStd 关掉了，要关必须写明理由）');
+  if (stdOff(page, 'refresh')) miss.push('刷新（被 listStd 关掉了，要关必须写明理由）');
+  const lt = listToolsText(page);
+  if (EXPORT_RE.test(lt)) miss.push('导出写进了 listTools（废弃写法）→ 会在右端渲染成蓝字链、和标配重复；直接删掉，骨架自带且位置在左排末尾');
+  if (COLCFG_RE.test(lt)) miss.push('自定义列写进了 listTools（废弃写法）→ 和标配右端 ⚙ 重复；直接删掉');
   return miss;
 }
 
@@ -170,10 +200,11 @@ if (!bad) {
   process.exit(0);
 }
 console.log('\n🔴 ' + bad + ' 处不合规。照这个写法补（骨架早就支持，只是默认关着）：');
-console.log('   勾选列  : "selectable": true');
-console.log('   刷新    : "table": { "refresh": true }');
-console.log('   列配置  : "listTools": [{"label":"自定义列","icon":"gear","opens":"<列配置弹窗名>"}], "toolsPos": "toolbar"');
-console.log('   导出    : "listTools" 里加 {"label":"导出","menu":["按勾选导出","按筛选导出"]}（或放 selectActions）');
+console.log('   勾选列        : "selectable": true   ← 只有这一件要自己写');
+console.log('   导出/列配置/刷新: 什么都别写 —— 骨架 listStd 标配自动有（导出∨ 在左排末尾，⚙ ⟳ 在右端）。');
+console.log('                   要关某一件才写 "listStd": { "export": false }，并写明理由。');
+console.log('   ⛔ 别再写 "listTools":[{"label":"导出"…}] / {"label":"自定义列"…} + "toolsPos":"toolbar"');
+console.log('      —— 那是废弃写法，会在右端渲染成蓝字链、和标配挤成两套（2026-11-18 用户逮到）。');
 console.log('   确实不该有的页：在该页写 "_listStandardExempt": "<理由>"，不许默认省略。');
 console.log('   补完要真能用 —— 刷新点了要重拉+toast，列配置点了要开弹窗且勾掉真少一列（规范 §5.4 一次性到位铁律第 2 条）。');
 if (WARN_ONLY) {

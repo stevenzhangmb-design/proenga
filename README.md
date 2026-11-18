@@ -9,6 +9,8 @@ AI 产研协同工具：原型、PRD、代码同出一源。
 >
 > 🔧 AI 工具无关 · 🌍 多地区（中/巴/美） · 📐 内置设计规范 · 🛡 40+ 道机器闸把关
 
+当前版本见工具包根目录的 VERSION 文件，更新方法见“快速开始”里的“更新到新版本”。
+
 ---
 
 ## 谁用 · 拿到什么
@@ -370,6 +372,57 @@ curl.exe http://localhost:3799/anno-queue
 给 XX 模块生成 PRD             # → 不圈选直接生成，写完自动出原型标注
 一键生成代码 / 导出对接料        # → dev-codegen 出料/出码
 ```
+
+### 更新到新版本
+
+Proenga 发布新版本后，用工具包根目录自带的更新脚本一键更新，你自己的原型、PRD 和设置都会保留。
+
+**最简单的办法：对 AI 说一句话**
+- 用你平时的 AI 工具打开 proenga 文件夹。用 OpenClaw 的不用打开文件夹，在话里加上“Proenga 在 D:\proenga 文件夹”，D:\proenga 换成你的实际位置。
+- 只想看看有没有新版：输入“检查 Proenga 有没有新版”，然后发送。AI 会告诉你有没有新版，有的话列出更新了什么，不会改动任何文件。
+- 要更新：输入“帮我更新 Proenga”，然后发送。AI 会运行更新脚本，最后告诉你从哪个版本更新到哪个版本、更新了什么、备份放在哪里。
+
+**自己运行更新脚本**
+- Windows：在文件资源管理器里打开 proenga 文件夹，在空白处点鼠标右键，选【在终端中打开】。Windows 10 按住 Shift 键再点右键，选【在此处打开 PowerShell 窗口】。
+- Mac：打开【终端】，输入 cd 和一个空格，把 proenga 文件夹拖进终端窗口，按回车。
+- 然后运行下面的命令。加 -Check 只检查不更新，不加就是完整更新。
+
+```powershell
+# Windows（PowerShell）：只检查有没有新版
+powershell -ExecutionPolicy Bypass -File .\update-proenga.ps1 -Check
+# Windows（PowerShell）：更新到最新版
+powershell -ExecutionPolicy Bypass -File .\update-proenga.ps1
+```
+```bash
+# Mac / Linux：只检查有没有新版
+bash update-proenga.sh -Check
+# Mac / Linux：更新到最新版
+bash update-proenga.sh
+```
+
+- 脚本会依次停掉本地同步服务，取回新版文件，重新复制做过全局安装的技能，再重启同步服务并自检。
+- 用 ZIP 下载的，脚本会先把整个 proenga 文件夹备份到旁边的“proenga-备份-日期时间”文件夹，再替换工具包自己的文件。
+- 任何一步出错，脚本都会自动用备份还原，工具包回到更新前的样子。
+
+**会保留的东西**
+- archive 文件夹：原型、PRD、需求清单。
+- anno-server/anno-config.json：你指定的原型输出目录。
+- .claude/ledgers.txt：需求清单登记。
+- .claude/settings.json：Claude 的钩子配置。你改过的会保留，新版另存为 settings.json.new，脚本会提示你合并。合并时跟 AI 说：“把 .claude/settings.json.new 里的新钩子合并到 .claude/settings.json。”。
+- .mcp.json：Playwright MCP 配置。
+- skills/pm-design/learned-specs 里你自己学过的规范。
+
+**更新后各工具要做的**
+- Claude：把 Claude 关掉再打开，重新打开 proenga 文件夹。
+- Cursor、Codex、GitHub Copilot、WorkBuddy：重新打开 proenga 文件夹，新开一个对话。
+- OpenClaw：新开一个会话。
+- 最后输入“检查 Proenga 装好了没有”，然后发送，确认新版能正常用。
+
+**手动更新（备用）**
+- 只在更新脚本运行不了时用。先跟 AI 说：“帮我停掉 anno-server 同步服务。”。
+- 用 git clone 下载的：在 proenga 文件夹里运行 `git pull`。
+- 用 ZIP 下载的：把旧的 proenga 文件夹改名为 proenga-旧版，按“傻瓜版安装”第 2 步下载新版，解压到原来的位置并改名为 proenga，再把上面“会保留的东西”从 proenga-旧版 复制到新文件夹的同一位置，.claude/settings.json 不用复制。
+- 最后跟 AI 说：“帮我完成 Proenga 的安装。”，用 OpenClaw 或做过全局安装的，再按“命令行安装”里的命令重新复制一次技能。确认都正常后，再删掉 proenga-旧版。
 
 ---
 

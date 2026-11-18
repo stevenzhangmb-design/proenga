@@ -293,6 +293,143 @@ curl.exe http://localhost:3799/anno-queue
 一键生成代码 / 导出对接料        # → dev-codegen 出料/出码
 ```
 
+## 更新到新版本
+
+> Proenga 发布新版本后，用工具包根目录自带的更新脚本一键更新，你自己的原型、PRD 和设置都会保留。当前版本写在根目录的 VERSION 文件里，内容是发布日期加序号，例如 2026.11.18.1，每次发布自动更新。下面的手动更新只在脚本运行不了时用。
+
+### 1. 对 AI 说一句话（推荐）
+- 用你平时的 AI 工具打开 proenga 文件夹。用 OpenClaw 的不用打开文件夹，在话里加上“Proenga 在 D:\proenga 文件夹”，D:\proenga 换成你的实际位置。
+- 只想看看有没有新版：输入“检查 Proenga 有没有新版”，然后发送。AI 会告诉你有没有新版，有的话列出更新了什么，不会改动任何文件。
+- 要更新：输入“帮我更新 Proenga”，然后发送。AI 会运行更新脚本，最后告诉你从哪个版本更新到哪个版本、更新了什么、备份放在哪里。
+- 更新完按下面第 5 步重新打开你的 AI 工具。
+
+### 2. 自己运行更新脚本
+- Windows：在文件资源管理器里打开 proenga 文件夹，在空白处点鼠标右键，选【在终端中打开】。Windows 10 按住 Shift 键再点右键，选【在此处打开 PowerShell 窗口】。
+- Mac：打开【终端】，输入 cd 和一个空格，把 proenga 文件夹拖进终端窗口，按回车。
+- 然后运行下面的命令。加 -Check 只检查不更新，不加就是完整更新。
+
+```powershell
+# Windows（PowerShell）：只检查有没有新版，并列出更新了什么
+powershell -ExecutionPolicy Bypass -File .\update-proenga.ps1 -Check
+# Windows（PowerShell）：更新到最新版
+powershell -ExecutionPolicy Bypass -File .\update-proenga.ps1
+```
+```bash
+# Mac / Linux：只检查有没有新版，并列出更新了什么
+bash update-proenga.sh -Check
+# Mac / Linux：更新到最新版
+bash update-proenga.sh
+```
+
+完整更新时，脚本按下面的顺序做：
+1. 停掉本地同步服务，避免后台一直跑旧版。
+2. 取回新版文件：用 git clone 下载的运行 git pull；用 ZIP 下载的自动下载最新 ZIP，先把整个 proenga 文件夹备份一份，再按清单替换工具包自己的文件，你自己的文件全部保留。
+3. 重新复制做过全局安装的技能，包括 OpenClaw 用的 ~/.agents/skills 和 Claude Code 全局安装用的 ~/.claude/skills。
+4. 重启本地同步服务并自检。
+5. 告诉你从哪个版本更新到哪个版本、更新了什么、备份放在哪里。
+
+### 3. git clone 下载和 ZIP 下载的区别
+
+proenga 文件夹里有 .git 文件夹，就是用 git clone 下载的，脚本会自动判断。.git 是隐藏文件夹，在文件资源管理器里点【查看】，再点【显示】，勾选【隐藏的项目】才能看到。
+
+| 对比项 | git clone 下载的 | ZIP 下载的 |
+|---|---|---|
+| 怎么取新版 | 在 proenga 文件夹里运行 git pull。 | 自动从 GitHub 下载最新 ZIP，按清单替换工具包自己的文件。 |
+| 你自己的文件 | git pull 不动被 .gitignore 排除的文件和没被 git 跟踪的文件。 | 清单外的文件不动，上面列的你自己的文件全部保留。 |
+| 你改过的工具包文件 | 和新版改到同一处时，git pull 可能停下，需要先处理本地改动。 | 会被新版替换，改动前的文件留在备份文件夹里。 |
+
+### 4. 哪些东西不会被动
+
+| 东西 | 是什么 |
+|---|---|
+| archive 文件夹 | 原型、PRD、Word、截图、需求清单。没指定过原型输出目录时都在这里。 |
+| anno-server/anno-config.json | 你指定的原型输出目录。 |
+| .claude/ledgers.txt | 需求清单登记。 |
+| .claude/settings.json | Claude Code 的钩子配置。你改过的会保留，新版另存为 .claude/settings.json.new，脚本会提示你合并。 |
+| .mcp.json | Playwright MCP 配置，用 setup-mcp-playwright.ps1 配过才有。 |
+| skills/pm-design/learned-specs 里你自己学过的规范 | 学过的外部设计规范。 |
+
+- 看到合并提示时，跟 AI 说：“把 .claude/settings.json.new 里的新钩子合并到 .claude/settings.json。”。合并完重启 Claude。
+- 已经做好的原型不会自动换成新版的标注层和工具栏。AI 打开旧原型时会提示标注层是旧版，按提示让 AI 重新生成即可。
+
+### 5. 更新后各工具要做的
+
+| 工具 | 更新后要做的 | 原因 |
+|---|---|---|
+| Claude | 把 Claude 关掉再打开，重新打开 proenga 文件夹。 | 技能和钩子配置在启动时读取，不重启用的还是旧版。 |
+| Cursor | 重新打开 proenga 文件夹，新开一个对话。 | 旧对话里已经读过的是旧版规则。 |
+| Codex | 重新打开 proenga 文件夹，新开一个对话。 | 旧对话里已经读过的是旧版规则。 |
+| GitHub Copilot | 在 VS Code 里重新打开 proenga 文件夹，在 Chat 里新开一个对话。 | 旧对话里已经读过的是旧版规则。 |
+| WorkBuddy | 新建任务，重新选 proenga 文件夹作为工作空间。弹出信任提示时选【正常打开】。 | 旧任务里已经读过的是旧版规则。 |
+| OpenClaw | 新开一个会话。 | 脚本已经把新版技能复制到 ~/.agents/skills，新会话才会读到。 |
+
+最后输入“检查 Proenga 装好了没有”，然后发送。打开你以前的原型，能正常打开、标注和导出，就说明更新成功。
+
+### 6. 更新失败会怎样
+- 任何一步出错，脚本都会自动用备份还原，工具包回到更新前的样子，你的原型和 PRD 不受影响。
+- 还原后把脚本最后显示的提示截图发给 AI，说“帮我看看 Proenga 为什么更新失败”。
+- 网络连不上 GitHub 时也会失败，换个网络或过一会儿再试。
+
+### 7. 备份放在哪、怎么删
+- 备份放在 proenga 文件夹旁边，文件夹名是“proenga-备份-日期时间”。例如 proenga 在 D:\proenga，备份就在 D:\ 下面。
+- 备份是更新前整个 proenga 文件夹的完整副本，包括你的原型和 PRD。
+- 确认新版用着都正常后，在文件资源管理器里选中备份文件夹，按 Delete 键删掉即可。不删也不影响使用，只是占硬盘空间。
+- 每更新一次就多一个备份文件夹，旧的可以只留最近一个。
+
+### 8. 手动更新（备用）
+
+只在更新脚本运行不了时用。
+
+**第 1 步：停掉本地同步服务**
+- 跟 AI 说：“帮我停掉 anno-server 同步服务。”。
+- 自己停的：Windows 先结束 wscript.exe 进程，再结束运行 anno-server\server.js 的 node.exe 进程。只结束 node 的话，wscript 会在 3 秒后把旧版重新拉起来。Mac / Linux 先结束 start-anno-server.js 进程，再结束 server.js 进程。
+
+**第 2 步：取回新版文件**
+
+git clone 下载的：
+```bash
+cd proenga
+# 有改过的文件时先处理，否则 git pull 会停下
+git status
+git pull
+# 这条有输出，说明钩子模板变了，Claude 用户要重新复制或合并 .claude/settings.json
+git diff ORIG_HEAD HEAD -- .claude/settings.json.example
+```
+
+ZIP 下载的：
+- 把旧的 proenga 文件夹改名为 proenga-旧版，先不要删。
+- 打开 https://github.com/stevenzhangmb-design/proenga ，点绿色的【Code】按钮，再点【Download ZIP】。
+- 把压缩包解压到原来的位置，把解压出来的文件夹名改成 proenga。新文件夹要和旧文件夹在同一个位置、同一个名字，开机自动启动记的是这个位置。
+- 把上面“哪些东西不会被动”表里的东西从 proenga-旧版 复制到新文件夹的同一位置，.claude/settings.json 不用复制。
+- 跟 AI 说：“帮我完成 Proenga 的安装。”，AI 会按新版重新复制钩子配置、启动同步服务。
+
+**第 3 步：重新复制全局技能（用 OpenClaw 或做过全局安装的）**
+```powershell
+# Windows（PowerShell）：OpenClaw，或 Cursor / Codex / GitHub Copilot 全局安装
+Copy-Item -Recurse -Force skills\* "$HOME\.agents\skills\"
+# Windows（PowerShell）：Claude Code 全局安装
+Copy-Item -Recurse -Force skills\* "$HOME\.claude\skills\"
+```
+```bash
+# Mac / Linux：OpenClaw，或 Cursor / Codex / GitHub Copilot 全局安装
+cp -r skills/* ~/.agents/skills/
+# Mac / Linux：Claude Code 全局安装
+cp -r skills/* ~/.claude/skills/
+```
+
+**第 4 步：重启同步服务并检查**
+```powershell
+# Windows（PowerShell）
+wscript anno-server\start-anno-server.vbs
+curl.exe http://localhost:3799/anno-queue
+```
+```bash
+# Mac / Linux
+nohup node anno-server/start-anno-server.js >/dev/null 2>&1 &
+curl http://localhost:3799/anno-queue
+```
+能看到返回内容（如 []）就说明在运行。然后按上面第 5 步重新打开你的 AI 工具，确认都正常后再删掉 proenga-旧版。
+
 ## 各工具从哪里读规则和技能
 
 公开包里已经放好了各工具的技能入口（.claude/skills、.agents/skills、.github/skills、.codebuddy/skills 下每个技能一个 SKILL.md），入口文件只写技能名和用途，并指向 skills/ 下的完整规则。这些入口由发布脚本自动生成，不要手改。
@@ -328,7 +465,9 @@ curl.exe http://localhost:3799/anno-queue
 4. 提一个改原型的要求 → AI **应先把它记进 `原型改动清单.md`（状态“本轮·待做”）再动手**；做完回复里应列出清单每条的状态。
    Claude Code 下还可以这样验机器拦截：在清单里手动加一行状态为“本轮·待做”的条目，让 AI 结束一轮 → 应被拦下并列出该条目。
 
-4 条都出现 = 规则 + 闸已生效。**没出现** = 该工具没加载到规则（检查技能放置/启用；Claude Code 检查 `.claude/settings.json` 是否存在），别将就。## 诚实边界
+4 条都出现 = 规则 + 闸已生效。**没出现** = 该工具没加载到规则（检查技能放置/启用；Claude Code 检查 `.claude/settings.json` 是否存在），别将就。
+
+## 诚实边界
 - **规则和机器闸**：所有工具一致。
 - **自动跑闸并拦截**：只有 Claude Code 能自动做到；其余工具靠 AGENTS.md 约定交付前手动跑 node skills/pm-design/qa/deliver-gate.js。
 - **需求清单**：规则所有工具一样，写在 AGENTS.md 第 9 条；没做完就拦住收工的机器拦截只有 Claude Code 有。
