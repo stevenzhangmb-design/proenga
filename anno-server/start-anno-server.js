@@ -12,9 +12,10 @@ const http = require("http");
 const path = require("path");
 const fs   = require("fs");
 
+const PORT = +(process.env.ANNO_PORT || 3799);   // 和 server.js 一致：设了 ANNO_PORT 就用它（隔离测试、更新自检用）
 function portBusy() {
   return new Promise((res) => {
-    const req = http.get("http://localhost:3799/anno-queue", (r) => { res(r.statusCode === 200); r.resume(); });
+    const req = http.get("http://localhost:" + PORT + "/anno-queue", (r) => { res(r.statusCode === 200); r.resume(); });
     req.on("error", () => res(false));
     req.setTimeout(1500, () => { req.destroy(); res(false); });
   });

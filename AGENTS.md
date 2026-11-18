@@ -49,7 +49,38 @@
   - **Windows**：`wscript "<anno-server>\start-anno-server.vbs"`（全隐藏）。
   - **macOS / Linux / 任意 OS**：`nohup node "<anno-server>/start-anno-server.js" >/dev/null 2>&1 &`（跨平台 node 监督器，零额外依赖）。
   - 两个启动器脚本都随 `anno-server/` 包发；实在没有才回退可见窗口 `node server.js`。检测是否在跑：`GET http://localhost:3799/anno-queue`。
+  - **停止同步服务的正确方法**：先停守护进程，再停 node，最后确认端口已释放。只结束 node 不行：Windows 的 `start-anno-server.vbs` 会在 3 秒后把它重新拉起，`start-anno-server.js` 不到 1 秒就会拉起。只停本 proenga 文件夹里的进程，别的文件夹的同步服务不要动。
+    - **Windows**（在 proenga 文件夹里运行 PowerShell）：
+      ```powershell
+      $dir = (Join-Path (Get-Location).ProviderPath 'anno-server\').ToLower()
+      $all = @(Get-CimInstance Win32_Process)
+      $svc = @($all | Where-Object { $_.CommandLine -and $_.CommandLine.ToLower().Replace('/','\').Contains($dir) })
+      # 守护进程：wscript（start-anno-server.vbs）或 node（start-anno-server.js）；用相对路径启动的从子进程往上找
+      $guard = @($all | Where-Object { (($svc.ProcessId -contains $_.ProcessId) -or ($svc.ParentProcessId -contains $_.ProcessId)) -and $_.CommandLine -match 'start-anno-server' })
+      $guard | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }                     # 1. 先停守护进程
+      $svc | Where-Object { $guard.ProcessId -notcontains $_.ProcessId } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }   # 2. 再停 node
+      Start-Sleep 2; try { Invoke-WebRequest http://localhost:3799/anno-queue -TimeoutSec 2 -UseBasicParsing | Out-Null; '还在运行' } catch { '已停止，端口已释放' }   # 3. 确认
+      ```
+    - **macOS / Linux**（在 proenga 文件夹里运行）：`d="$(pwd -P)/anno-server/"; pkill -f "${d}start-anno-server.js"; sleep 1; pkill -f "${d}server.js"; sleep 1; curl -s http://localhost:3799/anno-queue >/dev/null && echo 还在运行 || echo 已停止`。
+    - 停完要恢复时，按上面的隐藏启动器重新启动，并复验 `http://localhost:3799/anno-queue` 能通。更新 Proenga 时不用手动停，更新脚本会自己停、自己重启。
 - **原型图自动截图**：`node skills/pm-design/qa/auto-screenshot.js -Html <离线原型.html>`——不给 `-States` 时自动读原型内 `window.__ANNO_SHOT_MANIFEST__`（pm-design 生成原型时烤入），零配置。
+
+## 🔄 更新 Proenga（任何工具通用）
+
+用户说“更新 Proenga”“帮我更新 Proenga”“升级 Proenga”时，运行更新脚本；说“检查 Proenga 有没有新版”“Proenga 是不是最新版”时，加 `-Check` 只检查。脚本在 proenga 文件夹根目录，不需要管理员权限：
+
+| 系统 | 只检查 | 更新到最新版 |
+|---|---|---|
+| Windows | `powershell -ExecutionPolicy Bypass -File .\update-proenga.ps1 -Check` | `powershell -ExecutionPolicy Bypass -File .\update-proenga.ps1` |
+| macOS / Linux | `bash update-proenga.sh -Check` | `bash update-proenga.sh` |
+
+- 在 proenga 文件夹里运行。当前文件夹不是 proenga（比如 OpenClaw 或全局安装只复制了技能）时，先问用户 proenga 文件夹在哪里，再用完整路径运行。
+- 更新可能要几分钟（要下载、备份整个文件夹），命令超时设长一点（至少 10 分钟），不要中途打断。
+- 脚本自己会：判断是不是已是最新版；停掉并重启同步服务；ZIP 下载的先完整备份到同级的“proenga-备份-日期时间”文件夹，再按清单替换工具包文件，用户自己的文件（archive、anno-server/anno-config.json、.claude/settings.json、.claude/ledgers.txt、.mcp.json、自己学的规范等）一个不碰；git 下载的走 git pull；做过全局安装的（~/.agents/skills、~/.claude/skills）一起换成新版；出错自动还原。
+- 运行完，把脚本输出的要点用白话转述给用户：从哪个版本更新到哪个版本、更新了什么、备份在哪里、同步服务是否正常、下一步要不要重开 AI 工具。不要只说“更新好了”。
+- 退出码 2 表示需要用户先处理（例如 git 下载的文件夹里改过工具包文件）：把脚本的提示原样转述，问用户要撤销还是保留这些改动，用户说了再处理；不要自己 `git stash`、`git reset`、`git checkout` 或强行覆盖。
+- 退出码 1 表示没更新成功：转述原因（网络不通、下载不完整等），现有文件没被改动或已自动还原。不要自己手动下载 ZIP 覆盖文件夹，也不要删除备份文件夹。
+- 输出里提到 `.claude/settings.json.new` 或其它 `.new` 文件时，说明用户改过原文件；问用户后，帮他把新版里的内容合并进原文件。
 
 ## 🔌 跨工具说明（诚实标注）
 

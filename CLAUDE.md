@@ -1,7 +1,7 @@
 # AI 原型 + PRD 协作工具
 
 > **版本：v1.0.0**　发布日期：2026-06-19　维护者：[作者主页](https://github.com/)
-> 如需更新，请在项目目录执行 `git pull` 获取最新铁律与组件。
+> 当前版本以根目录的 `VERSION` 文件为准。如需更新，跟 AI 说“帮我更新 Proenga”，或运行根目录的 `update-proenga.ps1`（Windows）/ `update-proenga.sh`（macOS / Linux），见 AGENTS.md“更新 Proenga”。
 
 跨工具通用规则见 AGENTS.md，Claude Code 通过下面这一行一并读入：
 
@@ -61,6 +61,9 @@ $found = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 > **【AI 铁律·anno-server 起停纪律】（2026-07-03 事故根治·强制执行）**
 > 1. 启动/重启 anno-server **一律走隐藏启动器**（Windows：`wscript start-anno-server.vbs`；跨平台：`node start-anno-server.js` 监督器）——**绝不裸跑 `node server.js`**。裸跑无监督，退出/被杀不会自愈；vbs 有 relaunch 循环、`start-anno-server.js` 有崩溃 respawn，且端口忙自动防双开。
 > 2. **改过 `server.js` / `anno-config.json` 需重启时**：① 停掉旧实例 → ② **走监督器重启**（非裸 `Start-Process node`）→ ③ **立刻复验 `http://localhost:3799/anno-queue` 通**，不留空档。
+>    停旧实例要**先停守护进程（wscript 运行的 `start-anno-server.vbs`，或 `start-anno-server.js`），再停 `server.js` 的 node，最后确认端口已释放**；只结束 node 会被守护进程在 3 秒内重新拉起旧版。只停本 proenga 文件夹里的进程。具体命令见 AGENTS.md“环境与运行”里的“停止同步服务的正确方法”。
+>
+> **【更新 Proenga】** 用户说“更新 Proenga”时运行 `powershell -ExecutionPolicy Bypass -File .\update-proenga.ps1`（macOS / Linux：`bash update-proenga.sh`）；说“检查 Proenga 有没有新版”时加 `-Check`。运行完把版本变化、更新内容、备份位置、同步服务状态、下一步用白话转述给用户；退出码 2 时把提示转述给用户等他决定，不要自己处理本地改动。细则见 AGENTS.md“更新 Proenga”。
 > 3. **禁"反复裸杀裸起"**：同一轮多处改动合并成一次重启；重启后没验证通之前，不告诉用户"服务已就绪"。
 > 4. 三层保险联动：①开机自启（setup-autostart.ps1）②监督器崩溃自重启 ③AI 检测未起自动拉起——正常用户永远碰不到"需先启动 anno-server"。
 > 根因：反复裸杀裸起 + 无开机自启 → 用户点【导出分享版】时服务恰好没起、报 `导出失败：需先启动 anno-server`。

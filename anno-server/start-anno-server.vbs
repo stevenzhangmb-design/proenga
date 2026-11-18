@@ -2,16 +2,19 @@
 '  anno-server hidden background launcher
 '  - Runs anno-server silently (no visible console window)
 '  - Auto-restarts if it crashes / is killed (keeps PRD sync alive)
-'  - Guards against double-start (exits if port 3799 already up)
+'  - Guards against double-start (exits if port 3799 / %ANNO_PORT% already up)
 '  Usage: wscript "start-anno-server.vbs"   (AI auto-start / logon / double-click)
 '  Deps : Windows built-in wscript + installed node. Zero extra deps.
 ' ============================================================
 Option Explicit
-Dim sh, fso, dir
+Dim sh, fso, dir, port
 Set sh  = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 dir = fso.GetParentFolderName(WScript.ScriptFullName)
 sh.CurrentDirectory = dir
+' Port: env ANNO_PORT if set (isolated tests / update self-check), else 3799
+port = sh.Environment("PROCESS")("ANNO_PORT")
+If port = "" Then port = "3799"
 
 ' Already running (port 3799 answers) -> quit, avoid a second instance
 If PortBusy() Then WScript.Quit
@@ -28,7 +31,7 @@ Function PortBusy()
   PortBusy = False
   On Error Resume Next
   Set http = CreateObject("MSXML2.XMLHTTP")
-  http.Open "GET", "http://localhost:3799/anno-queue", False
+  http.Open "GET", "http://localhost:" & port & "/anno-queue", False
   http.Send
   If Err.Number = 0 And http.status = 200 Then PortBusy = True
   On Error GoTo 0

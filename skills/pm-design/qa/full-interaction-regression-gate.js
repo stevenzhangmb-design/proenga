@@ -88,7 +88,8 @@ const results = [];
         }
       };
       const send = (m, p = {}) => new Promise(res => { const i = ++id; pend[i] = res; ws.send(JSON.stringify({ id: i, method: m, params: p })); });
-      const ev = async e => (await send('Runtime.evaluate', { expression: e, returnByValue: true, awaitPromise: false })).result?.result?.value;
+      /* awaitP=true：表达式是 async IIFE 时必须等它 resolve，否则拿回 undefined（B-0 死控件探测要用） */
+      const ev = async (e, awaitP) => (await send('Runtime.evaluate', { expression: e, returnByValue: true, awaitPromise: !!awaitP })).result?.result?.value;
       await send('Page.enable'); await require('./_anno-isolate').isolateAnnoServer(send); /* 隔离真 anno-server(3799)：防标注层 /anno-persist 改写用户真实原型 */ await send('Runtime.enable');
       await send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 1000, deviceScaleFactor: 1, mobile: false });
       await send('Page.navigate', { url: `http://localhost:${wp}/p.html?reset=1` });
@@ -165,14 +166,70 @@ const results = [];
       }
       /* 枚举页面（左侧菜单 / 顶部页签 / 自定义外壳菜单） */
       const pageEls = await ev(`(()=>{const els=[...document.querySelectorAll('#app aside .el-menu-item, #app .el-menu-item, #app .p-side .mi, #app nav a, #app [class*="menu"] [class*="item"], #app [class*="side"] [class*="item"]')].filter(e=>e.offsetParent);return [...new Set(els.map(e=>e.textContent.trim()).filter(t=>t&&t.length<20))].slice(0,40)})()`) || [];
-      const pages = pageEls.length ? pageEls : ['(单页)'];
+      /* ★ 2026-11-18 补盲区：【顶部导航版】原型的菜单项是点开才渲染、而且 teleport 到 body 的下拉，
+         上面那串选择器一个都枚举不到 → 闸只跑首页却报全绿（和 2026-07-11 那次"只跑单页"是同一类假安全感）。
+         改用骨架自己的路由：从 __PRD_DATA__ 拿页面清单，从 Vue 实例拿 go()，直接按 id 跳。
+         拿不到就退回原来的菜单点击法，不影响侧边菜单版原型。 */
+      const viaGo = await ev(`(()=>{try{
+        const app=document.querySelector('#app'); const inst=app&&app.__vue_app__&&app.__vue_app__._instance;
+        const go=inst&&inst.setupState&&inst.setupState.go;
+        const d=window.__PRD_DATA__||{}; const pcs=d.pages||{};
+        if(typeof go!=='function'||!Object.keys(pcs).length) return null;
+        window.__GATE_GO__=go;
+        return Object.keys(pcs).filter(k=>!(pcs[k]&&pcs[k].hidden));
+      }catch(e){return null}})()`);
+      const pages = (viaGo && viaGo.length > pageEls.length) ? viaGo : (pageEls.length ? pageEls : ['(单页)']);
       r.pages = pages.length;
 
       for (const pg of pages) {
         if (pg !== '(单页)') {
-          await ev(`(()=>{const e=[...document.querySelectorAll('#app .el-menu-item,#app .p-side .mi,#app nav a')].find(x=>x.offsetParent&&x.textContent.trim()===${JSON.stringify(pg)});if(e)e.click()})()`);
+          const jumped = await ev(`(()=>{ if(window.__GATE_GO__){ try{ window.__GATE_GO__(${JSON.stringify(pg)}); return 1; }catch(e){} } return 0; })()`);
+          if (!jumped) {
+            await ev(`(()=>{const e=[...document.querySelectorAll('#app .el-menu-item,#app .p-side .mi,#app nav a')].find(x=>x.offsetParent&&x.textContent.trim()===${JSON.stringify(pg)});if(e)e.click()})()`);
+          }
           await sleep(500);
         }
+        /* ╔══ B-0（2026-11-18 用户第二次立规后加）：断言「点了有反应」，不只是「点了不炸」══
+           为什么要加：老闸只抓 JS 报错，**死按钮一个都抓不到**——行操作写成光秃秃的标签
+           （"actions":"查看,收款"），骨架渲染出蓝链但没有去向，点了纹丝不动，闸照样全绿。
+           用户 2026-11-04 立过「每个可见控件都要能点」，2026-11-18 又逮到一次，说明光写规范没用。
+           判法：逐个点，比对点前点后的页面指纹（弹窗/抽屉可见数、表头、行数、toast、当前页签），
+           四者全无变化 = 死控件，点名判红。一次只点一个，点完复位，避免互相干扰。 */
+        const SIG = `(()=>({
+          dlg:[...document.querySelectorAll('.el-overlay,.el-drawer__wrapper')].filter(o=>o.offsetParent).length,
+          msg:document.querySelectorAll('.el-message,.el-notification').length,
+          th:[...document.querySelectorAll('#app .el-table__header th')].map(e=>e.innerText.trim()).join('|'),
+          rows:document.querySelectorAll('#app .el-table__row').length,
+          tab:[...document.querySelectorAll('#app .el-tabs__item.is-active,#app .stab.is-on,#app .tabbar .tab.active')].map(e=>e.innerText.trim()).join('|')
+        }))()`;
+        /* ⚠️ B-0 期间必须【临时关掉标注模式】：标注开着时左键被标注层接管，点什么都"有反应"，
+           死控件一个也抓不到（2026-11-18 第一版就栽在这里，闸绿但原型的【查看】是死的）。测完立刻开回去，B-2 还要用。 */
+        await ev("(()=>{try{window.__anno.toggleMode(false);}catch(e){}})()"); await sleep(250);
+        const deadHere = await ev(`(async()=>{
+          const nap=ms=>new Promise(z=>setTimeout(z,ms));
+          const sig=()=>(${SIG});
+          const pick=()=>[...document.querySelectorAll('#app .el-table__body tr:first-child td:last-child a, #app .el-table__body tr:first-child td:last-child .el-button, #app .el-table__body tr:first-child td:last-child .el-link')]
+            .filter(e=>e.offsetParent && e.innerText.trim());
+          const names=pick().map(e=>e.innerText.trim());
+          const out=[];
+          for(let i=0;i<names.length && i<8;i++){
+            const before=JSON.stringify(sig());
+            const es=pick(); if(!es[i]) continue;
+            try{ es[i].click(); }catch(e){}
+            await nap(650);
+            const after=JSON.stringify(sig());
+            if(before===after) out.push(names[i]);
+            /* 复位：关掉可能开的弹窗/抽屉 */
+            document.querySelectorAll('.el-dialog__headerbtn,.el-drawer__close-btn').forEach(b=>{try{b.click()}catch(e){}});
+            await nap(250);
+          }
+          return out;
+        })()`, true);
+        await ev("(()=>{try{window.__anno.toggleMode(true);}catch(e){}})()"); await sleep(250);
+        if (Array.isArray(deadHere) && deadHere.length) {
+          deadHere.forEach(n => r.dead.push(pg + ' › 行操作【' + n + '】'));
+        }
+
         /* B-1：把这一页每个按钮/页签/行内操作都点一遍，断言不炸 */
         const clicked = await ev(`(()=>{
           const btns=[...document.querySelectorAll('#app button,#app .el-button,#app .el-tabs__item,#app .stab,#app .el-table__body .el-link,#app .op-icon')]
@@ -232,7 +289,7 @@ const results = [];
     const _boxBad = (r.boxName !== null && (!r.boxName || r.boxName === '功能区'))
       || (r.boxContent !== null && r.boxContent === 0)
       || (r.boxName !== null && r.boxHasTable === true && (r.boxContent || 0) < 3);
-    const ok = !r.badNames.length && !r.jsErrs.length && r.boxReachable !== false && !_boxBad;
+    const ok = !r.badNames.length && !r.jsErrs.length && r.boxReachable !== false && !_boxBad && !r.dead.length;
     console.log(`\n  ${ok ? '✓' : '✗'} ${r.name}`);
     console.log(`      页${r.pages} · 点了${r.clicks}个控件 · 右键验了${r.rclicks}个元素 · 圈选(画框)可达:${r.boxReachable===true?'✓':(r.boxReachable===false?'✗ 进不去':'?')}`
       + ` · 框选e2e:${r.boxName===null?'(未跑到)':`名「${r.boxName||'空'}」内容${r.boxContent==null?'?':r.boxContent}项${_boxBad?' ✗':' ✓'}`}`);
@@ -240,11 +297,17 @@ const results = [];
     if (_boxBad) console.log(`      ✗ 框选e2e不合格：名字空/「功能区」或复制内容为0（名字错时 AI 无料生成PRD）`);
     if (r.badNames.length) { console.log(`      ✗ 取不到真功能名(${r.badNames.length}处)：`); r.badNames.slice(0, 8).forEach(b => console.log('          - ' + b)); }
     if (r.jsErrs.length) { console.log(`      ✗ JS报错(${r.jsErrs.length})：`); [...new Set(r.jsErrs)].slice(0, 5).forEach(e => console.log('          - ' + e)); }
+    if (r.dead.length) {
+      console.log(`      ✗ 点了没反应的控件(${r.dead.length}处) —— 违反「每个可见控件都要能点」铁律：`);
+      [...new Set(r.dead)].slice(0, 12).forEach(d => console.log('          - ' + d));
+      console.log(`          修法：行操作不许只写 label，必须带去向 —— {label:'查看', go:'<详情页id>'} / {label:'收款', opens:'<弹窗名>'} / {label:'下发', act:'<提示文案>'}`);
+    }
   }
   const allOk = results.every(r => !r.badNames.length && !r.jsErrs.length && r.boxReachable !== false
+    && !r.dead.length
     && !((r.boxName !== null && (!r.boxName || r.boxName === '功能区')) || (r.boxContent !== null && r.boxContent === 0)));
   console.log('\n──────────────────────────────');
-  console.log(allOk ? '  ㊱ 全量交互回归闸 全绿 PASS ✅（每页每按钮都点过·每元素右键都取到真功能名）'
+  console.log(allOk ? '  ㊱ 全量交互回归闸 全绿 PASS ✅（每页每按钮都点过且点了有反应·每元素右键都取到真功能名）'
                     : '  ㊱ 全量交互回归闸 有红 FAIL ❌');
   console.log('════════════════════════════════\n');
   process.exit(allOk ? 0 : 1);

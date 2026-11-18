@@ -1,0 +1,2 @@
+# Mac/Linux 的更新脚本必须是 LF 换行，否则在 Windows 上 git 取下来变成 CRLF 后 bash 跑不了
+*.sh text eol=lf

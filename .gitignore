@@ -12,6 +12,14 @@ archive/
 .claude/settings.json
 # 本机 MCP 配置（含个人 npx/chrome 绝对路径，不上传；用 .mcp.json.example 作模板）
 .mcp.json
+# 用户自己的东西（更新时保留；不进仓库，git pull 也不会和它们冲突）
+anno-server/anno-config.json
+anno-server/anno-queue.json
+anno-server/anno-ai-regen-queue.json
+.claude/ledgers.txt
+# 更新脚本给“你改过的文件”另存的新版副本
+.claude/settings.json.new
+skills/pm-design/learned-specs/README.md.new
 # 个人记忆（本在用户主目录，双保险）
 memory/
 # 内部规划/研究文档（不随公共工具分发）
@@ -63,6 +71,7 @@ logs/
 /*.txt
 /*.json
 !/package.json
+!/.proenga-manifest.json
 /br-summary.md
 # 真实生产系统（OMS/WMS 等）截图素材：含登录页/验证码/真实业务数据，仅本机提取设计规范用
 /screenshots/
