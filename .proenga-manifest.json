@@ -1,6 +1,6 @@
 {
  "_说明": "本文件由发布脚本自动生成，不要手工改。update-proenga.ps1 / update-proenga.sh 用它核对新版是否完整、判断哪些旧文件可以删除。",
- "version": "2026.11.19.2",
+ "version": "2026.11.19.3",
  "files": {
   ".agents/skills/dev-codegen/SKILL.md": "4ecaea1fd3899373f76ecd2cf6f84b03b13386ba",
   ".agents/skills/dev-prompts/SKILL.md": "624f7c3c3da8cc69e5a19863bb1d51c66ad93279",
@@ -52,12 +52,12 @@
   ".gitignore": "4c79d5bcfe93dbe43aa70c1ed11649d9d713fee9",
   ".mcp.json.example": "166f13e31ffc38be1a73b7ac9cb898f2ec19605d",
   "AGENTS.md": "19bcbcb566f1fd5413424372f5ef031b9d2b8767",
-  "CHANGELOG.md": "45641414dc65b2c41799076b5dd0a962ae761682",
+  "CHANGELOG.md": "ca4ad7a3cb3d14a2892867d8c24fd740d45218a0",
   "CLAUDE.md": "ad5e8defb33150668118689c14eadef81a48a645",
   "INSTALL.md": "ff7da8ec32ac5e79af4478ba485cd0f0e94f88d4",
   "LICENSE": "af7501a71a5774098519eee4324ab75cc73d9a4a",
   "README.md": "ed02d4286d218b3d03ceddc41e8cb84ffc1efabe",
-  "VERSION": "dff95d0bf8c69db22c13fb19e7d6eafe9a35284c",
+  "VERSION": "50bb20adef8152021ca8fd83c59b5f1c9db89845",
   "anno-server/anno-config.example.json": "53f8a23cf9689de61d17667d2dac99bc0cc64b9f",
   "anno-server/assemble-once.js": "9df4eb3cde539a64cdb92deb723283ad82ffa5c4",
   "anno-server/build-shared-generator.js": "14d491f41d75ed20df4f0e88a34eefa83915b639",
@@ -299,7 +299,7 @@
   "skills/rpa/autologin.js": "a81f343d8322b9116dbdd9b9cab822d6af3f09cc",
   "skills/rpa/awaitcode.js": "65ecf880ec446562915998ccdf344af3103c8f69",
   "skills/rpa/captcha.js": "6ed68b4ddce40819039feecab3299bf5a31a1be7",
-  "skills/rpa/clickcaptcha.js": "f30b9cb7904daa4d96d36757cfc533ba2deab9be",
+  "skills/rpa/clickcaptcha.js": "4d83d84c51c0ff3eb8a3b5605dc3ae7437059b8f",
   "skills/rpa/coverage.js": "02f4e3e717c31487fe761142f70c427167c2b175",
   "skills/rpa/deepcrawl.js": "6d81eda4e91b7e9cc3ee087c3a51f85ae5e2d393",
   "skills/rpa/derive-config.js": "cd9c32100d1eee917a63c552e6d65c801c360bc1",
@@ -350,6 +350,7 @@
    "191544ea4c0c21860ddbfc69a7be79e9c401834f",
    "4279f4c22cd993629c5ab556f39b58ad5a966707",
    "4458ee53599309ff2b4abc56afcb3e5a8b69a2a0",
+   "45641414dc65b2c41799076b5dd0a962ae761682",
    "a4e95af4f3131dd05970b1af020e48067b086bd5",
    "b27b532c4eea9ed6ad5920898d9294a0fb993d8a",
    "b82b3d3a7439d85f84976e97a0ed88413c3425d7"
@@ -734,6 +735,9 @@
    "aca18dbc84da21ee2b53d81e34c1d0a20a261b17",
    "b87f978e678e2e0b16f41c9df99377ba370db10e",
    "de96cce03cd2e7416e12289d8c4bd3c3a61366e3"
+  ],
+  "skills/rpa/clickcaptcha.js": [
+   "f30b9cb7904daa4d96d36757cfc533ba2deab9be"
   ],
   "skills/rpa/slider.js": [
    "915a03c269ef23a37c0421c3b0896ce24c264dc9"

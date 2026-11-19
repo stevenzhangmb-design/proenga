@@ -14,11 +14,14 @@
      没过：多数系统会自动换一张，重跑 probe 再来；最多试 4 次再告诉用户。
 
    用法：
-     node clickcaptcha.js <port> probe [图路径=<工作目录>/_temp/clickcap.png]
+     node clickcaptcha.js <port> probe [图路径=临时目录/clickcap.png]
      node clickcaptcha.js <port> click "x1,y1;x2,y2;x3,y3"
    ════════════════════════════════════════════════════════════════════════ */
 'use strict';
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
+function tmpBase() { try { return require('../_shared/qa/_tmp-root').tmpRoot(); } catch (_) { return os.tmpdir(); } }
 const { connect } = require('./_cdp');
 const sleep = ms => new Promise(z => setTimeout(z, ms));
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -98,7 +101,7 @@ const CONFIRM = (pic) => `(function(){var p=${JSON.stringify(pic)};
     if (process.env.RPA_DEBUG) console.log('· 定位完成', JSON.stringify(info));
     if (!info.ok) { console.error('✗ ' + info.why); process.exit(1); }
     if (mode === 'probe') {
-      const out = arg || '<工作目录>/_temp/clickcap.png';
+      const out = arg || path.join(tmpBase(), 'clickcap.png');
       const raw = await shot(c, info.pic);
       if (process.env.RPA_DEBUG) console.log('· 截图完成', raw.length);
       const g = await c.evalv(GRID(raw, Math.round(info.pic.w), Math.round(info.pic.h)), true);
