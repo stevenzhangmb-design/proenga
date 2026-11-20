@@ -1,6 +1,6 @@
 {
  "_说明": "本文件由发布脚本自动生成，不要手工改。update-proenga.ps1 / update-proenga.sh 用它核对新版是否完整、判断哪些旧文件可以删除。",
- "version": "2026.11.20.1",
+ "version": "2026.11.20.2",
  "files": {
   ".agents/skills/dev-codegen/SKILL.md": "4ecaea1fd3899373f76ecd2cf6f84b03b13386ba",
   ".agents/skills/dev-prompts/SKILL.md": "624f7c3c3da8cc69e5a19863bb1d51c66ad93279",
@@ -52,12 +52,12 @@
   ".gitignore": "4c79d5bcfe93dbe43aa70c1ed11649d9d713fee9",
   ".mcp.json.example": "166f13e31ffc38be1a73b7ac9cb898f2ec19605d",
   "AGENTS.md": "19bcbcb566f1fd5413424372f5ef031b9d2b8767",
-  "CHANGELOG.md": "a312943e7db9169bc9502315db18ea8475743ca3",
+  "CHANGELOG.md": "7b7d85d1f706cd1b7ae1549946ae55e9c703ce4a",
   "CLAUDE.md": "ad5e8defb33150668118689c14eadef81a48a645",
   "INSTALL.md": "ff7da8ec32ac5e79af4478ba485cd0f0e94f88d4",
   "LICENSE": "af7501a71a5774098519eee4324ab75cc73d9a4a",
   "README.md": "ed02d4286d218b3d03ceddc41e8cb84ffc1efabe",
-  "VERSION": "f350b14a4d36e01e9850b87a2e26e5c1cf25af96",
+  "VERSION": "0b847730ab3d3ef0461d8d0044230908f047c3d6",
   "anno-server/anno-config.example.json": "53f8a23cf9689de61d17667d2dac99bc0cc64b9f",
   "anno-server/assemble-once.js": "9df4eb3cde539a64cdb92deb723283ad82ffa5c4",
   "anno-server/build-shared-generator.js": "14d491f41d75ed20df4f0e88a34eefa83915b639",
@@ -124,7 +124,7 @@
   "skills/pm-design/components/annotation-layer.html": "2b18a48c3f26c20f2bf39730731d9b5387d55351",
   "skills/pm-design/components/host-shell.html": "acd5ff6f9442c671ac28300abacfb1d2da1f6f18",
   "skills/pm-design/components/page-renderer.html": "26f6b8ecde893828746e3aa4580eb4d8e5705329",
-  "skills/pm-design/components/prototype-skeleton.html": "c83c75132f5299720fa6c353aba312419ee2a38c",
+  "skills/pm-design/components/prototype-skeleton.html": "751c4fe43f2c64cadc294f8d9aa4d66ca96fd383",
   "skills/pm-design/examples/capture-mode-retail-product-management.md": "54d107f8b5c178ca9a85992749a37903157fe447",
   "skills/pm-design/examples/project-data.sample.json": "f4e74b564b66664abb132f0cce30f4c748dbd434",
   "skills/pm-design/i18n-compact.js": "7c19f2194a4253fabae88cd25751493fcedf0ca2",
@@ -351,6 +351,7 @@
    "4279f4c22cd993629c5ab556f39b58ad5a966707",
    "4458ee53599309ff2b4abc56afcb3e5a8b69a2a0",
    "45641414dc65b2c41799076b5dd0a962ae761682",
+   "a312943e7db9169bc9502315db18ea8475743ca3",
    "a4e95af4f3131dd05970b1af020e48067b086bd5",
    "b27b532c4eea9ed6ad5920898d9294a0fb993d8a",
    "b82b3d3a7439d85f84976e97a0ed88413c3425d7",
@@ -482,6 +483,7 @@
    "81c8403110e9ab0784385c4c2f5bb5a7fe30cef1",
    "a5ca9945f838580ff9a44ab64123b6e3de57c0df",
    "acbf4ed2770692f5c22cc46a9bbd503eabc0f65a",
+   "c83c75132f5299720fa6c353aba312419ee2a38c",
    "e07a526987d420e4e0afed1318bffd7efc836569"
   ],
   "skills/pm-design/examples/project-data.sample.json": [

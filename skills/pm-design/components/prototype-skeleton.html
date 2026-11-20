@@ -1,5 +1,16 @@
 <!-- ╔══════════════════════════════════════════════════════════════════════╗
      原型骨架（装配器结构唯一源）· prototype-skeleton · v8.11 （2026-11-10）
+     v8.64（2423）：收银台与通用弹窗的通用能力，都不配不生效、原行为不变：
+            ① pos.preReqInline:true → 门店预订必填没填时提示写在各字段下方（字段 reqMsg，默认“请输入/请选择 + 字段名”）；
+            ② posOrder.voidTo.keepIssued:{state,color?,title?} → 取消后历史发票保留“已开票”“已取消”两条；cancelRows / cancelAddRows 的行可写 types:[订单类型] 按单据类型加行；
+            ③ posOrder.voidDlg.requiredMsg + rules:[{pattern|minLen,msg}] → 取消理由按后台同一套规则校验；voidDlg.alertBy:{订单类型:[说明]} 按单据类型换说明；voidDlg.authYmd:true 开票时间写成 yyyy-mm-dd HH:mm:ss；
+            ④ posOrder.relAbs:true → 加载时把“刚刚（N 分钟前）”等相对时间换成 yyyy-mm-dd HH:mm:ss；fillRelTime 认 {{-3h|ymd}}；calcDeadline 认 yyyy-mm-dd；
+            ⑤ 小票单位写成 {zh,en,pt} 时取葡文；交班页 pendLive:true → 待上传与顶栏同一个数；表格 nfView.hideFields:[字段名] → 发票详情不显示这些字段；
+            ⑥ nfTable.typeParts 段写 sub:true + text:{…{v}…}（from / fromOrder / fromOrig + re）→ 发票类型下面第二行；nfTable.rowLabels:{中文行名:{zh,en,pt}} → 明细行名按语言显示；
+            ⑦ refundAuto 模板认 {key:55|65}（按发票号现算 Key）；exchangeAuto.viaPos.sameNo:true（+ retNoText / retKeyText）→ 结果页与生成的单据同一组号码和 Key，并显示销售退票；viaPos.ret/exc.qtyTag → 卡片灰字；
+            ⑧ 勾选网格 checkGrid 必选按各项是否勾上判断；行上【更多 › 下载】把当前行交给下载（{r.N} 取这一行）；needSel 的按钮可写 needSelMsg；
+            ⑨ okButtons 写 validate:true → 先校验字段再弹确认框；确认文字认 {fv:字段名}；keepFv:true → 记下弹窗填写值，设置卡片 html 用 {sv:字段名|or:默认} 显示；
+            ⑩ 多条值文本域 fd.itemRe / itemReMsg / maxItemsMsg（每条格式、超过 maxItems 条）；字段 requiredWhen:{field:'同弹窗字段名', eq|notEq|in|has} → 条件必填（带星号）；不分区弹窗的文本域显示占位文字。
      v8.63（2402）：开票弹窗统一用到的通用能力，都不配不生效、原行为不变：
             ① 弹窗字段 editAlt / lookup / showRe（editFrom 取空时换列、取关联单在另一页的状态、显示值按正则改写，见 dlgEditPost）；
             ② 行内按钮 opensByLink（按关联单在另一页的状态选开哪个弹窗）；③ 弹窗 netOff:{msg}（顶栏离线时不提交、状态不变）；
@@ -3210,8 +3221,8 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                   <span v-if="fd.after" style="color:#333;font-size:13px">{{ L(fd.after) }}</span>
                 </div>
                 <el-input v-else-if="fd.type==='textarea'" v-model="fd.value" type="textarea" :rows="2" :maxlength="fd.max" :show-word-limit="!!fd.max"></el-input>
-                <!-- §v4.3 设置卡里也能放一段富 HTML（真系统开启「定期导出NF-e」后那块灰底摘要） -->
-                <div v-else-if="fd.type==='html'" v-html="L(fd.value)"></div>
+                <!-- §v4.3 设置卡里也能放一段富 HTML（真系统开启「定期导出NF-e」后那块灰底摘要）；§v8.64（2423）{sv:字段名|or:默认} = 弹窗里填过的值 -->
+                <div v-else-if="fd.type==='html'" v-html="fillSaved(L(fd.value))"></div>
                 <div v-else-if="fd.type==='readonly'" style="color:#333;padding-top:6px" v-html="cell(fd.fromRow?dlgFieldVal(fd):fd.value)"></div>
                 <!-- §v4.2 设置卡片里的「值 + 一个蓝链」一行（真系统账户设置：邮箱 xxx 更改邮箱 / 手机号 xxx 修改手机号） -->
                 <div v-else-if="fd.type==='valueLink'" class="pf-vlink">
@@ -4329,6 +4340,11 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                     <div v-if="posResult.chave" class="pos-rs-k">
                       <div><span>{{ L(curPos.nfceNoText||'NFC-e 号') }}</span><b>{{ posResult.no }}</b></div>
                       <div><span>{{ L(curPos.chaveText||'Chave de Acesso（44 位）') }}</span><em>{{ posResult.chave }}</em></div>
+                      <!-- §v8.64（2423）换货 viaPos.sameNo：同时显示销售退票（标签取 viaPos.retNoText / retKeyText） -->
+                      <template v-if="posResult.ret && posExch && posExch.vp">
+                        <div><span>{{ L(posExch.vp.retNoText) }}</span><b>{{ posResult.ret.no }}</b></div>
+                        <div><span>{{ L(posExch.vp.retKeyText) }}</span><em>{{ posResult.ret.chave }}</em></div>
+                      </template>
                     </div>
                     <div class="pos-rs-b">
                       <!-- §v6.14 断网（posResult.net）：已收款，只能登记邮箱 + 完成（订单记开票失败，事后补开后自动发邮件） -->
@@ -4455,7 +4471,8 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
              提示块（ⓘ）+ 表格（序列号 / 发票号 / 关联单号 / 开票时间 / 距超时 / 取消理由）+ 底部说明 +【再想想】【提交】。
              列由 voidDlg.cols[{label,key}] 决定，key：check / serie / no / rel / auth / left / why。没配 voidDlg 仍用下面的旧面板。 -->
         <el-dialog v-if="posVoidOpen && posTx.voidDlg" class="fdlg" v-model="posVoidOpen" :title="L(posTx.voidDlg.title)" :width="posTx.voidDlg.width||'1180px'" append-to-body>
-          <div v-if="posTx.voidDlg.alert" class="tf-alert"><i class="tf-alert-ic">ⓘ</i><div class="tf-alert-body"><div v-for="(ln,li) in [].concat(posTx.voidDlg.alert)" :key="li">{{ posVoidFill(L(ln)) }}</div></div></div>
+          <!-- §v8.64（2423）voidDlg.alertBy:{订单类型:[说明…]} → 按这单类型换说明文字（没写到的类型用 alert） -->
+          <div v-if="posVoidAlert.length" class="tf-alert"><i class="tf-alert-ic">ⓘ</i><div class="tf-alert-body"><div v-for="(ln,li) in posVoidAlert" :key="li">{{ posVoidFill(L(ln)) }}</div></div></div>
           <el-table :data="posVoidRows" border size="small" style="margin-top:4px">
             <el-table-column v-for="(col,ci) in (posTx.voidDlg.cols||[]).filter(c=>c.key!=='check'||posVoidRows.some(r=>r.part))" :key="ci" :min-width="col.width||110" :width="col.key==='check'?60:undefined">
               <template #header><span v-if="col.key==='why'" style="color:#f56c6c;margin-right:3px">*</span><span>{{ L(col.label) }}</span></template>
@@ -4850,7 +4867,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                 </div>
               </template>
               <div class="po-nf" v-else-if="poOrder.nf.rows">
-                <div v-for="(r,ri) in poOrder.nf.rows" :key="ri"><span>{{ L(r.label) }}</span><b v-if="r.goNo"><a class="cell-link" style="cursor:pointer" @click.stop="poGoNo(r.goNo)">{{ L(r.value) }}</a></b><b v-else :class="r.mono?'mono':''">{{ L(r.value) }}</b></div>
+                <div v-for="(r,ri) in poOrder.nf.rows" :key="ri"><span>{{ nfRowLab(r.label, poNfCfg) }}</span><b v-if="r.goNo"><a class="cell-link" style="cursor:pointer" @click.stop="poGoNo(r.goNo)">{{ L(r.value) }}</a></b><b v-else :class="r.mono?'mono':''">{{ L(r.value) }}</b></div>
               </div>
               <!-- §v7.8 nf.goNo → 提示文字里的这个单号可点击跳转到那一单（关联开票的退货单 ↔ 换货单） -->
               <div class="po-nf-none" v-else-if="(poOrder.nf.empty || !poOrder.nf.tip) && poOrder.nf.goNo && String(L(poOrder.nf.empty)).indexOf(poOrder.nf.goNo)>-1">{{ String(L(poOrder.nf.empty)).split(poOrder.nf.goNo)[0] }}<a class="cell-link" style="cursor:pointer" @click.stop="poGoNo(poOrder.nf.goNo)">{{ poOrder.nf.goNo }}</a>{{ String(L(poOrder.nf.empty)).split(poOrder.nf.goNo).slice(1).join(poOrder.nf.goNo) }}</div>
@@ -4880,7 +4897,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                       <em v-if="h.state" class="po-nf-st" :class="'n-'+(h.color||'gray')">{{ L(h.state) }}</em>
                     </div>
                     <div class="po-nf">
-                      <div v-for="(r,ri) in (h.rows||[])" :key="ri"><span>{{ L(r.label) }}</span><b :class="r.mono?'mono':''">{{ L(r.value) }}</b></div>
+                      <div v-for="(r,ri) in (h.rows||[])" :key="ri"><span>{{ nfRowLab(r.label, poNfCfg) }}</span><b :class="r.mono?'mono':''">{{ L(r.value) }}</b></div>
                     </div>
                   </div>
                 </div>
@@ -4915,7 +4932,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                 <template v-for="(sc,si) in poNfSecs(poNfView)" :key="'nfs'+si">
                   <div class="po-nfv-s" v-if="sc.title">{{ L(sc.title) }}</div>
                   <div class="po-nf">
-                    <div v-for="(r,ri) in sc.rows" :key="ri"><span>{{ L(r.label) }}</span><b :class="r.mono?'mono':''">{{ L(r.value) }}</b></div>
+                    <div v-for="(r,ri) in sc.rows" :key="ri"><span>{{ nfRowLab(r.label, poNfCfg) }}</span><b :class="r.mono?'mono':''">{{ L(r.value) }}</b></div>
                   </div>
                   <div v-if="sc.fail" class="rf-band po-nf-band po-nf-band-below" :class="bandLv(sc.fail)">
                     <span class="rf-ico">&#9888;</span>
@@ -4968,7 +4985,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           <template v-for="(sc,si) in dvNfView.secs" :key="'dnfs'+si">
             <div class="po-nfv-s" v-if="sc.title">{{ L(sc.title) }}</div>
             <div class="po-nf">
-              <div v-for="(r,ri) in sc.rows" :key="ri"><span>{{ L(r.label) }}</span><b :class="r.mono?'mono':''">{{ L(r.value) }}</b></div>
+              <div v-for="(r,ri) in sc.rows" :key="ri"><span>{{ nfRowLab(r.label, dvNfView.cfg) }}</span><b :class="r.mono?'mono':''">{{ L(r.value) }}</b></div>
             </div>
             <div v-if="sc.fail" class="rf-band po-nf-band po-nf-band-below" :class="bandLv(sc.fail)">
               <span class="rf-ico">&#9888;</span>
@@ -5065,7 +5082,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         <!-- §v5.0 fd._err → 红框 + 控件下方红字（替代原来飘一条 toast） -->
         <!-- §v6.9 重开票弹窗「这一格要改」：失败记录里写 fixField='字段名'（+可选 fixWhy），
              打开弹窗的是失败行时，同名字段自动红框 + 下方红字说明。普通开票行没有失败记录，不受影响。2026-10-13 -->
-        <el-form-item v-if="fdShow(cfg.dialogs[dialogName].fields, fd)" :label="(fd.type==='combo'||fd.noLabel)?'':L(fd.label)" :required="!!fd.required" :class="{'span-2':fd.span===2,'is-error':!!(fd._err||dlgFixErr(fd))}" :error="fd._err||dlgFixErr(fd)||undefined">
+        <el-form-item v-if="fdShow(cfg.dialogs[dialogName].fields, fd)" :label="(fd.type==='combo'||fd.noLabel)?'':L(fd.label)" :required="!!fd.required || fdReqField(fd)" :class="{'span-2':fd.span===2,'is-error':!!(fd._err||dlgFixErr(fd))}" :error="fd._err||dlgFixErr(fd)||undefined">
           <!-- §弹窗组合筛选(v2.3)：type:'combo' —— 与列表筛选区 §5.3b 同一套结构/样式/形态判定，
                只是 v-model 落在 dlgFilterModel 上（弹窗筛选与列表筛选互不干扰）。
                写法：{type:'combo', label:'发票号', fields:['发票号','序列号','Key'], ph:'批量搜索用逗号,隔开', match:null}
@@ -5183,9 +5200,10 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           <el-select v-else-if="fd.type==='select'" v-model="fd.value" :multiple="!!fd.multiple" :placeholder="L(fd.ph||'')" :disabled="!!fd.disabled"><el-option v-for="o in (fd.options||[])" :key="K(o)" :label="L(o)" :value="K(o)" :title="L(o)" :disabled="!!optDisabledReason(fd,o)"><span>{{ L(o) }}</span><span v-if="optDisabledReason(fd,o)" class="opt-why">{{ optDisabledReason(fd,o) }}</span></el-option></el-select>
           <el-date-picker v-else-if="fd.type==='date'" v-model="fd.value" :type="fd.range?'daterange':(fd.month?'month':'date')" :unlink-panels="!!fd.range" :shortcuts="dtShortcuts(fd)" :start-placeholder="T('startTime')" :end-placeholder="T('endTime')"></el-date-picker>
           <el-switch v-else-if="fd.type==='switch'" v-model="fd.value"></el-switch>
-          <el-input v-else-if="fd.type==='textarea' && !(fd.maxSoft && fd.max)" v-model="fd.value" type="textarea" :rows="2" :maxlength="fd.max" :show-word-limit="!!fd.max" @blur="fd.blurCheck && dlgBlur(fd)" @input="fd.blurCheck && fd._err && dlgBlur(fd)"></el-input>
+          <!-- §v8.64（2423）不分区弹窗的文本域也显示占位文字 fd.ph（原来没传 placeholder） -->
+          <el-input v-else-if="fd.type==='textarea' && !(fd.maxSoft && fd.max)" v-model="fd.value" type="textarea" :rows="2" :placeholder="L(fd.ph||'')" :maxlength="fd.max" :show-word-limit="!!fd.max" @blur="fd.blurCheck && dlgBlur(fd)" @input="fd.blurCheck && fd._err && dlgBlur(fd)"></el-input>
           <!-- §v8.57 不分区弹窗的文本域 fd.maxSoft:true → 不截断，超过 max 红字「{f}最多 N 个字符」（离开即校验），右下仍显示 n / max -->
-          <div v-else-if="fd.type==='textarea'" class="soft-ta"><el-input v-model="fd.value" type="textarea" :rows="2" @blur="dlgBlur(fd)" @input="(fd._err || String(fd.value||'').length>fd.max) && dlgBlur(fd)"></el-input><span class="soft-cnt" :class="{over:String(fd.value||'').length>fd.max}">{{ String(fd.value||'').length }} / {{ fd.max }}</span></div>
+          <div v-else-if="fd.type==='textarea'" class="soft-ta"><el-input v-model="fd.value" type="textarea" :rows="2" :placeholder="L(fd.ph||'')" @blur="dlgBlur(fd)" @input="(fd._err || String(fd.value||'').length>fd.max) && dlgBlur(fd)"></el-input><span class="soft-cnt" :class="{over:String(fd.value||'').length>fd.max}">{{ String(fd.value||'').length }} / {{ fd.max }}</span></div>
           <el-input v-else-if="fd.type==='password'" v-model="fd.value" type="password" show-password :placeholder="L(fd.ph||'')"></el-input>
           <!-- §5.3r 多选网格（真系统「同步采购发票」弹窗：全选 + 两列勾选框·每项=名称+灰色副行(CNPJ)·可滚动）
                数据写 { type:'checkGrid', allLabel:'全部公司', items:[{label:'APAUL COM LTDA', sub:'64.962.869/0001-08'},…] } -->
@@ -5212,11 +5230,11 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                     </div>
           </el-radio-group>
           <div v-else-if="fd.type==='checkGrid'" class="chk-grid-wrap">
-            <el-checkbox v-model="fd._all" @change="v=>{ (fd.items||[]).forEach(it=>it._on=v); }">{{ L(fd.allLabel||'全部') }}</el-checkbox>
+            <el-checkbox v-model="fd._all" @change="v=>{ (fd.items||[]).forEach(it=>it._on=v); if(fd._err) dlgBlur(fd); }">{{ L(fd.allLabel||'全部') }}</el-checkbox>
             <div class="chk-grid-hr"></div>
             <div class="chk-grid">
               <label v-for="(it,ii) in (fd.items||[])" :key="ii" class="chk-cell">
-                <el-checkbox v-model="it._on" @change="()=>{ fd._all = (fd.items||[]).every(x=>x._on); }">
+                <el-checkbox v-model="it._on" @change="()=>{ fd._all = (fd.items||[]).every(x=>x._on); if(fd._err) dlgBlur(fd); }">
                   <span class="cg-name">{{ L(it.label) }}</span>
                 </el-checkbox>
                 <span v-if="it&&typeof it==='object'&&it.sub" class="cg-sub">{{ L(it.sub) }}</span>
@@ -5411,7 +5429,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                fd.type:'valueHistory' → 值 + 「历史记录 ∨」下拉表格；textarea 支持 rows / max(0/N 计数) / min(提交校验) -->
           <el-form v-if="sec.fields" v-show="!sec.collapse || secOpen(si,sec)" :label-position="sec.labelPos||'top'" :label-width="sec.labelPos==='left' ? (sec.labelWidth||'180px') : ''"
                    size="small" :class="sec.labelPos==='left' ? 'dlg-lform' : ['form-grid','cols-'+(sec.cols||2)]">
-            <el-form-item v-for="(fd,fi) in sec.fields" :key="fi" :required="!!fd.required" :class="{'is-error':!!fd._err,'span-2':fd.span===2}" :error="fd._err||undefined">
+            <el-form-item v-for="(fd,fi) in sec.fields" :key="fi" :required="!!fd.required || fdReqField(fd)" :class="{'is-error':!!fd._err,'span-2':fd.span===2}" :error="fd._err||undefined">
               <template #label><span>{{ L(fd.label) }}</span><el-tooltip v-if="fd.tip" effect="dark" placement="bottom" :content="L(fd.tip)" popper-class="th-tip-wide fd-tip-pre"><span class="fd-tip-ic">?</span></el-tooltip></template>
               <!-- §v4.3 fd.maxItems → 右下角计数是「已填几条 / 最多几条」，不是字符数，也不限制能打多少字
                    （真系统「发送至」那个 0/3 是最多 3 个邮箱；按空格 / 分号 / 逗号 / 换行分条） -->
@@ -5776,15 +5794,26 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
   /* §v3.71 相对时间占位符：数据里写 {{-3h}} / {{-2d}} / {{-45m}}（也支持 +），渲染成「相对现在」的
      dd/mm/yyyy HH:MM:SS。模拟数据的时间写死日期，过几天再打开就全过期了（取消发票的「距超时」会变成全部已超时）；
      写成相对的，演示时永远有「还剩 / 即将超时 / 已超时」的对比。 */
+  /* §v8.64（2423）占位符末尾加 |ymd（如 {{-3h|ymd}}）→ 写成 yyyy-mm-dd HH:mm:ss；不加仍是 dd/mm/yyyy */
   function fillRelTime(s){
     if(s.indexOf('{{') < 0) return s;
-    return s.replace(/\{\{([+-])(\d+)([dhm])\}\}/g, (_, sg, n, u)=>{
+    return s.replace(/\{\{([+-])(\d+)([dhm])(\|ymd)?\}\}/g, (_, sg, n, u, ymd)=>{
       const ms = ({ d:864e5, h:36e5, m:6e4 }[u] || 0) * (+n) * (sg === '-' ? -1 : 1);
       const t = new Date(Date.now() + ms), p = x => String(x).padStart(2, '0');
-      return p(t.getDate()) + '/' + p(t.getMonth()+1) + '/' + t.getFullYear()
-           + ' ' + p(t.getHours()) + ':' + p(t.getMinutes()) + ':' + p(t.getSeconds());
+      const hms = p(t.getHours()) + ':' + p(t.getMinutes()) + ':' + p(t.getSeconds());
+      return ymd ? t.getFullYear() + '-' + p(t.getMonth()+1) + '-' + p(t.getDate()) + ' ' + hms
+                 : p(t.getDate()) + '/' + p(t.getMonth()+1) + '/' + t.getFullYear() + ' ' + hms;
     });
   }
+  /* §v8.64（2423）时间文字 → yyyy-mm-dd HH:mm:ss：认 yyyy-mm-dd HH:mm[:ss]、dd/mm/yyyy HH:mm[:ss]、“N 分钟前”“N 小时前”“刚刚”（含“刚刚（N 分钟前）”）；认不出原样返回 */
+  function relToYmd(s){ const at=String(s==null?'':s); let m, t=null; const now=Date.now();
+    if((m=at.match(/(\d{4})-(\d{2})-(\d{2})[\sT]+(\d{2}):(\d{2})(?::(\d{2}))?/))) t=new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +(m[6]||0)).getTime();
+    else if((m=at.match(/(\d{2})\/(\d{2})\/(\d{4})[\s ]+(\d{2}):(\d{2})(?::(\d{2}))?/))) t=new Date(+m[3], +m[2]-1, +m[1], +m[4], +m[5], +(m[6]||0)).getTime();
+    else if((m=at.match(/(\d+)\s*分钟前/))) t=now-(+m[1])*6e4;
+    else if((m=at.match(/(\d+)\s*小时前/))) t=now-(+m[1])*36e5;
+    else if(/刚刚/.test(at)) t=now;
+    if(t==null) return at; const d=new Date(t), p=x=>String(x).padStart(2,'0');
+    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
   /* 数据里只写空壳 <i class="copy-ic" data-copy="X"></i>，渲染时补上图形 —— 免得每格都塞一份 SVG */
   function fillCopyIcons(s){
     return s.indexOf('copy-ic') < 0 ? s
@@ -6447,13 +6476,14 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         const seqOf=pre=>{ let q=0; all.forEach(y=>{ const m=String(y.no||'').match(new RegExp('^'+pre+'(\\d{6})$')); if(m) q=Math.max(q,+m[1]); }); return pre+String(q+1).padStart(6,'0'); };
         const rNo=seqOf(vp.retNoPrefix||'TH'), xNo=seqOf(vp.excNoPrefix||'HH');
         let mx=0; all.forEach(y=>{ [y.nf&&y.nf.no].concat(((y.nf&&y.nf.parts)||[]).map(p=>p.no)).forEach(n=>{ const v=parseInt(String(n||'').replace(/\D/g,''),10); if(v>mx && v<1e9) mx=v; }); });
-        const rNf=String(mx+1).padStart(9,'0'); const sNf=(off && res.no) ? res.no : String(mx+2).padStart(9,'0');
+        const _same=!!(vp.sameNo && !off && res && res.ret);   /* §v8.64（2423）sameNo：号码和 Key 取结果页那一组 */
+        const rNf=_same ? res.ret.no : String(mx+1).padStart(9,'0'); const sNf=((off||_same) && res.no) ? res.no : String(mx+2).padStart(9,'0');
         const mk=(md,no)=>{ const k43=String(vp.keyHead||'35261045123456000165')+md+'001'+no+(md==='65'&&off?'9':'1')+String(10000000+(+no*7919)%89999999).slice(-8);
           let s=0,w=2; for(let i=k43.length-1;i>=0;i--){ s+=(+k43[i])*w; w=w===9?2:w+1; } return k43+((s%11<2)?0:11-s%11); };
         const pm=((curPos.value&&curPos.value.payMethods)||[])[posPm.value];
         const vars={ RNO:rNo, XNO:xNo, ORIG:o.no, TYPE:L(o.type), STORE:L(o.store), RGOODS:x.names, XGOODS:ex.map(r=>L(r.name)).join('、')||'—',
           RAMT:L(posMoney(x.amt)), XAMT:L(posMoney(xamtN)), DIFF:L(posMoney(Math.abs(xamtN-x.amt))), RQTY:x.qty, XQTY:xqty, NOW:now, DUE:(()=>{ /* §2375 {DUE} = {NOW} + vp.dueHours（默认 24）小时，格式同 {NOW} */ const m=String(now).match(/(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d):(\d\d)/); if(!m) return now; const d=new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6]); d.setTime(d.getTime()+(+(vp.dueHours||24))*3600000); const z=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes())+':'+z(d.getSeconds()); })(),
-          RNF:rNf, SNF:sNf, RKEY:mk('55',rNf), SKEY:(off && res.chave) ? res.chave : mk('65',sNf), ORIGNF:(o.nf&&o.nf.no)||'—',
+          RNF:rNf, SNF:sNf, RKEY:_same ? res.ret.chave : mk('55',rNf), SKEY:((off||_same) && res.chave) ? res.chave : mk('65',sNf), ORIGNF:(o.nf&&o.nf.no)||'—',
           USER:L(curPos.value&&curPos.value.user)||'--', PAY:L(pm&&pm.label)||'--', GOT:L(posMoney(Math.max(0,+posGot.value||0))), CHG:L(posMoney(Math.max(0,Math.max(0,+posGot.value||0)-posTotal.value))) };
         const fill=t=>JSON.parse(JSON.stringify(t==null?'':t).replace(/\{(RNO|XNO|ORIG|TYPE|STORE|RGOODS|XGOODS|RAMT|XAMT|DIFF|RQTY|XQTY|NOW|DUE|RNF|SNF|RKEY|SKEY|ORIGNF|USER|PAY|GOT|CHG|XST|RST)\}/g,(m,k)=>String(vars[k]==null?'':vars[k]).replace(/["\\]/g,'\\$&')));
         const by=(vp.byOrigType||{})[L(o.type)]||{};
@@ -6462,7 +6492,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         const rs=spec('ret'), xs=spec('exc');
         const exGoods=ex.map(r=>({ name:L(r.name), barcode:r.code||r.barcode||'', price:L(posMoney(r.price||0)), qty:'x'+(r.qty||1), sub:L(posMoney((r.price||0)*(r.qty||1))) }));
         const mkOrder=(s,no,goods,names,qty,amt)=>Object.assign({ store:o.store, type:'', status:'', statusColor:'green' }, fill(s.base),
-          { no, summary:names, qtyText:'x'+qty+' · '+String(L(vp.origText)||'原单：')+L(o.type), amount:amt, totalText:String(L(vp.totalTpl)||'共 {n} 件，合计 {a}').replace('{n}',qty).replace('{a}',amt),
+          { no, summary:names, qtyText:'x'+qty+' · '+(s.qtyTag!=null ? String(L(s.qtyTag)) : String(L(vp.origText)||'原单：')+L(o.type)),   /* §v8.64（2423）viaPos.ret/exc.qtyTag → 卡片灰字按单据写（“换货退回”“换出商品”），不配 = 原单：+类型 */ amount:amt, totalText:String(L(vp.totalTpl)||'共 {n} 件，合计 {a}').replace('{n}',qty).replace('{a}',amt),
             goods, head:fill(s.head||[]), sums:fill(s.sums||[]), info:fill(s.info||[]), nf:fill(s.nf||{}) });
         const ro=mkOrder(rs, rNo, JSON.parse(JSON.stringify(x.goods)), x.names, x.qty, vars.RAMT);
         const xo=mkOrder(xs, xNo, exGoods, vars.XGOODS, xqty, vars.XAMT);
@@ -6575,6 +6605,9 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         posPreForm['e'+i]=e; return e; }
       function posPreOk(){
         const req=(curPos.value&&curPos.value.preFields||[]).map((f,i)=>({f,i})).filter(x=>x.f.required && !x.f.disabled && !posPreForm[x.i]);
+        /* §v8.64（2423）pos.preReqInline:true → 必填没填时把“请输入/请选择 + 字段名”（或字段 reqMsg）写到各字段下方（posPreForm['e'+下标]），不再只弹顶部提示；不配 = 原样 */
+        if(req.length && curPos.value && curPos.value.preReqInline){ (curPos.value.preFields||[]).forEach((f,i)=>{ if(!req.some(x=>x.i===i)) posPreChk(i); });
+          req.forEach(x=>{ posPreForm['e'+x.i] = L(x.f.reqMsg) || vMsg(x.f.type==='select' ? 'vSelect' : 'vEnter', x.f.label); }); return; }
         if(req.length){ posTip((curPos.value&&curPos.value.preMiss)||('请先填写：'+req.map(x=>L(x.f.label)).join('、'))); return; }
         if((curPos.value&&curPos.value.preFields||[]).map((f,i)=>posPreChk(i)).some(Boolean)) return;   /* §v8.57 */
         posPreOpen.value=false; posPayOpen.value=true;
@@ -6772,7 +6805,13 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         let okNo=no, okKey=key; const _kh=p.keyHead||p.offKeyHead;
         if(_kh){ okNo=posNextNfNos(1)[0]; const k43=String(_kh)+'65'+'001'+okNo+'1'+String(10000000+(+okNo*7919)%89999999).slice(-8);
           let s=0,w=2; for(let i=k43.length-1;i>=0;i--){ s+=(+k43[i])*w; w=w===9?2:w+1; } okKey=k43+((s%11<2)?0:11-s%11); }
-        posResult.value={ kind:'ok', no:okNo, chave:okKey,
+        /* §v8.64（2423）换货结账 viaPos.sameNo:true → 结果页和生成的换货/退货订单用同一组号码与 Key：先取两个连号（销售退票、销售发票），
+           结果页另显示销售退票（posResult.ret，标签取 viaPos.retNoText / retKeyText）。不配 = 原样 */
+        let _ret=null; const _xv=posExch.value && posExch.value.vp;
+        if(_xv && _xv.sameNo){ const kh=String(_kh||_xv.keyHead||'35261045123456000165'); const ns=posNextNfNos(2);
+          const mk=(md,n)=>{ const k43=kh+md+'001'+n+'1'+String(10000000+(+n*7919)%89999999).slice(-8); let s=0,w=2; for(let i=k43.length-1;i>=0;i--){ s+=(+k43[i])*w; w=w===9?2:w+1; } return k43+((s%11<2)?0:11-s%11); };
+          _ret={ no:ns[0], chave:mk('55',ns[0]) }; okNo=ns[1]; okKey=mk('65',ns[1]); }
+        posResult.value={ kind:'ok', no:okNo, chave:okKey, ret:_ret,
           title:L(p.okTitle)||'NFC-e 开具成功，已授权', reason:L(p.okMsg)||'DANFE NFC-e 已送打印，请交给顾客' };
         posIssued.value={ no:okNo, chave:okKey, kind:'ok', at:posNow() };
       }
@@ -6858,24 +6897,38 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         const po=poOrder.value||{}; const rows=(po.nf&&po.nf.rows)||[];
         const val=lb=>{ if(!lb) return ''; const r=rows.find(x=>String(L(x.label)||'')===String(L(lb))); return r?String(L(r.value)||''):''; };
         const rel=(d.relPrefixBy && L(d.relPrefixBy[L(po.type)]) || '') + (po.no||'');
-        const base={ serie: val(d.serieLabel) || L(d.serieDefault) || '', rel, auth: val(d.authLabel) || '--' };
+        const _au=val(d.authLabel);   /* §v8.64（2423）voidDlg.authYmd:true → 开票时间写成 yyyy-mm-dd HH:mm:ss；不配 = 原样 */
+        const base={ serie: val(d.serieLabel) || L(d.serieDefault) || '', rel, auth: (_au && d.authYmd) ? relToYmd(_au) : (_au || '--') };
         const pi=posIssued.value;
         if(Array.isArray(pi.parts) && pi.parts.length) return pi.parts.map((p,i)=>Object.assign({}, base, { part:p, no:p.no, left:p.leftText||pi.left||'--', over:!!p.over, err:posVoidRowErr.value[i]||'' }));
         return [Object.assign({}, base, { no:pi.no, left:pi.left||L(d.leftDefault)||'--', over:false, err:posVoidRowErr.value[0]||'' })]; });
+      /* §v8.64（2423）voidDlg.alertBy:{订单类型（中文）:[说明…]} → 提示块按这单类型选；没写到的类型用 voidDlg.alert。不配不生效 */
+      const posVoidAlert = computed(()=>{ const d=posTx.value && posTx.value.voidDlg; if(!d) return [];
+        const t=String(_zhOf((poOrder.value||{}).type)||''); const by=d.alertBy && d.alertBy[t];
+        const a = by!=null ? by : d.alert; return a ? [].concat(a) : []; });
       /* 提示块里的 {model} → 这单当前票的发票模型（不写死 65/55） */
       const posVoidFill = s => { const d=posTx.value && posTx.value.voidDlg; if(!d || String(s).indexOf('{model}')<0) return s;
         const rows=(poOrder.value&&poOrder.value.nf&&poOrder.value.nf.rows)||[]; const r=rows.find(x=>String(L(x.label)||'')===String(L(d.modelLabel)));
         return String(s).replace(/\{model\}/g, r?String(L(r.value)||''):''); };
+      /* §v8.64（2423）voidDlg.rules:[{pattern,flags?,msg}|{minLen,msg}] + requiredMsg → 取消理由与后台取消弹窗同一套规则：先查没填（requiredMsg），再按 rules 顺序只报第一条
+         （msg 里 {n}=现在的字数）；不配 rules = 原来只查至少 15 个字符（minMsg） */
+      function posWhyErr(vd, raw){ const s=String(raw==null?'':raw).trim(), n=s.length;
+        if(!Array.isArray(vd.rules)) return n<15 ? (L(vd.minMsg)||'至少 15 个字符').replace('{n}',n) : '';
+        if(!s) return L(vd.requiredMsg) || vMsg('vEnter', ((vd.cols||[]).find(c=>c&&c.key==='why')||{}).label);
+        for(const r of vd.rules){ if(!r || typeof r!=='object') continue;
+          if(r.pattern && !(new RegExp(r.pattern, r.flags||'').test(s))) return String(L(r.msg)||vMsg('vFormat','')).replace('{n}',n);
+          if(r.minLen && n<r.minLen) return String(L(r.msg)||vMsg('vMin','',r.minLen)).replace('{n}',n); }
+        return ''; }
       function posVoidDo(){
         /* §v8.8 统一款弹窗 + 多张票：勾上的每张都要有 ≥15 字理由；通过后取第一张的理由走原流程 */
         const vd=posTx.value && posTx.value.voidDlg; posVoidRowErr.value={};
         if(vd && posIssued.value && Array.isArray(posIssued.value.parts) && posIssued.value.parts.length){
           const ps=posIssued.value.parts; const on=ps.map((p,i)=>[p,i]).filter(x=>x[0].on && !x[0].over);
           if(!on.length){ posVoidErr.value=L((curPosOrder.value&&curPosOrder.value.voidTo&&curPosOrder.value.voidTo.pickMsg))||L(vd.pickMsg)||'请至少勾选一项'; return; }
-          const bad={}; on.forEach(([p,i])=>{ const n=String(p.why||'').trim().length; if(n<15) bad[i]=(L(vd.minMsg)||'至少 15 个字符').replace('{n}',n); });
+          const bad={}; on.forEach(([p,i])=>{ const e=posWhyErr(vd, p.why); if(e) bad[i]=e; });
           if(Object.keys(bad).length){ posVoidRowErr.value=bad; posVoidErr.value=' '; return; }
           posVoidWhy.value=String(on[0][0].why||'').trim(); }
-        else if(vd){ const n=String(posVoidWhy.value||'').trim().length; if(n<15){ posVoidRowErr.value={0:(L(vd.minMsg)||'至少 15 个字符').replace('{n}',n)}; posVoidErr.value=' '; return; } }
+        else if(vd){ const e=posWhyErr(vd, posVoidWhy.value); if(e){ posVoidRowErr.value={0:e}; posVoidErr.value=' '; return; } }
         const w=String(posVoidWhy.value||'').trim();
         if(w.length<15){ posVoidErr.value=L((curPos.value&&curPos.value.voidMinMsg))||('取消理由至少 15 个字符，会上传税局（现在 '+w.length+' 个）'); return; }
         posVoidErr.value='';
@@ -6888,13 +6941,16 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         /* §v6.12 posOrder.voidTo={state,color,empty,histTitle} → 取消后订单回到「待开票」（与后台订单列表取消发票同一做法，2026-10-20 用户定），
            被取消的那张票挪进发票记录（history）标「已取消」，可再点【开票】重开 */
         const vt = curPosOrder.value && curPosOrder.value.voidTo;
+        /* §v8.64（2423）voidTo.cancelRows / cancelAddRows 的行可写 types:[订单类型…] → 只有这单类型（中文）在其中时才加这一行（取消方式：收银订单 30 分钟、退货订单 24 小时）；不写 types = 都加 */
+        const _otz=String(_zhOf((poOrder.value||{}).type)||'');
+        const _voidByType = list => Array.isArray(list) ? list.filter(r=>!r || !Array.isArray(r.types) || r.types.map(x=>String(_zhOf(x))).indexOf(_otz)>-1).map(r=>{ if(!r || !r.types) return r; const c=Object.assign({}, r); delete c.types; return c; }) : list;
         const parts = posIssued.value && posIssued.value.parts;
         if(parts && !parts.some(p=>p.on)){ posVoidErr.value=L(vt&&vt.pickMsg); return; }
         /* §v6.13 两张票只勾了一张：只取消那一张，订单回「待开票」，再开票时只补开被取消的那张（o.nfPart 供开票弹窗「应开票种」） */
         if(poOrder.value && poOrder.value.nf && vt && parts && parts.some(p=>!p.on)){
           const nf=poOrder.value.nf, gone=parts.filter(p=>p.on), keep=parts.filter(p=>!p.on);
           nf.history=gone.map(p=>({ title:String(L(vt.histTitle)||'')+' · '+L(p.label)+' '+p.no, state:vt.cancelState, color:'gray',
-            rows:tplFill(vt.cancelRows,{no:p.no,why:w,now:posNow()}) })).concat(nf.history||[]);
+            rows:tplFill(_voidByType(vt.cancelRows),{no:p.no,why:w,now:posNow()}) })).concat(nf.history||[]);
           nf.parts=keep; nf.state=JSON.parse(JSON.stringify(vt.partState||vt.state)); nf.color=vt.color||'orange'; delete nf.to55;
           nf.rows=keep.map(p=>({label:p.label,value:p.no}));
           poOrder.value.nfPart = gone.map(p=>L(p.label)).join(' + ');
@@ -6906,8 +6962,10 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           if(parts && poOrder.value.nfPartAll) poOrder.value.nfPart = poOrder.value.nfPartAll;
           delete poOrder.value.nfGone;
           const h={ title: String(L(vt.histTitle)||'').replace('{no}', nf.no||''), state:vt.cancelState, color:'gray',
-                    rows:(nf.rows||[]).concat(tplFill(vt.cancelAddRows,{why:w,now:posNow()})||[]) };
-          nf.history=[h].concat(nf.history||[]);
+                    rows:(nf.rows||[]).concat(tplFill(_voidByType(vt.cancelAddRows),{why:w,now:posNow()})||[]) };
+          /* §v8.64（2423）voidTo.keepIssued:{state,color?,title?} → 历史发票保留两条：原来“已开票”的那条（原明细）在前，“已取消”的那条在后（同静态数据写法）；不配 = 只留已取消一条 */
+          const kp=vt.keepIssued; const hk = kp ? { title: kp.title!=null ? JSON.parse(JSON.stringify(kp.title)) : h.title, state:JSON.parse(JSON.stringify(kp.state)), color:kp.color||'green', rows:JSON.parse(JSON.stringify(nf.rows||[])) } : null;
+          nf.history=(hk?[hk,h]:[h]).concat(nf.history||[]);
           nf.state=JSON.parse(JSON.stringify(vt.state)); nf.color=vt.color||'orange'; nf.no='—'; delete nf.rows; delete nf.to55; delete nf.parts;
           /* §v6.26 voidTo.tip → 提示放在历史发票下面（与后台同一句），不再写在上面 */
           if(vt.tip){ nf.tip=JSON.parse(JSON.stringify(vt.tip)); delete nf.empty; }
@@ -6939,6 +6997,8 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         return m ? { text: m.show!=null ? m.show : nf.state, color: m.color || nf.color || 'green', tag: m.tag || null }
                  : { text: (nf||{}).state, color: (nf||{}).color || 'green', tag: null }; };
       const _nfLab = r => String(L(r && r.label) || '');
+      /* §v8.64（2423）nfTable.rowLabels:{中文行名:{zh,en,pt}} → 发票详情 / 发票信息里明细行名按当前语言显示（数据里只写了中文的行名如“关联退货订单”）；没配到的行名原样 */
+      const nfRowLab = (l, n) => { const m=n && n.rowLabels; const z=String(_zhOf(l)); return (m && m[z]!=null) ? L(m[z]) : L(l); };
       const _nfLabZh = r => { const l=r && r.label; return (l && typeof l==='object' && l.zh!=null) ? String(l.zh) : String(l==null?'':l); };
       const _nfIn = (l, arr) => (arr||[]).some(k=>String(L(k))===l);
       const _nfHas = (l, arr) => (arr||[]).some(k=>l.indexOf(String(L(k)))>-1);
@@ -6954,8 +7014,21 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           .map(x=>[x.show, _nfVal(rows,[x.label])]).filter(x=>x[1]);
         /* §v8.33（X）typeParts：发票类型按段拼（from 取明细行文字 / fromOrder 取本单字段，map 第一个命中的 show；has:'' 当默认），段间“ · ”，suffix 段直接接后面 */
         let typeTxt = null;
+        let typeSub = '';
         if((n.typeParts||[]).length){ const segs=[]; let suf='';
-          n.typeParts.forEach(p=>{ if((p.ifRow && !_rowHas(p.ifRow)) || (p.notIfRow && _rowHas(p.notIfRow))) return; const txt = p.fromOrder ? String(L((poOrder.value||{})[p.fromOrder])||'') : ((p.from||[]).map(l=>_nfVal(rows,[l])).join(' ')+' '+ttl);
+          /* 第二行段的 ifRow / notIfRow 明细行名按中文名或当前语言名认（英葡界面下照样判断） */
+          const _rowHas2 = c => { if(!c) return false; const ls=[].concat(c.label||[]); const r=rows.find(x=>ls.some(l=>_nfLab(x)===String(L(l)) || _nfLabZh(x)===String(_zhOf(l)))); const v=r?String(L(r.value)||''):'';
+            const vz=r?String(_zhOf(r.value)||''):''; return !!v && (c.has==null || v.indexOf(String(L(c.has)))>-1 || vz.indexOf(String(_zhOf(c.has)))>-1); };
+          n.typeParts.forEach(p=>{ if(p.sub ? ((p.ifRow && !_rowHas2(p.ifRow)) || (p.notIfRow && _rowHas2(p.notIfRow))) : ((p.ifRow && !_rowHas(p.ifRow)) || (p.notIfRow && _rowHas(p.notIfRow)))) return;
+            /* §v8.64（2423）段写 sub:true + text:{…{v}…} → 这段放在发票类型下面第二行（灰字）：{v} 依次从 from 明细行（中文名或当前语言名）、
+               fromOrder 本单字段、fromOrig（本单字段记的原单号 → 那一单的发票号）里取，有 re 时取第 1 组；都取不到 {v} 为空 */
+            if(p.sub){ if(typeSub) return; const o=poOrder.value||{}; const pick=s=>{ const t=String(s==null?'':s); if(!t) return ''; if(!p.re) return t; const m=t.match(new RegExp(p.re)); return m ? (m[1]!=null?m[1]:m[0]) : ''; };
+              let v=''; (p.from||[]).some(l=>{ const r=rows.find(x=>_nfLab(x)===String(L(l)) || _nfLabZh(x)===String(_zhOf(l))); v=r?pick(L(r.value)):''; return !!v; });
+              if(!v && p.fromOrder) v=pick(L(o[p.fromOrder]));
+              if(!v && p.fromOrig && o[p.fromOrig]){ const og=((curPosOrder.value||{}).orders||[]).find(x=>x && x.no===String(L(o[p.fromOrig]))); const nf0=og&&og.nf; const cand=nf0 ? [nf0.no].concat((nf0.history||[]).map(h=>_nfVal(h.rows,n.noLabels))) : [];
+                cand.some(c=>{ v=/^\d{6,}$/.test(String(c||'').trim()) ? String(c).trim() : ''; return !!v; }); }
+              typeSub = String(L(p.text)||'{v}').replace(/\{v\}/g, v).replace(/\s+$/,'').replace(/\s{2,}/g,' '); return; }
+            const txt = p.fromOrder ? String(L((poOrder.value||{})[p.fromOrder])||'') : ((p.from||[]).map(l=>_nfVal(rows,[l])).join(' ')+' '+ttl);
             const m=(p.map||[]).find(x=>txt.indexOf(String(L(x.has)))>-1); const s = m ? m.show : null;
             if(s==null || String(L(s))==='') return; if(p.suffix) suf=s; else segs.push(s); });
           if(segs.length) typeTxt = segs.map(s=>String(L(s))).join(' · ')+(suf?String(L(suf)):''); }
@@ -6973,7 +7046,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         if(kf){ const km=n.keyMask||[4,4]; const pop=[{label:'Key', value:kf}]; const no0=_nfVal(rows,n.noLabels);
           if(n.keyId && no0) pop.push({label:n.keyId.label||'ID', value:String(n.keyId.prefix||'')+no0});
           key={ t: kf.length>km[0]+km[1] ? kf.slice(0,km[0])+'******'+kf.slice(kf.length-km[1]) : kf, pop }; }
-        return { type: typeTxt ? typeTxt : (hit ? L(hit.show) : (model || ttl || '--')), sub: (cur && src.title) ? ttl : '', no: _nfVal(rows,n.noLabels) || (n.noEmpty!=null ? n.noEmpty : '—'),
+        return { type: typeTxt ? typeTxt : (hit ? L(hit.show) : (model || ttl || '--')), sub: typeSub || ((cur && src.title) ? ttl : ''), no: _nfVal(rows,n.noLabels) || (n.noEmpty!=null ? n.noEmpty : '—'),
                  recv: L(recv), rid, amt, stSub, key,
                  state: src.state || '', color: src.color || (cur ? 'green' : 'gray'), times, rows, fail: src.fail || null };
       };
@@ -7070,7 +7143,11 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         return !(n.noViewStates||[]).some(s=>(s && typeof s==='object' ? s.zh : s)===z); };
       const dvNfCfgT = tb => _dvNfCfg(tb);
       const dvNfNoText = tb => { const n=_dvNfCfg(tb); return n.noViewText!=null ? L(n.noViewText) : '--'; };
-      const dvNfOpen = (tb, row) => { const n=_dvNfCfg(tb); dvNfView.value={ cfg:n, secs:_nfFixedSecs(_dvNfItem(tb,row), n) }; };
+      /* §v8.64（2423）表格 nfView.hideFields:[字段名…] → 从这页打开的“发票详情”不显示这些字段（中文名或当前语言名任一相同）；不配 = 原样 */
+      const dvNfOpen = (tb, row) => { const n=_dvNfCfg(tb); const hf=((tb.nfView||{}).hideFields||[]).map(x=>[String(_zhOf(x)), String(L(x))]);
+        let secs=_nfFixedSecs(_dvNfItem(tb,row), n);
+        if(hf.length) secs=secs.map(s=>Object.assign({}, s, { rows:(s.rows||[]).filter(r=>{ const z=String(_zhOf(r.label)), c=String(L(r.label)); return !hf.some(h=>h[0]===z || h[1]===c); }) }));
+        dvNfView.value={ cfg:n, secs }; };
       /* §v6.9 取消发票面板的文案源：收银页用 pos 配置，订单管理页用 posOrder 配置 */
       const posTx = computed(()=> curPos.value || curPosOrder.value || {});
       /* §v6.9 cfg.pageBtn 可以是单个对象，也可以是数组（右上角并排几个按钮） */
@@ -7329,7 +7406,10 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           const rtNo=(ra.noPrefix||'TH')+(ra.noMid||'')+String(seq+1).padStart(6,'0'); const nfNo=String(mx+1).padStart(9,'0');
           const names=poRetNames.value, amt=poRetMax.value, origNf=(o.nf&&o.nf.no)||'—';
           const vars={NO:nfNo, ORDER:rtNo, ORIG:o.no, TYPE:L(o.type), STORE:L(o.store), GOODS:names, AMT:String(amt), NOW:now, ORIGNF:origNf};
-          const fill=x=>JSON.parse(JSON.stringify(x==null?'':x).replace(/\{(NO|ORDER|ORIG|TYPE|STORE|GOODS|AMT|NOW|ORIGNF)\}/g,(m,k)=>String(vars[k]).replace(/"/g,'\\"')));
+          /* §v8.64（2423）{key:55}/{key:65} → 按收银页 keyHead（或 ra.keyHead）+ 模型 + 本张发票号现算 44 位 Key（同 thenAuth 写法）；不写不生效 */
+          const _rk=md=>{ const pc=_posCfgAny(); const kh=String(ra.keyHead||pc.keyHead||pc.offKeyHead||'35261045123456000165'); const k43=kh+md+'001'+nfNo+'1'+String(10000000+(+nfNo*7919)%89999999).slice(-8);
+            let sm=0,w=2; for(let i=k43.length-1;i>=0;i--){ sm+=(+k43[i])*w; w=w===9?2:w+1; } return k43+((sm%11<2)?0:11-sm%11); };
+          const fill=x=>JSON.parse(JSON.stringify(x==null?'':x).replace(/\{(NO|ORDER|ORIG|TYPE|STORE|GOODS|AMT|NOW|ORIGNF)\}/g,(m,k)=>String(vars[k]).replace(/"/g,'\\"')).replace(/\{key:(55|65)\}/g,(m,md)=>_rk(md)));
           /* §2336 ra.netOff:{nfState,nfColor,nfEmpty,tip,mirrors} → 收银台网络异常（顶栏切到离线 posOnline=false）时退货退款不开票：
              发票状态/发票信息/完成提示改用 netOff 里的；mirrors 只同步 netOff.mirrors（不写 = 不同步，票没开出来）。不配不生效，网络正常不受影响。 */
           const raOff = (isInv && !posOnline.value && ra.netOff) ? ra.netOff : null;
@@ -7449,8 +7529,9 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       /* 待补传张数：默认取配置，补传成功后置 0。
          不能用 Vue.watch(...,{immediate:true}) —— 它在 setup 期就执行，那时 cfg 还没初始化（整页白屏）。 */
       const hvPendDone = ref(false);
-      const hvPend = computed(()=> hvPendDone.value ? 0
-        : (+((curHandover.value||{}).nfce||{}).pending || 0));
+      /* §v8.64（2423）交班页 pendLive:true → 待上传张数与收银台顶栏同一个数（posPending），不再取配置里写死的 nfce.pending；【立即上传】成功后两边一起清零。不配 = 原样 */
+      const hvPend = computed(()=> (curHandover.value||{}).pendLive ? posPending.value : (hvPendDone.value ? 0
+        : (+((curHandover.value||{}).nfce||{}).pending || 0)));
       /* §v8.56 交班【去处理】【去上传】跳收银台 › 订单管理并预选筛选：failGoto / pendGoto = 页 id，
          failFilter / pendFilter = {title:筛选组名, chip:胶囊文字}（如 {title:'开票状态', chip:'开票失败'}）；不配 failGoto 时【去处理】照旧只弹 failTip */
       function hvGoFilter(pg, f){
@@ -7472,7 +7553,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         /* §v6.14 pendGoto:'页id' → 「去补开」直接跳到那一页（收银台 › 订单管理 补开开票失败的单），不再模拟补传 */
         const hg=(curHandover.value||{}).pendGoto; if(hg){ hvGoFilter(hg,(curHandover.value||{}).pendFilter); return; }
         posTip(L((curHandover.value&&curHandover.value.uploadingMsg))||'正在补传…');
-        setTimeout(()=>{ hvPendDone.value=true;
+        setTimeout(()=>{ hvPendDone.value=true; if((curHandover.value||{}).pendLive) posPending.value=0;
           posTip(L((curHandover.value&&curHandover.value.uploadedMsg))); }, 900);
       }
       /* ════════════ §v6.0 收银台模块切换抽屉 ═══════════════════════════════════════
@@ -7785,8 +7866,18 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         if(!fd) return false;
         if(fd.required) return true;                         /* 静态必填优先 */
         const w = fd.requiredWhen; if(!w) return false;
+        if(w.field!=null) return fdReqField(fd);
         return (w.key!=null) ? dvFlagHas(w) : false;
       }
+      /* §v8.64（2423）requiredWhen:{field:'同一弹窗里另一个字段的名称', eq|notEq|in|has:值} → 那个字段的值符合时本字段必填（显示星号、没填提示“请输入 + 字段名”或 requiredMsg）；
+         字段名按中文原文或当前语言名认，值按中文键或当前语言文字比。只认写了 field 的，原来的 key 写法不变 */
+      function fdReqField(fd){ const w=fd && fd.requiredWhen; if(!w || w.field==null) return false;
+        const d=(cfg.value.dialogs||{})[dialogName.value]; if(!d) return false; let src=null;
+        [].concat(...(d.sections||[]).map(x=>(x&&x.fields)||[]), Array.isArray(d.fields)?d.fields:[]).some(x=>{ if(x && x!==fd && (lblIs(x.label, String(_zhOf(w.field))) || lblIs(x.label, String(L(w.field))))){ src=x; return true; } return false; });
+        if(!src) return false; const v=src.value; const vs=[String(K(v)==null?'':K(v)), String(L(v)==null?'':L(v))];
+        const is=x=>vs.indexOf(String(K(x)))>-1 || vs.indexOf(String(L(x)))>-1;
+        if(w.eq!=null) return is(w.eq); if(w.notEq!=null) return !is(w.notEq); if(Array.isArray(w.in)) return w.in.some(is);
+        if(w.has!=null) return vs.some(t=>t.indexOf(String(K(w.has)))>-1 || t.indexOf(String(L(w.has)))>-1); return !!vs[0]; }
       /* §v5.0 详情整页按行回显 —— 见 openDetail 处的说明 */
       function dvEachField(d, fn){
         (d.sections||[]).forEach(s=>{
@@ -8086,6 +8177,16 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         });
       });
       const PC = reactive(PAGECFG);            // 让 formDialog/detailView 里的字段可 v-model 编辑（原型级·不必真提交）
+      /* §v8.64（2423）弹窗按钮 keepFv:true 确认后记下的字段值（键 = 字段中文名 / 当前语言名）；设置卡片 html 里 {sv:字段名|or:默认} 取用 */
+      const SAVEDFV = reactive({});
+      const fillSaved = s => String(s==null?'':s).indexOf('{sv:')<0 ? s : String(s).replace(/\{sv:([^}|]+)(?:\|or:([^}]*))?\}/g,(m,k,d)=>{ const v=SAVEDFV[k]; return (v!=null && v!=='') ? String(v).replace(/[&<>"]/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])) : (d!=null ? d : ''); });
+      /* §v8.64（2423）posOrder.relAbs:true → 加载时把收银台订单里整格只写相对时间的值（“刚刚（12 分钟前）”“N 分钟前”“N 小时前”“刚刚”）
+         换算成 yyyy-mm-dd HH:mm:ss（相对打开原型的时刻），剩余可取消时间照样按这个时间算。不配不生效 */
+      Object.keys(PAGECFG||{}).forEach(k=>{ const po=PAGECFG[k] && PAGECFG[k].posOrder; if(!po || !po.relAbs || !Array.isArray(po.orders)) return;
+        const RE=/^\s*(刚刚(（\s*\d+\s*(分钟|小时)前\s*）)?|\d+\s*(分钟|小时)前)\s*$/;
+        const fix=o=>{ if(Array.isArray(o)){ o.forEach((x,i)=>{ if(typeof x==='string'){ if(RE.test(x)) o[i]=relToYmd(x); } else fix(x); }); return; }
+          if(o && typeof o==='object') Object.keys(o).forEach(j=>{ const x=o[j]; if(typeof x==='string'){ if(RE.test(x)) o[j]=relToYmd(x); } else fix(x); }); };
+        fix(po.orders); });
       /* §下拉自愈（彻底根治「填了对不上选项的值 → 泄漏 matriz 这种内部码」这一整类问题·2026-07-11）
          挂载时把每个 select 字段的 value 归一到「真实存在的选项键」：作者写精确选项 or default序号 or 写错，
          都自动纠正——对不上就取 default 索引、再兜底首项，绝不把原始码泄漏给用户。结构上让 mismatch 无害。 */
@@ -8231,12 +8332,20 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       function dvCheckField(fd){
         if(!fd || fd.type==='button' || fd.type==='html' || fd.type==='readonly' || fd.type==='valueLink') return '';
         const lab = fd.label || fd.ph;
+        /* §v8.64（2423）勾选网格（checkGrid）必选：看各项有没有勾上（items[]._on），不看 fd.value */
+        if(fd.type==='checkGrid') return (fdRequired(fd) && !(fd.items||[]).some(it=>it && it._on)) ? (L(fd.requiredMsg) || vMsg('vSelect', lab)) : '';
         if(fdRequired(fd) && dvEmpty(fd.value)) return L(fd.requiredMsg) || vEmptyMsg(fd, lab);
         const v = String(fd.value==null ? '' : (typeof fd.value==='object' ? L(fd.value) : fd.value)).trim();
         if(fd._failMsg!=null && dvFailSame(fd)) return String(typeof fd._failMsg==='object' ? (L(fd._failMsg)||'') : fd._failMsg);   /* §v8.54（BA） */
         /* §v6.27 together:{field,msg} → 和同板块另一个字段要么都填、要么都留空：另一个填了、自己空着就提示 */
         if(!v && fd.together && detailData.value){ let on=false; (detailData.value.sections||[]).forEach(sec=>{ if(!secShow(sec) || !(sec.fields||[]).includes(fd)) return; const o=(sec.fields||[]).find(x=>L(x.label)===L(fd.together.field)); if(o && String(o.value==null?'':o.value).trim()) on=true; }); if(on) return L(fd.together.msg); }
         if(!v) return '';
+        /* §v8.64（2423）多条值的文本域（fd.maxItems，按分号 / 逗号 / 空白分条）：itemRe 每条都要匹配（不符提示 itemReMsg，{x}=写错的那几条），
+           超过 maxItems 条提示 maxItemsMsg；不写 itemRe / maxItemsMsg 不生效 */
+        if(fd.itemRe || (fd.maxItems && fd.maxItemsMsg)){ const its=String(fd.value==null?'':fd.value).trim().split(/[\s;,，；]+/).filter(Boolean);
+          if(fd.itemRe){ let re=null; try{ re=new RegExp(fd.itemRe); }catch(e){} const bad=re ? its.filter(x=>!re.test(x)) : [];
+            if(bad.length) return String(L(fd.itemReMsg)||vMsg('vFormat',lab)).replace('{x}', bad.slice(0,3).join('、')); }
+          if(fd.maxItems && fd.maxItemsMsg && its.length>fd.maxItems) return String(L(fd.maxItemsMsg)).replace('{n}', fd.maxItems); }
         /* §v7.0 rules:[{pattern,flags?,msg}|{minLen,msg}] —— 和弹窗表格列同一种写法，按顺序只报第一条（取消理由要依次查中文或特殊符号 → 15 个字符 → 只有标点或重复字符） */
         if(Array.isArray(fd.rules)){ for(const r of fd.rules){ if(!r || typeof r!=='object') continue;
           if(r.pattern && !(new RegExp(r.pattern, r.flags||'').test(v))) return L(r.msg) || vMsg('vFormat', lab);
@@ -8485,7 +8594,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         if(hit) return { name:g(ec.name), taxId:g(ec.taxId), ie:g(ec.ie), street:g(ec.street), no:g(ec.no), bairro:g(ec.bairro), city:g(ec.city), uf:g(ec.uf), cep:g(ec.cep), phone:g(ec.phone) };
         return Object.assign({ name:'', taxId: tid.length===14 ? prtFmtId(tid) : '' }, fb||{}); }
       function prtTax(due){ const p=PCF().taxPct; if(!p) return null; return { fed:prtMoney(due*(+p.fed||0)/100), est:prtMoney(due*(+p.est||0)/100), fedPct:p.fed, estPct:p.est }; }
-      function prtUnit(u){ u=String(u||'').trim(); const un=PCF().unit||{}; let local=false; try{ local=!!(un.localRe && new RegExp(un.localRe).test(u)); }catch(e){} return (!u || local) ? String(un.def||u||'') : u; }
+      function prtUnit(u){ u=String(prtPT(u)||'').trim();   /* §v8.64（2423）单位写成 {zh,en,pt} 时先取葡文（原来显示成 [object Object]） */ const un=PCF().unit||{}; let local=false; try{ local=!!(un.localRe && new RegExp(un.localRe).test(u)); }catch(e){} return (!u || local) ? String(un.def||u||'') : u; }
       const prtOrd = k => [].concat((PCF().ord||{})[k]||[]);
       /* ── 收银台订单管理的一单 → 票据数据 ── */
       function docFromOrder(o, model){ if(!o) return null; const nf=o.nf||{}; model=String(model||'65');
@@ -8703,6 +8812,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         if(d && d.print && prtIsBtn(b)){ dlgDoPrint(d);
           /* 只有 act:'print'、没有别的动作的【打印】：打完关掉预览并提示（原来停在预览上） */
           if(b && typeof b==='object' && b.act==='print' && !(b.goto||b.opens||b.download||b.copy||b.setFlag||b.confirm)){ dlgClose(); msg(L(b.done||b.label)); return; } }
+        if(b && typeof b==='object' && b.validate && dlgFieldsInvalid(d)) return;   /* §v8.64（2423）okButtons 写 validate:true → 先按字段规则校验（红字在字段下方），通过才弹确认框 / 执行 */
         if(b && typeof b==='object' && (b.goto||b.opens||b.download||b.act||b.copy||b.setFlag||b.confirm)) return fireBtn(b, dlgRow.value);
         dlgClose(); msg(L((b && typeof b==='object') ? (b.done||b.label) : b)); }
       /* §v6.27 {qr.列下标}：原型示意用的 QR 图样（按 Key 生成，每张不同，打开时才算，不存进数据；不能真实扫码） */
@@ -9869,7 +9979,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         /* needSelP 只有批量工具条那几个入口会传 —— 别的地方调 fireBtn 一律不受这条约束 */
         if(needSelP!=null && !row && curSelectable.value && !selCount.value){
           const own = (b && typeof b==='object') ? b.needSel : undefined;
-          if(own!=null ? own!==false : !!needSelP){ ElementPlus.ElMessage({message:T('pickOne'), type:'warning'}); return; }
+          if(own!=null ? own!==false : !!needSelP){ ElementPlus.ElMessage({message:(b && typeof b==='object' && L(b.needSelMsg)) || T('pickOne'), type:'warning'}); return; }   /* §v8.64（2423）按钮自己写的 needSelMsg 优先 */
         }
         /* §v6.31 每次按钮开弹窗都重新决定「是否跳过已有历史记录的票」：只有 okButtons 写了 skipHist:true 的那个按钮才跳过 */
         if(b && typeof b==='object' && b.opens) EFX.skipHist = !!b.skipHist;
@@ -9914,7 +10024,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           if(dialogName.value){ const dd=(cfg.value.dialogs||{})[dialogName.value];
             if(dlgFieldsInvalid(dd) || dlgTableInvalid(dd)) return; }
           doTransition(b,row); return; }
-        if(b && b.download){ const n=doDownload(b.download); msg(n?((b.done?L(b.done):'已导出 ')+n):'导出失败'); return; }
+        if(b && b.download){ const n=doDownload(b.download, Array.isArray(row) ? row : null); msg(n?((b.done?L(b.done):'已导出 ')+n):'导出失败'); return; }
         /* §v4.3 作者显式写了 opens 的「删除」按钮，走 opens，不被「名字叫删除」劫持成内置确认框。
            （真系统 OMS 发票主体点删除弹的是「该发票账号不允许被删除」的说明窗，不是删除确认）
            显式写了 confirm 的，也走自己的确认框文案（真系统「删除 / 确认删除该税种? / 取消·确认」与内置那句不一样）。 */
@@ -9993,8 +10103,14 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                     confirmButtonText: b.okText?L(b.okText):(zh?'确定':'OK'),
                     cancelButtonText:  b.cancelText?L(b.cancelText):(zh?'取消':'Cancel') };
           if(b.confirmDanger) o.confirmButtonClass='el-button--danger';
-          ElementPlus.ElMessageBox.confirm(L(b.confirm), (b.confirmTitle===false?'':L(b.confirmTitle||b.label||'')), o)
-            .then(()=>{ dialogName.value='';   /* §v4.3 弹窗里的按钮带二次确认时，确认完要把原弹窗也关掉 */
+          /* §v8.64（2423）确认文字里 {fv:字段名} = 当前弹窗里这个字段填的值（确认框里显示所填邮箱）；按钮写 keepFv:true → 确认后把弹窗各字段的值记下，
+             设置卡片的 html 里用 {sv:字段名|or:默认} 显示（卡片显示弹窗里填的日期和邮箱）。不写不生效 */
+          const _dlgNow=(cfg.value.dialogs||{})[dialogName.value]; const _dfs=_dlgNow ? [].concat(...(_dlgNow.sections||[]).map(s=>(s&&s.fields)||[]), Array.isArray(_dlgNow.fields)?_dlgNow.fields:[]) : [];
+          const _dfv=k=>{ const f=_dfs.find(x=>x && (lblIs(x.label,k))); return f ? String(L(f.value)==null?'':L(f.value)) : ''; };
+          const _cTxt=String(L(b.confirm)).replace(/\{fv:([^}]+)\}/g,(m,k)=>_dfv(k));
+          ElementPlus.ElMessageBox.confirm(_cTxt, (b.confirmTitle===false?'':L(b.confirmTitle||b.label||'')), o)
+            .then(()=>{ if(b.keepFv) _dfs.forEach(f=>{ if(!f || f.label==null) return; const v=String(L(f.value)==null?'':L(f.value)); SAVEDFV[String(_zhOf(f.label))]=v; SAVEDFV[String(L(f.label))]=v; });
+                        dialogName.value='';   /* §v4.3 弹窗里的按钮带二次确认时，确认完要把原弹窗也关掉 */
                         if(b.setFlag && typeof b.setFlag==='object'){ Object.keys(b.setFlag).forEach(k=>{ FLAGS[k]=b.setFlag[k]; }); }
                         if(b.done!==false) msg(b.done?L(b.done):btnLabel(b)+T('executed'));
                         if(b.goto) doGoto(b.goto); }).catch(()=>{}); }
@@ -10230,20 +10346,20 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       /* §通用弹窗「确定」：okOpens→开下一个弹窗；否则关弹窗(可选 okThenCloseDetail 连带关整页)+ done 提示。用于开票复核弹窗。2026-08-22 */
       /* §真下载(v1.8)：写 download:{filename, mime?, content} → 真的生成文件让浏览器落盘，
          不再只弹「已导出」提示。content 支持多语言对象，会先经 L() 取当前语言。 */
-      function doDownload(dl){
+      function doDownload(dl, row){   /* §v8.64（2423）row = 点的是哪一行（行上【更多 › 下载】），文件名 / 内容里的 {r.N} 取这一行，不再落到第一行；不传 = 原样 */
         try{
           /* §v3.48 download 可以直接写成文件名字符串（download:'xxx.xml'）——
              原来只认 {filename,...} 对象，写字符串会静默落成 download.txt。 */
           const isStr = (typeof dl==='string');
           /* §v6.11 文件名 / 内容里也认 {r.列下标}、{key.列下标}（与打印预览同一套）：下载的 DANFE 是这一行的票，不是示例票 */
-          const name = isStr ? dl : ((dl&&dl.filename)?fillRow(L(dl.filename)):'download.txt');
+          const name = isStr ? dl : ((dl&&dl.filename)?fillRow(L(dl.filename), row):'download.txt');
           const ext = String(name).split('.').pop().toLowerCase();
           const MIME = { xml:'application/xml;charset=utf-8', csv:'text/csv;charset=utf-8',
                          json:'application/json;charset=utf-8', pdf:'application/pdf',
                          zip:'application/zip', xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
           const mime=(!isStr && dl && dl.mime) || MIME[ext] || 'text/plain;charset=utf-8';
           let body=isStr ? ('' + name + '\n（原型示例文件）') : L((dl&&dl.content)||'');
-          if(typeof body!=='string') body=JSON.stringify(body,null,2); else body=fillRow(body);
+          if(typeof body!=='string') body=JSON.stringify(body,null,2); else body=fillRow(body, row);
           /* §v6.12 dl.base64 → 二进制文件原样下载（真 Excel 模板） */
           if(!isStr && dl && dl.base64){ const bin=atob(dl.base64); const u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i); body=u8; }
           const blob=new Blob([body],{type:mime});
@@ -10728,7 +10844,9 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       function calcDeadline(r, c, lineTxt){
         const ls = cellLines(r[c.col!=null?c.col:0]);
         const s = c.line ? (ls[c.line-1]||'') : ls.join(' ');
-        const m = s.match(/(\d{2})\/(\d{2})\/(\d{4})[\s ]+(\d{2}):(\d{2})(?::(\d{2}))?/);
+        let m = s.match(/(\d{2})\/(\d{2})\/(\d{4})[\s ]+(\d{2}):(\d{2})(?::(\d{2}))?/);
+        /* §v8.64（2423）也认 yyyy-mm-dd HH:mm[:ss]（换成与 dd/mm/yyyy 同样的分组顺序） */
+        if(!m){ const y=s.match(/(\d{4})-(\d{2})-(\d{2})[\sT]+(\d{2}):(\d{2})(?::(\d{2}))?/); if(y) m=[y[0], y[3], y[2], y[1], y[4], y[5], y[6]]; }
         if(!m) return { over:false, html:'—' };
         /* §v6.13 hoursBy:{col, map:{'NFC-e 65':0.5}} → 按这一行某格的文字选时限（巴西：NF-e 55 授权后 24 小时、NFC-e 65 授权后 30 分钟，2026-10-21 用户定） */
         let hrs = c.hours||24;
@@ -11488,6 +11606,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       afTb,afSel,afQ,afCfg,afRows,afDlgOpen,afConflict,afConfirm,                       /* §v6.5 从清单里挑（关联门店） */
       posAdOpen,posAd,posAdErr,posAdSave,
       posNfe,posIsCnpj,posDocName,posIssued,posVoidOpen,posVoidWhy,posVoidErr,posVoidDo,posRedeem,
+      posVoidAlert,nfRowLab,fdReqField,fillSaved,SAVEDFV,   /* §v8.64（2423） */
       curHandover,hvTab,hvNote,hvPend,hvUpload,hvFix,
       hvDate,hvDaily,hvStats,hvRecOpen,hvRecTab,hvRecSel,hvDetail,hvOpenDetail,   /* §v6.2 日结页/交班记录/明细 */
       isPosPage,posHead,posNav,posNavOpen,posNavItems,posNavIcon,posNavGo,posNavBack,posStores,posStoreName,posPickStore,   /* §v6.0 收银台模块切换抽屉 */
