@@ -6,6 +6,9 @@
  *   不用「」（功能/页面/按钮用【】，状态/类型/提示原文用“”）；不用口语、简写、破折号旁注。
  *   规则正文见 skills/prd/SKILL.md「中文书面用语 / 直白写法铁律」。
  *
+ * 2026-11-20 加：占位文字默认规范（system-design-spec.md §7.6）——原型数据里占位（ph / xxxPh / placeholder）正好写成“请输入”“请选择”、不带字段名 = 红。
+ *   字段没写占位时骨架会自动拼“请输入/请选择 + 字段名”，所以不写比写光秃秃的“请输入”更对。
+ *
  * 只查【项目数据】三个字面量（SYSTEMS / NAV / PAGECFG）里含汉字的字符串；
  *   标准件自带文案（骨架、标注层）不在此闸范围；charRules / pattern / bad 等校验规则正则跳过。
  * 11-03 之前构建、之后未再构建的旧原型只提示不拦（不擅自改其他产品的存量原型）。
@@ -43,9 +46,10 @@ function grabLiteral(src, decl) {
 function checkOne(file) {
   const html = fs.readFileSync(file, 'utf8');
   const legacy = fs.statSync(file).mtime < new Date('2026-11-03T00:00:00');
-  const seen = new Set(); let brk = 0; const brkEx = []; const oral = {};
+  const seen = new Set(); let brk = 0; const brkEx = []; const oral = {}; const barePh = [];
   function walk(node, p) {
     if (typeof node === 'string') {
+      if (/(^|\.)(ph|\w*Ph|placeholder)(\.zh)?$/.test(p) && /^(请输入|请选择)$/.test(node.trim())) barePh.push(p + '：“' + node.trim() + '”');
       if (!/[\u4e00-\u9fff]/.test(node) || seen.has(node)) return; seen.add(node);
       const t = node.replace(/<[^>]+>/g, '');
       const n = (t.match(/「/g) || []).length; if (n) { brk += n; if (brkEx.length < 5) brkEx.push(p + '：' + t.slice(Math.max(0, t.indexOf('「') - 10), t.indexOf('「') + 20)); }
@@ -65,6 +69,7 @@ function checkOne(file) {
   if (!parsed) { console.log('    ⊘ 未找到项目数据字面量，跳过'); return false; }
   const reds = [];
   if (brk) reds.push('仍有 ' + brk + ' 处「」——功能/页面/按钮须用【】，状态/类型/提示原文须用“”。例：' + brkEx.join(' ｜ '));
+  if (barePh.length) reds.push('有 ' + barePh.length + ' 处占位只写了“请输入”或“请选择”，没带字段名。按默认规范，输入框写“请输入 + 字段名”，下拉框写“请选择 + 字段名”（如“请输入客户名称”“请选择客户类型”）；用例子当占位的保留例子；也可以删掉这个占位，骨架会自动拼上字段名。位置：' + barePh.slice(0, 6).join(' ｜ ') + (barePh.length > 6 ? ' 等' : ''));
   const hits = Object.entries(oral);
   if (hits.length) reds.push('出现口语、简写或破折号旁注：' + hits.map(([w, o]) => w + '×' + o.n + '（如 ' + o.ex + '）').join('、'));
   if (!reds.length) { console.log('    ✅ 全部为中文书面用语'); return false; }

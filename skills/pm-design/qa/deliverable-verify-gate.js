@@ -158,6 +158,42 @@ for (const f of comp) {
 }
 if (stale) { red++; console.log('    ❌ 交付件过期：改了源/骨架但没重建 —— 跑 rebuild-deliverable.ps1'); }
 else console.log('    ✓ 交付件比所有源/标准件都新（已重建）');
+
+/* ── ①.6 §2026-11-20 内容规范检查（静态·不开浏览器·约 1 秒）：
+   【铁律】原型按默认规范、原型遵守 PRD 字段规范和用例规则模版。交付件自检（快速模式的后台报告、全量重建）都会跑这两项，红了交付件自检就红：
+     a) 文案书面用语 + 占位不许光秃秃写“请输入/请选择”（proto-copy-writing-gate.js）；
+     b) 原型和配对 PRD 的字段一致：字段名、必填星号、占位、没填提示（prd/qa/prd-prototype-field-gate.js）。
+        配对 PRD = 交付件或 project-data 同目录的 prd-data.json，且 system_name 和原型一致；找不到就跳过并写明。 */
+console.log('\n── ①.6 内容规范（文案、占位、PRD 字段一致）──');
+const runGate = (file, args) => {
+  try { return { c: 0, out: execFileSync(process.execPath, [file, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }) }; }
+  catch (e) { return { c: e.status == null ? 2 : e.status, out: String(e.stdout || '') + String(e.stderr || '') }; }
+};
+const showRed = out => out.split(/\r?\n/).filter(l => /❌|⚠|FAIL|- /.test(l)).slice(0, 12).forEach(l => console.log('      ' + l.trim()));
+{
+  const r = runGate(path.join(__dirname, 'proto-copy-writing-gate.js'), [DELIV]);
+  if (r.c === 0) console.log('    ✓ 文案书面用语、占位文字合规');
+  else { red++; console.log('    ✗ 文案或占位不合规（proto-copy-writing-gate.js）：'); showRed(r.out); }
+}
+{
+  let sys = ''; try { const m = fs.readFileSync(DELIV, 'utf8').match(/"system_name"\s*:\s*"((?:[^"\\]|\\.)*)"/); sys = m ? m[1] : ''; } catch (_) {}
+  const dirs = [...new Set([path.dirname(DELIV), PDATA ? path.dirname(PDATA) : null].filter(Boolean))];
+  let prdFile = null;
+  for (const d of dirs) {          // 先找 system_name 一致的 prd-data.json，再找 PRD 的 .md（文件名含系统名，或目录里只有一份）
+    const f = path.join(d, 'prd-data.json');
+    if (fs.existsSync(f)) { try { const p = JSON.parse(fs.readFileSync(f, 'utf8').replace(/^﻿/, '')); if (!sys || p.system_name === sys) { prdFile = f; break; } } catch (_) {} }
+    let mds = []; try { mds = fs.readdirSync(d).filter(x => /^PRD.*\.md$/i.test(x) && !/^~\$/.test(x)); } catch (_) {}
+    const byName = sys ? mds.filter(x => x.includes(sys)) : [];
+    if (byName.length) { prdFile = path.join(d, byName.sort().pop()); break; }
+    if (mds.length === 1) { prdFile = path.join(d, mds[0]); break; }
+  }
+  if (!prdFile) console.log('    ⚠ PRD 字段一致性未检查（不算通过）：交付件或 project-data 同目录没找到配对的 PRD（system_name 一致的 prd-data.json，或 PRD-<系统名>.md）。还没写 PRD 可以先交付原型；写好 PRD 后重跑自检。');
+  else {
+    const r = runGate(path.join(__dirname, '..', '..', 'prd', 'qa', 'prd-prototype-field-gate.js'), [DELIV, prdFile]);
+    if (r.c === 0) console.log('    ✓ 原型字段和 PRD 字段规范、用例规则一致（' + path.basename(prdFile) + '）');
+    else { red++; console.log('    ✗ 原型和 PRD 字段规范、用例规则不一致（prd-prototype-field-gate.js）：'); showRed(r.out); }
+  }
+}
 }
 
 /* ── ①.5 分片并行（父进程）：把页分成 JOBS 片，各起一个子进程各开一个浏览器 ── */

@@ -98,6 +98,11 @@ node skills/pm-design/qa/inject-latest-anno-layer.js <你的原型.html> <输出
 - **提 Pull Request**（推荐）——你的修复和测试直接被合并，一次修复、所有人受益。
 - **提 Issue / 直接告诉作者**——作者在上游修好后发版。
 
+### B3a. 【铁律】推到 GitHub 的文字只写通用能力（2026-11-20 用户铁律）
+推送到 GitHub 的提交说明、CHANGELOG、README，以及公开工具包里的所有文字，不许带具体项目的系统名称和业务功能名称，只写工具包提供的通用能力。提 Pull Request、写提交说明、改 CHANGELOG 和 README 时都按这条写。工具包作者的发布脚本会检查提交说明和说明文字的新增内容，发现项目业务词就拒绝发布。
+- 正确：“表格单元格支持第二行说明”“弹窗字段支持条件必填”“表格行名支持多语言映射”“弹窗按钮带确认框时先校验字段”。
+- 错误：“××单类型下面加第二行”“作废××单保留原记录”“××页待上传张数”“三语行名”（带了某个具体项目的单据名、页面名、功能名，或只有那个项目才看得懂的简称）。
+
 ### B4. 升级方式，以及为什么别长期分叉
 升级一律用一键更新：跟 AI 说“帮我更新 Proenga”，或在 proenga 文件夹里运行 `update-proenga.ps1`（Windows）、`update-proenga.sh`（macOS / Linux），细则见 `skills/proenga-update/SKILL.md`。
 

@@ -9,7 +9,7 @@
   "pagecfg": {
     "OMS-recharge-list": {
       "listTitle": "充值管理", "primaryBtn": "充值",
-      "filters": [ { "label": "充值单号", "ph": "请输入" } ],
+      "filters": [ { "label": "充值单号", "ph": "请输入充值单号" } ],
       "toolbar": ["导出"],
       "columns": ["充值单号", "金额", "状态"],
       "rows": [ ["CZ001", "BRL 100,00", { "t": "已审核", "c": "green" }], ["CZ002", "BRL 200,00", { "t": "待审核", "c": "orange" }] ],

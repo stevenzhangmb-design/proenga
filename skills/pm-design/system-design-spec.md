@@ -446,7 +446,7 @@
 
 | 变体 | EP 写法 |
 |---|---|
-| 基础 | `<el-input v-model="text" placeholder="请输入" />` |
+| 基础 | `<el-input v-model="text" placeholder="请输入名称" />`（占位 = 请输入 + 字段名，见 §7.6）|
 | 禁用 | `<el-input v-model="text" disabled />` |
 | 可清空 | `<el-input v-model="text" clearable />` |
 | 带 icon | `<el-input><template #prefix><el-icon><Calendar /></el-icon></template></el-input>` |
@@ -919,7 +919,7 @@
   <el-select v-model="f.personType" style="width:110px">
     <el-option v-for="p in personTypes" :key="p" :label="p" :value="p"></el-option>
   </el-select>
-  <el-input v-model="f.personKw" placeholder="请输入" clearable style="flex:1;margin-left:8px"></el-input>
+  <el-input v-model="f.personKw" :placeholder="'请输入' + f.personType" clearable style="flex:1;margin-left:8px"></el-input>
 </div>
 ```
 
@@ -1156,7 +1156,7 @@ if (f.personKw && pf) list = list.filter(r => (r[pf]||'').includes(f.personKw));
 | 类型 | 写法 | 渲染 |
 |---|---|---|
 | 上传 | `{"type":"upload","upText":"上传证书"}` | **「＋ 上传证书」蓝色文字链**（真系统就是链接，不是输入框）|
-| 密码 | `{"type":"password","ph":"请输入"}` | 密码框 |
+| 密码 | `{"type":"password","ph":"请输入密码"}` | 密码框 |
 | 只读 | `{"disabled":true}` | 灰底禁用输入框（如 CNPJ）|
 | 下拉/日期/开关/多行/只读文本 | `select` / `date` / `switch` / `textarea` / `readonly` | 对应控件 |
 
@@ -1497,7 +1497,7 @@ if (f.personKw && pf) list = list.filter(r => (r[pf]||'').includes(f.personKw));
 | 下拉 | `{"ctrl":"select","options":["A","B"],"value":"A"}` |
 | 数字+后缀 | `{"ctrl":"number","value":"30","suffix":"%"}` |
 | 勾选框 | `{"ctrl":"checkbox","value":false,"text":"含买家运费开票"}` |
-| 输入框 | `{"ctrl":"input","value":"zp","ph":"请输入"}` |
+| 输入框 | `{"ctrl":"input","value":"zp","ph":"请输入免费样品/赠品"}` |
 | 删除图标 | `{"ctrl":"del"}` |
 | 顶部按钮 | `sec.table.addBtn = "添加店铺"` |
 
@@ -1840,6 +1840,21 @@ ElMessage.error({ message: '操作失败', showClose: true, duration: 0 })
 
 垂直 16-20px，标签与控件 4-8px。
 
+### 7.6 占位文字（2026-10-26 用户定·默认规范）
+
+适用于新增、编辑、弹窗里的输入项（筛选区另按 §5.3a：无 label，字段名写进占位，下拉默认“全部XX”）。
+
+| 控件 | 占位写法 | 正确 | 错误 |
+|---|---|---|---|
+| 输入框、文本域、数字框、密码框 | 请输入 + 字段名 | 请输入客户名称 / Enter Customer Name / Informe Nome do cliente | 请输入 |
+| 下拉框、日期、级联、选人 | 请选择 + 字段名 | 请选择客户类型 / Select Customer Type / Selecione Tipo de cliente | 请选择 |
+| 用例子当占位的字段 | 保留例子原文 | 例如 00.000.000/0000-00、name@example.com | 把例子换成“请输入” |
+
+- 字段名取该输入项的标签原文；多语言原型三种语言各按本语言拼：中文“请输入/请选择 + 字段名”，英文“Enter / Select + 字段名”，葡文“Informe / Selecione + 字段名”。
+- 原型数据里字段没写占位时，骨架自动按上表拼出占位；写了就用写的。
+- 原型数据里占位正好写成光秃秃的“请输入”“请选择”（不带字段名）会被交付检查判红。
+- 填错提示按用户语言写短句：“请输入XX”“格式不正确”“最多 N 个字符”，和 PRD 字段规范一致。
+
 ---
 
 ## 8. 页面结构模板
@@ -1853,7 +1868,7 @@ ElMessage.error({ message: '操作失败', showClose: true, duration: 0 })
 | **菜单** | 顶部横向主菜单+悬停多列大菜单；内容区多页签(列表×/详情×可关)；可切经典左侧栏。§5.1/§5.2/§5.3g | ✅ |
 | **查询条件** | 筛选区**无 label·字段名进占位符**；下拉默「全部XX」；日期=`维度下拉+[开始]to[结束]`；**商品查询=统一三段组合**(字段▾+批量搜索+匹配▾)；末尾`[查询蓝][重置白]`；有【更多筛选】时漏斗放最后一个查询条件后面、紧挨【查询】前面(`[漏斗][查询][重置]`)，🚫禁夹在中间某个查询条件后面(`pos:'afterCombo'` 已作废)。§5.3/§5.3a/§5.3b/§5.3u。🚫禁"搜索/清空" | ✅ |
 | **列表** | 筛选区→状态(多=左导航列带计数/少=页签带计数)→工具栏(`已选:N`+主操作·**新增类永不禁用**)→表格→分页。操作列**一律图标**(§5.3j)非文字；可点单元格=蓝链。**3 子变体**：①单据类(状态流转+审批)②主数据(增删改查)③**报表类**(只`查询/重置/导出`·**无 CRUD**·**分组数字列**如良品/不良品×总/锁定/可用·表体可 13/12px 密集)。§8.1/§5.4 | ✅(WMS 11模块全扫) |
-| **新增** | **整页新页签**(`/add`)·分区标题·**3列 label在上**·必填红`*`·帮助灰`?`·占位「请输入/请选择」·底部 sticky **`[取消][保存]`**(保存主色)。**不是弹窗、标准新增=保存**。§8.2 | ✅ |
+| **新增** | **整页新页签**(`/add`)·分区标题·**3列 label在上**·必填红`*`·帮助灰`?`·占位「请输入/请选择 + 字段名」(如「请输入客户名称」「请选择客户类型」·§7.6)·底部 sticky **`[取消][保存]`**(保存主色)。**不是弹窗、标准新增=保存**。§8.2 | ✅ |
 | **编辑** | 同新增布局·字段**回显**·`/edit`·标题「编辑」·**比新增多只读回显 meta 区**(Status/创建人/创建时间)·底部`[取消][保存]`(设置/配置类整页=`[取消][提交]`)。§8.2 | ✅实测(商品31字段) |
 | **删除** | **不进整页**：行内🗑或勾选后工具栏「删除」→**二次确认框**「确认删除该XX？」`[取消][确定]`→toast「删除成功」+刷新。产操作日志。**⚠️删除受状态前置约束**(如商品仅「待审核/已驳回」可删)：状态不符**不弹确认框·弹拦截 toast**(§5.3t)。§6.2 | ✅状态拦截实测(确认框逐字文案待实测) |
 | **查看** | **整页新页签**(`/detail`/`/view`)·(过程型)顶部**横向状态步骤条+时间戳**·分区标题·**3列 label在上只读回显**(空`--`)·底部**居中单个「返回」**。**绝不是弹窗、绝不是`[取消][提交]`**。§8.3 | ✅ |
@@ -1963,13 +1978,13 @@ ElMessage.error({ message: '操作失败', showClose: true, duration: 0 })
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
         <div class="form-grid"><!-- 3列 -->
           <el-form-item label="客户名称" prop="name" required>
-            <el-input v-model="form.name" placeholder="请输入" />
+            <el-input v-model="form.name" placeholder="请输入客户名称" />
           </el-form-item>
           <el-form-item label="客户简称" prop="shortName">
-            <el-input v-model="form.shortName" placeholder="请输入" />
+            <el-input v-model="form.shortName" placeholder="请输入客户简称" />
           </el-form-item>
           <el-form-item label="客户类型" prop="type">
-            <el-select v-model="form.type" placeholder="请选择" style="width:100%" />
+            <el-select v-model="form.type" placeholder="请选择客户类型" style="width:100%" />
           </el-form-item>
         </div>
       </el-form>

@@ -1,6 +1,6 @@
 {
  "_说明": "本文件由发布脚本自动生成，不要手工改。update-proenga.ps1 / update-proenga.sh 用它核对新版是否完整、判断哪些旧文件可以删除。",
- "version": "2026.11.20.2",
+ "version": "2026.11.20.3",
  "files": {
   ".agents/skills/dev-codegen/SKILL.md": "4ecaea1fd3899373f76ecd2cf6f84b03b13386ba",
   ".agents/skills/dev-prompts/SKILL.md": "624f7c3c3da8cc69e5a19863bb1d51c66ad93279",
@@ -51,13 +51,13 @@
   ".github/skills/verify-prototype/SKILL.md": "821d9330bb92ae1b9f00a8cef24fc03ed31adc61",
   ".gitignore": "4c79d5bcfe93dbe43aa70c1ed11649d9d713fee9",
   ".mcp.json.example": "166f13e31ffc38be1a73b7ac9cb898f2ec19605d",
-  "AGENTS.md": "19bcbcb566f1fd5413424372f5ef031b9d2b8767",
-  "CHANGELOG.md": "7b7d85d1f706cd1b7ae1549946ae55e9c703ce4a",
-  "CLAUDE.md": "ad5e8defb33150668118689c14eadef81a48a645",
+  "AGENTS.md": "65f7d98aa5276ab1f903796ecb931befd6a509a5",
+  "CHANGELOG.md": "06de227e8dcd6a040d114f881b3d9aa998616208",
+  "CLAUDE.md": "e092a631c68bc170f98d591b5d91a2f4e508a9c6",
   "INSTALL.md": "ff7da8ec32ac5e79af4478ba485cd0f0e94f88d4",
   "LICENSE": "af7501a71a5774098519eee4324ab75cc73d9a4a",
   "README.md": "ed02d4286d218b3d03ceddc41e8cb84ffc1efabe",
-  "VERSION": "0b847730ab3d3ef0461d8d0044230908f047c3d6",
+  "VERSION": "6d9b3d0e915e619d2637fbacb342b12ec7b3059f",
   "anno-server/anno-config.example.json": "53f8a23cf9689de61d17667d2dac99bc0cc64b9f",
   "anno-server/assemble-once.js": "9df4eb3cde539a64cdb92deb723283ad82ffa5c4",
   "anno-server/build-shared-generator.js": "14d491f41d75ed20df4f0e88a34eefa83915b639",
@@ -75,7 +75,7 @@
   "skills/_shared/dev-stack-spec.md": "d3c3c8d7568472ead3de5fda5dd1809c7ca792a4",
   "skills/_shared/downstream-skill-conventions.md": "e07a98e41f05749905254b11ae7e4eb9014bde5b",
   "skills/_shared/efficiency-cheatsheet.md": "52ac3cd090d705fc1fc87bdabf89c2d008bd43e6",
-  "skills/_shared/fix-and-upstream-protocol.md": "f6ff6ea04e7e87b075900df1e94a67b109efe479",
+  "skills/_shared/fix-and-upstream-protocol.md": "912c5cf382993c26188a67b9db46d1e40cc420f6",
   "skills/_shared/qa/_no-throwaway-script-hook.js": "1c47a3ab40b998c6cf79e699bb7a947fe7ca540a",
   "skills/_shared/qa/_stop-ledger-check.js": "3b6862899850c7b5e74afd52f379799c5c6f9c00",
   "skills/_shared/qa/_stop-speed-budget.js": "69977aedd79d2bec4a96d917edfd7e966c652f4b",
@@ -117,14 +117,14 @@
   "skills/dev-prompts/SKILL.md": "cb15dc45f877284387674468f3d437f29fa247b2",
   "skills/dev-prompts/team-config.md": "b0533be34edb4c935882d5f5764fde3391057618",
   "skills/dev-prompts/template.md": "873b758cd925a74d3e7ab1eb6952153e5f3aec4b",
-  "skills/pm-design/SKILL.md": "71025176afe3ca9fe5b7162d7a410465d999275c",
+  "skills/pm-design/SKILL.md": "3cd7d1ff1b14e849ec6be0a18a741af666c2dea2",
   "skills/pm-design/annotation-templates.md": "673cc7ba8251823989e46d17350fcb93255465f7",
   "skills/pm-design/business-analysis-template.md": "1ac3e47fb84cfb7afaaac55ddeaa9f6e52dea287",
   "skills/pm-design/check-annotation-coverage.ps1": "106e061c86945652d089c4224fab33734d8e8d02",
   "skills/pm-design/components/annotation-layer.html": "2b18a48c3f26c20f2bf39730731d9b5387d55351",
   "skills/pm-design/components/host-shell.html": "acd5ff6f9442c671ac28300abacfb1d2da1f6f18",
   "skills/pm-design/components/page-renderer.html": "26f6b8ecde893828746e3aa4580eb4d8e5705329",
-  "skills/pm-design/components/prototype-skeleton.html": "751c4fe43f2c64cadc294f8d9aa4d66ca96fd383",
+  "skills/pm-design/components/prototype-skeleton.html": "5b3af973786d7c57622ddc9f065b7e9f79bc8a37",
   "skills/pm-design/examples/capture-mode-retail-product-management.md": "54d107f8b5c178ca9a85992749a37903157fe447",
   "skills/pm-design/examples/project-data.sample.json": "f4e74b564b66664abb132f0cce30f4c748dbd434",
   "skills/pm-design/i18n-compact.js": "7c19f2194a4253fabae88cd25751493fcedf0ca2",
@@ -177,7 +177,7 @@
   "skills/pm-design/qa/contract-anno-prototype-test.js": "a35dfed5c1b8dcbfe9aebf6ad8a27862310c4bf8",
   "skills/pm-design/qa/delete-sync-isolated-gate.js": "ebe62d4baa302ac07a2b7bf824d37843592c084c",
   "skills/pm-design/qa/deliver-gate.js": "b39eb0fb99f08fbb17f1985bd62cc880c03f191a",
-  "skills/pm-design/qa/deliverable-verify-gate.js": "1a69596f12a9247ecfe5ccbe09f307942de18838",
+  "skills/pm-design/qa/deliverable-verify-gate.js": "2a13f1a3c79bfe93011161d6faad780df9aa2cbc",
   "skills/pm-design/qa/design-baseline.json": "35056b8f6cab55666e7ab674a9136fb277e25e37",
   "skills/pm-design/qa/design-token-gate.js": "f8c30871774aa38033a221aa0cbd137618500740",
   "skills/pm-design/qa/dialog-eyeball-gate.js": "506bb9b5469f81d5458213036daf12244e6e2ab9",
@@ -187,10 +187,10 @@
   "skills/pm-design/qa/fidelity-gate.js": "f4c651737e0bad8eb6fe563cb80f6fc41c4897cf",
   "skills/pm-design/qa/fixtures/custom-shell-old-layer.html": "d223fc350ce39d8447529619f4c9bd8285cdd192",
   "skills/pm-design/qa/fixtures/reference-prototype.html": "7a2c2b992e95c72e63e3e4479b72057b28dc6ccd",
-  "skills/pm-design/qa/fixtures/roundtrip-data.json": "50681a1b41fa60141f8eb0545a62a20d9f02bdbc",
-  "skills/pm-design/qa/fixtures/sample-deliverable-data.json": "8be1505aa0ccc261b314d79b710cc8f5b7bae2c7",
+  "skills/pm-design/qa/fixtures/roundtrip-data.json": "69e1dd0620b8b4e6419ae78ae422eb5101bfab84",
+  "skills/pm-design/qa/fixtures/sample-deliverable-data.json": "5c6710dbb1f5df216115196ea0d8fec2ce277ae8",
   "skills/pm-design/qa/fixtures/vt/br-trilingual.json": "eecfce2cb5394f2e2344baccd77752b26d81eaaa",
-  "skills/pm-design/qa/fixtures/vt/cn-b-admin.json": "d2c410443e6dc9a3cfb5e9a32649808a39aae85f",
+  "skills/pm-design/qa/fixtures/vt/cn-b-admin.json": "79f69ba8ef5b336f9b5f558f60392a8406ff104b",
   "skills/pm-design/qa/fresh-install-smoke.js": "b188b883db074840e5494b70a9a155cd0a9369fc",
   "skills/pm-design/qa/full-interaction-regression-gate.js": "4a02abd5a2690cfdd2c9337b7188e1f34b645204",
   "skills/pm-design/qa/full-pipeline-audit.js": "506ec53bfd93ac0a50ffd0ae0f0d260b7399fe1c",
@@ -213,7 +213,7 @@
   "skills/pm-design/qa/playwright.config.js": "d47f61085762485e68d8fb191c214b9322620a91",
   "skills/pm-design/qa/prd-generator-test.js": "08a513f525f33d91fbc15098875c31aff70b1f2a",
   "skills/pm-design/qa/product-filter-gate.js": "2e649bcc320bde4f127bcc709c85da29140da78a",
-  "skills/pm-design/qa/proto-copy-writing-gate.js": "654b8c4f5ed59647da86d7969e11cc295de88f53",
+  "skills/pm-design/qa/proto-copy-writing-gate.js": "3a2fc844866d2a1ab860dc26e117ab73034da10f",
   "skills/pm-design/qa/prototype-pmdesign-gate.js": "52cbf078b71d69dbe8c1c5b13c2e74ae3a10dd6d",
   "skills/pm-design/qa/prototype-standard-sync-gate.js": "588c16be5c354987cd8bf1f51d8d1e11f06676fe",
   "skills/pm-design/qa/real-deliverable-smoke-gate.js": "0f3f2840e2d0cc79d0a491491cd277b6a3187321",
@@ -243,7 +243,7 @@
   "skills/pm-design/scaffold.js": "3cacd4c130a5383ce120d44f17c54626021cda96",
   "skills/pm-design/shot.ps1": "93089d8d2a455ead8401fd2b7e7b2ba04d52d140",
   "skills/pm-design/system-design-spec-mobile.md": "9a7ab4607ef0accb3b45c110d3a4fc4323bec887",
-  "skills/pm-design/system-design-spec.md": "e6b1859b68767cfbecf947f50255f9054dba296b",
+  "skills/pm-design/system-design-spec.md": "80eccf2d942ef99e537519c2a4457bf6ae6519da",
   "skills/pm-design/v1-master-spec.md": "0de3067797a5d2b613e53fa17fe69fa98b343f28",
   "skills/pm-design/vendor/ep.css": "1bdde2347dce9014e96b83fcb055d9a8991a8986",
   "skills/pm-design/vendor/ep.css.url": "42733d8865f42f5c148f85c26d547e100a5ece18",
@@ -258,7 +258,7 @@
   "skills/pm-design/vendor/vue.js": "9469d82c60cfbfdf5956a9202f85ff8b6a563eb4",
   "skills/pm-design/vendor/vue.js.url": "fcb48932d3e2970b30928af2371c0e20a08ce5bf",
   "skills/pm-design/工程命名规范.md": "d773b45a67738b5122a07309f9d3779ade1f2f5c",
-  "skills/prd/SKILL.md": "dd2ce4f686ebcaac1c1d0d8c3837c2be741518f1",
+  "skills/prd/SKILL.md": "0efb50fd5c2b3f6b5cd45641ce408ee9dc366d70",
   "skills/prd/_anno-browser.js": "7a2a212dcfa5ffc7705706941dea9a2e0232c4f2",
   "skills/prd/_rules/prd-directory-numbering.mdc": "af929b1495d4f581ca8287199e56ea8111054692",
   "skills/prd/_rules/prd-post-generation-deepcheck.mdc": "d8665d3a968ee4d07cead6dd92f780669536381d",
@@ -280,7 +280,7 @@
   "skills/prd/qa/prd-content-lint.js": "cd93cdc90e85d1742cdf485c02e2be2be6a390e3",
   "skills/prd/qa/prd-draft-sync-gate.js": "64990887cb171cb2b2b5d7a15a7c4157498953b9",
   "skills/prd/qa/prd-name-fidelity-gate.js": "b873b20953132c590020d72ae8694fb889ab8e6d",
-  "skills/prd/qa/prd-prototype-field-gate.js": "119033e47f7444c62cf24bb459b61c1299d653ae",
+  "skills/prd/qa/prd-prototype-field-gate.js": "cf52899454d4e37564269e8a45b14f2e205b699e",
   "skills/prd/qa/prd-structure-lint.js": "d59e8dcb0dc633f11a1d937f022c3d7193b99060",
   "skills/prd/qa/prd-system-attribution-gate.js": "43886c655860ba7f9a4e0cc7a0dd7f1c9da6bc5b",
   "skills/prd/references/quality-checklist.md": "d9ee88d1a05e5451f9f44b1bf674519769a74d8d",
@@ -342,6 +342,7 @@
    "9bb9d5d373407dcd60185969f8151ec17e76a499"
   ],
   "AGENTS.md": [
+   "19bcbcb566f1fd5413424372f5ef031b9d2b8767",
    "5d66ec2eaffa61c7e8561369fdc612eaae7a83fb",
    "9ab556757024dcb78a70ad4c303cfc87b003a33d",
    "9d395e5ab96889047f23db851a5ed7d474652f24"
@@ -351,6 +352,7 @@
    "4279f4c22cd993629c5ab556f39b58ad5a966707",
    "4458ee53599309ff2b4abc56afcb3e5a8b69a2a0",
    "45641414dc65b2c41799076b5dd0a962ae761682",
+   "7b7d85d1f706cd1b7ae1549946ae55e9c703ce4a",
    "a312943e7db9169bc9502315db18ea8475743ca3",
    "a4e95af4f3131dd05970b1af020e48067b086bd5",
    "b27b532c4eea9ed6ad5920898d9294a0fb993d8a",
@@ -362,6 +364,7 @@
    "6afcf5be234072ee82beaede84754114d35bcff4",
    "89ca99f3db286bf14b58b7cf1568a5900737d007",
    "9240e72eb1d663aaa8a174b53c2a9b9d37306587",
+   "ad5e8defb33150668118689c14eadef81a48a645",
    "cfd3cc36933b0dd8cfde43267e0fda877f4abed9"
   ],
   "INSTALL.md": [
@@ -415,7 +418,8 @@
   ],
   "skills/_shared/fix-and-upstream-protocol.md": [
    "de344159bbbcfbc88fa3df999f9ad59cce260af9",
-   "e5302b8e7526f260017841fafe1d6f01e0a3dafd"
+   "e5302b8e7526f260017841fafe1d6f01e0a3dafd",
+   "f6ff6ea04e7e87b075900df1e94a67b109efe479"
   ],
   "skills/_shared/qa/verify-render-sync.js": [
    "0ce492c834f2e7a266b75a1c4bdbdae03d1f868b"
@@ -449,6 +453,7 @@
    "20400d18e2fd7888c9ddb22900078831b7a83901",
    "2af538ac3097eb9d5234c6c1f54fb68356c5a408",
    "536eb13b693c02d46cf7d46aafeaec4cbebf7564",
+   "71025176afe3ca9fe5b7162d7a410465d999275c",
    "78f96d2f7cc635b4d474bef08699652665b67869",
    "8f74f6d575cbaf62d2dd349cb41368b95f1b61c3",
    "c20164a250989b2a865e83a41ab04ec77caee830",
@@ -479,6 +484,7 @@
    "60645b42fb06cb9a1416337ec8d13d412a46b019",
    "6b3e7051dda2e071a9a5482d7cef8c6034b1ced5",
    "6b65fd997c6e8bd41d7dbd7354c6d18b9d661cab",
+   "751c4fe43f2c64cadc294f8d9aa4d66ca96fd383",
    "766d0c0576753f40cfb2f0a6efa103b74878c131",
    "81c8403110e9ab0784385c4c2f5bb5a7fe30cef1",
    "a5ca9945f838580ff9a44ab64123b6e3de57c0df",
@@ -565,6 +571,7 @@
    "fa84c95bcbbe2881faa36d830f59ee472515c4f1"
   ],
   "skills/pm-design/qa/deliverable-verify-gate.js": [
+   "1a69596f12a9247ecfe5ccbe09f307942de18838",
    "a2abf651e32f6678ebf119298b4d4d2c6e223437"
   ],
   "skills/pm-design/qa/design-token-gate.js": [
@@ -581,6 +588,15 @@
   ],
   "skills/pm-design/qa/fixtures/reference-prototype.html": [
    "6c44e93b98ef92c2fe0353ff5bbe143bc1c0442e"
+  ],
+  "skills/pm-design/qa/fixtures/roundtrip-data.json": [
+   "50681a1b41fa60141f8eb0545a62a20d9f02bdbc"
+  ],
+  "skills/pm-design/qa/fixtures/sample-deliverable-data.json": [
+   "8be1505aa0ccc261b314d79b710cc8f5b7bae2c7"
+  ],
+  "skills/pm-design/qa/fixtures/vt/cn-b-admin.json": [
+   "d2c410443e6dc9a3cfb5e9a32649808a39aae85f"
   ],
   "skills/pm-design/qa/fresh-install-smoke.js": [
    "f185b97a76c31be4912baf9ddd0274979c6a07c6"
@@ -625,6 +641,7 @@
    "ecdb248628821cafcc60d7a704b0e70d0da8d4f6"
   ],
   "skills/pm-design/qa/proto-copy-writing-gate.js": [
+   "654b8c4f5ed59647da86d7969e11cc295de88f53",
    "d08cc489ed4bf13fb85fe8807e73b061a14569db"
   ],
   "skills/pm-design/qa/prototype-standard-sync-gate.js": [
@@ -678,7 +695,8 @@
    "7b47c828633b746b1673e39123b352264b890e1e",
    "9b45a3985ff03e48d4c7d261fe92ba11f6afa137",
    "b1695708100b4e1f7a209988ad609e32e7094df1",
-   "cd5c4b848656c6e15b3c57f422fea9b9907e0422"
+   "cd5c4b848656c6e15b3c57f422fea9b9907e0422",
+   "e6b1859b68767cfbecf947f50255f9054dba296b"
   ],
   "skills/pm-design/v1-master-spec.md": [
    "eb7e7960747fb91fb7269071dcb2b4986f147a77"
@@ -690,7 +708,8 @@
    "70f7361a7aa06859e03a43732b0ba141687dfe6e",
    "bb45f0ce68013c7ed1a380d8bcac1713bf06610f",
    "c239fea8e477ea3d99bdd55e3de797310ba9bf4f",
-   "d996c0109b1ac324b5773bdd8ded6dfcf32f4d08"
+   "d996c0109b1ac324b5773bdd8ded6dfcf32f4d08",
+   "dd2ce4f686ebcaac1c1d0d8c3837c2be741518f1"
   ],
   "skills/prd/_anno-browser.js": [
    "94563f58fd8773d4514c1185e7a2495a70aa1ec9"
@@ -715,6 +734,9 @@
   ],
   "skills/prd/qa/prd-content-lint.js": [
    "74185642f1a492fb9cb2190700c6e316c68ce5ee"
+  ],
+  "skills/prd/qa/prd-prototype-field-gate.js": [
+   "119033e47f7444c62cf24bb459b61c1299d653ae"
   ],
   "skills/prd/qa/prd-structure-lint.js": [
    "8491fb1f3501609b211f0187b90ae49d170830be",

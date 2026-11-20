@@ -233,4 +233,15 @@ $found = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 
 > 🏛 **验收红线（常驻·随包·跨工具）**：画原型 / 生成 PRD / 标注 / 导出分享版 / 清空恢复 / 导出研发版 的必达效果，见 [`skills/_shared/acceptance-checklist.md`](skills/_shared/acceptance-checklist.md)。任何 AI 工具（本地或打包后别人用的 Cursor/Codex/OpenClaw 等）行为不符时，读该清单 + 对应 skill 规则 + `qa` 闸自行修复，跑闸验绿再交付——不空口保证。
 
+> 🏛 **【铁律】原型必须遵守 PRD 字段规范、用例规则模版（2026-11-20·强制·随包）**：生成原型和改原型都不能跳过：每个输入项的字段名、控件类型、是否必填（星号）、默认值或占位、校验规则、填错提示，都要和 PRD 字段规范模版、用例规则模版一致，多语言原型中英葡对照。模版原文以 `skills/prd/references/templates/prd-template-clean.md`（字段规范五列、用例规则提示消息三列）和 `skills/prd/references/templates/prompt-template-common.md` 为准，先读再写。
+>
+> - 占位：输入框写“请输入 + 字段名”，下拉框写“请选择 + 字段名”，用例子当占位的保留例子（见 `skills/pm-design/system-design-spec.md` §7.6）；字段没写占位时骨架自动拼上字段名，三种语言分别是“请输入{字段名} / Enter {字段名} / Informe {字段名}”“请选择{字段名} / Select {字段名} / Selecione {字段名}”。
+> - 必填：PRD 写“是”的字段，原型必须有星号（`required:true`，条件必填用 `requiredWhen`）；PRD 写“否”的字段不许有星号。
+> - 填错提示：用户语言短句，没填写“请输入XX”“请选择XX”“请上传XX”，填错写“格式不正确”“最多 N 个字符”“须大于 N”等，和 PRD 提示消息表一字不差。
+> - 正确：原型 `{ "label":"客户名称", "type":"input", "required":true, "ph":"请输入客户名称" }`，PRD 字段规范“客户名称｜文本｜是｜请输入客户名称｜最多 50 个字符”，提示消息“客户名称｜请输入客户名称｜最多 50 个字符”。
+> - 错误：原型 `{ "label":"客户名称", "ph":"请输入" }`（占位没带字段名）；PRD 写必填，原型没有星号；PRD 没填提示写“请输入客户名称”，原型 `reqMsg` 写“客户名称不能为空”。
+> - 机器兜底：交付件自检 `skills/pm-design/qa/deliverable-verify-gate.js` 内含两项检查，`rebuild-deliverable.ps1` 全量重建和快速模式的后台报告都会跑：`skills/pm-design/qa/proto-copy-writing-gate.js`（占位只写“请输入”“请选择”=红）、`skills/prd/qa/prd-prototype-field-gate.js`（字段名、必填、占位、没填提示和配对的 PRD 不一致=红）。交付总闸 `deliver-gate.js` 也调用这两项。红了不许说“做完了”，交付件自检全绿（快速模式看报告第一行是 PASS）才能说完成。
+
+> 🏛 **【铁律】推到 GitHub 的文字只写通用能力（2026-11-20·强制·随包）**：推送到 GitHub 的提交说明、CHANGELOG、README，以及公开工具包里的所有文字，不许带具体项目的系统名称和业务功能名称，只写工具包提供的通用能力。发布工具包时，发布脚本会检查提交说明和 CHANGELOG、README 等说明文字的新增内容，发现项目业务词就拒绝发布（硬拦），改成通用说法后再发。推送用户自己的原型只读版或 PRD 网页时，提交说明同样只写通用说法；页面正文是用户自己的文档，不在此限。正确：“表格单元格支持第二行说明”“弹窗字段支持条件必填”“表格行名支持多语言映射”“弹窗按钮带确认框时先校验字段”。错误：“××单类型下面加第二行”“作废××单保留原记录”“××页待上传张数”“三语行名”（带了某个具体项目的单据名、页面名、功能名，或只有那个项目才看得懂的简称）。
+
 > 🏛 **修复纪律（强制·随包）**：修任何 bug 前后必读 [`skills/_shared/fix-and-upstream-protocol.md`](skills/_shared/fix-and-upstream-protocol.md)。核心四条：① **能测就别猜**（实地测量，别连环假设）；② 修复**必落源头层**、改标准件必须 **bump 版本 + 重注入所有原型**；③ **每个修复必配一道闸或静态断言**（防重新引入）；④ **禁用假实现/硬编码绕过真实约束验收**——闸绿 ≠ 没问题，用户报了现象而闸绿，**先怀疑闸有盲区**。本地修复只救本机，**必须回流上游**。

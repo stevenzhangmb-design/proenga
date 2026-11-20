@@ -1,5 +1,9 @@
 <!-- ╔══════════════════════════════════════════════════════════════════════╗
      原型骨架（装配器结构唯一源）· prototype-skeleton · v8.11 （2026-11-10）
+     v8.65（2026-11-20）：占位默认拼字段名——字段没写 ph 时，原来默认“请输入”“请选择”的地方（分区表单的下拉/文本域/输入框、工具条下拉、预订单字段、备注类文本域）
+            改成“请输入/请选择 + 字段名”，中英葡按 vEnter / vSelect 模板（请输入{f} / Enter {f} / Informe {f}；请选择{f} / Select {f} / Selecione {f}）；写了 ph 仍用 ph；
+            弹窗（分区和不分区）、详情编辑、整页表单里原来默认空占位的输入框、文本域、密码框、下拉框也改成默认拼字段名；禁用的字段、没有字段名的字段仍是空占位；
+            筛选区、更多筛选、只读选择框、日期框不动（筛选区按规范写“全部XX”或字段名）。新增 phOf(ph, 字段名, 是否下拉, 是否禁用)。
      v8.64（2423）：收银台与通用弹窗的通用能力，都不配不生效、原行为不变：
             ① pos.preReqInline:true → 门店预订必填没填时提示写在各字段下方（字段 reqMsg，默认“请输入/请选择 + 字段名”）；
             ② posOrder.voidTo.keepIssued:{state,color?,title?} → 取消后历史发票保留“已开票”“已取消”两条；cancelRows / cancelAddRows 的行可写 types:[订单类型] 按单据类型加行；
@@ -10,7 +14,10 @@
             ⑦ refundAuto 模板认 {key:55|65}（按发票号现算 Key）；exchangeAuto.viaPos.sameNo:true（+ retNoText / retKeyText）→ 结果页与生成的单据同一组号码和 Key，并显示销售退票；viaPos.ret/exc.qtyTag → 卡片灰字；
             ⑧ 勾选网格 checkGrid 必选按各项是否勾上判断；行上【更多 › 下载】把当前行交给下载（{r.N} 取这一行）；needSel 的按钮可写 needSelMsg；
             ⑨ okButtons 写 validate:true → 先校验字段再弹确认框；确认文字认 {fv:字段名}；keepFv:true → 记下弹窗填写值，设置卡片 html 用 {sv:字段名|or:默认} 显示；
-            ⑩ 多条值文本域 fd.itemRe / itemReMsg / maxItemsMsg（每条格式、超过 maxItems 条）；字段 requiredWhen:{field:'同弹窗字段名', eq|notEq|in|has} → 条件必填（带星号）；不分区弹窗的文本域显示占位文字。
+            ⑩ 多条值文本域 fd.itemRe / itemReMsg / maxItemsMsg（每条格式、超过 maxItems 条）；字段 requiredWhen:{field:'同弹窗字段名', eq|notEq|in|has} → 条件必填（带星号）；不分区弹窗的文本域显示占位文字；
+            ⑪ 弹窗日期 / 月份字段 valueThisMonth:true → 打开时值设为当前“年-月”；下载文件名认 {fv:字段名}（取当前弹窗该字段的值）；
+            ⑫ pos.hideCancelOnResult:true → 结果页隐藏【取消收款】；refundAuto 的 mirrors[i].nowYmd / amtPrefix → 同步行时间写 yyyy-mm-dd、金额写“前缀 1.234,50”；
+               标准【导出 › 按勾选导出】没勾选时提示页面 needSelMsg，默认 pickOne 改为“请至少勾选一项。”；字段 reset 清空后回到 editDefault，不分区弹窗的 reset 也生效。
      v8.63（2402）：开票弹窗统一用到的通用能力，都不配不生效、原行为不变：
             ① 弹窗字段 editAlt / lookup / showRe（editFrom 取空时换列、取关联单在另一页的状态、显示值按正则改写，见 dlgEditPost）；
             ② 行内按钮 opensByLink（按关联单在另一页的状态选开哪个弹窗）；③ 弹窗 netOff:{msg}（顶栏离线时不提交、状态不变）；
@@ -2912,7 +2919,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                     <span v-if="fd.copy" class="fd-copy" :class="{'fd-copy-hov':!!fd.copyHover}" v-html="copyIc(String(L(fd.copyValue!=null?fd.copyValue:fd.value)).replace(/<[^>]*>/g,''))"></span>
                   </div>
                   <div v-else-if="detailData.readonly && fd.type!=='button' && fd.type!=='html'" class="fd-ro-v" v-html="cell(roVal(fd))"></div>
-                  <el-select v-else-if="fd.type==='select'" v-model="fd.value" :multiple="!!fd.multiple" :filterable="!!fd.filterable" :placeholder="L(fd.ph||'')" :disabled="fdDisabled(fd)" @visible-change="o=>{ if(!o) dvBlur(fd) }" @change="dvBlur(fd)" @visible-change="v=>{ if(!v) dvBlur(fd); }"><el-option v-for="o in (fd.options||[])" :key="K(o)" :label="L(o)" :value="K(o)" :title="L(o)" :disabled="!!optDisabledReason(fd,o)"><span>{{ L(o) }}</span><span v-if="optDisabledReason(fd,o)" class="opt-why">{{ optDisabledReason(fd,o) }}</span></el-option></el-select>
+                  <el-select v-else-if="fd.type==='select'" v-model="fd.value" :multiple="!!fd.multiple" :filterable="!!fd.filterable" :placeholder="phOf(fd.ph, fd.label, 1, fdDisabled(fd))" :disabled="fdDisabled(fd)" @visible-change="o=>{ if(!o) dvBlur(fd) }" @change="dvBlur(fd)" @visible-change="v=>{ if(!v) dvBlur(fd); }"><el-option v-for="o in (fd.options||[])" :key="K(o)" :label="L(o)" :value="K(o)" :title="L(o)" :disabled="!!optDisabledReason(fd,o)"><span>{{ L(o) }}</span><span v-if="optDisabledReason(fd,o)" class="opt-why">{{ optDisabledReason(fd,o) }}</span></el-option></el-select>
                   <el-date-picker v-else-if="fd.type==='date'" v-model="fd.value" :type="fd.range?'daterange':(fd.month?'month':'date')" :unlink-panels="!!fd.range" :shortcuts="dtShortcuts(fd)" :start-placeholder="T('startTime')" :end-placeholder="T('endTime')" :placeholder="L(fd.ph||'')" :format="fd.format||undefined" :style="fd.full?'width:100%':''" @blur="dvBlur(fd)" @change="dvBlur(fd)"></el-date-picker>
                   <template v-else-if="fd.type==='switch'"><el-switch v-model="fd.value"></el-switch><span v-if="fd.desc" class="fd-desc">{{ L(fd.desc) }}</span><div v-if="fd.sub" class="fd-sub">{{ L(fd.sub) }}</div></template>
                   <!-- textarea 支持字数统计（真系统「补充信息(Fisco)」0/200） -->
@@ -2921,7 +2928,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                   <el-input v-else-if="fd.type==='textarea' && !(fd.maxSoft && fd.max)" v-model="fd.value" type="textarea" :rows="2" :maxlength="fd.max" :show-word-limit="!!fd.max" @blur="dvBlur(fd)"></el-input>
                   <!-- §v8.57 整页文本域 fd.maxSoft:true → 不截断，超过 max 红字「{f}最多 N 个字符」，右下仍显示 n / max -->
                   <div v-else-if="fd.type==='textarea'" class="soft-ta"><el-input v-model="fd.value" type="textarea" :rows="2" @blur="dvBlur(fd)" @input="(fd._err || String(fd.value||'').length>fd.max) && dvBlur(fd)"></el-input><span class="soft-cnt" :class="{over:String(fd.value||'').length>fd.max}">{{ String(fd.value||'').length }} / {{ fd.max }}</span></div>
-                  <el-input v-else-if="fd.type==='password'" v-model="fd.value" type="password" show-password :placeholder="L(fd.ph||'')" @blur="dvBlur(fd)"></el-input>
+                  <el-input v-else-if="fd.type==='password'" v-model="fd.value" type="password" show-password :placeholder="phOf(fd.ph, fd.label, 0, 0)" @blur="dvBlur(fd)"></el-input>
                   <span v-else-if="fd.type==='upload'" class="up-link" @click="msg(L(fd.label))">＋ {{ L(fd.upText||fd.label) }}</span>
                   <!-- §v4.9 只读值走 cell()：与列表单元格同一套渲染，支持 {t,c,dot} 彩点与作者写的内联标记。
                        原来是纯文本插值，采购退货单「状态 / 授权协议号」整条 <span style=…> 被当文字显示在页面上
@@ -2948,7 +2955,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           <!-- §富HTML预览（打印发票 DANFE 预览用）：type:'html' → v-html 渲染整段单据，可滚动 -->
           <div v-else-if="fd.type==='html'" v-html="L(fd.value)" :style="fd.card?'':'overflow-x:auto;border:1px solid #e4e7ed;border-radius:4px;background:#fff'"></div>
                   <!-- §选单据(v1.4)：type:'pick' → 只读输入 + 右侧蓝色「选择」文字链，点开 fd.opens 指定的弹窗。
-                       写法：{type:'pick', label:'采购入库单', ph:'请选择', pickText:'选择', opens:'pickInbound'} -->
+                       写法：{type:'pick', label:'采购入库单', ph:'请选择采购入库单', pickText:'选择', opens:'pickInbound'} -->
                   <div v-else-if="fd.type==='pick'" style="display:flex;align-items:center;gap:14px;width:100%">
                     <el-input v-model="fd.value" readonly :placeholder="L(fd.ph||'')" :disabled="fdDisabled(fd)" style="flex:1"></el-input>
                     <a class="fd-pick" @click="fd.opens ? (dlgRow=null, dialogName=fd.opens) : msg(L(fd.label))">{{ L(fd.pickText||T('select')||'选择') }}</a>
@@ -2992,7 +2999,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                        写法：{type:'inputSelect', selectOptions:['CPF','CNPJ'], selectValue:'CPF', selectWidth:90, phBy:{CPF:'000.000.000-00',CNPJ:'00.000.000/0000-00'}} -->
                   <!-- §v5.9 inputSuggest：能自己打字、也能从历史里挑（真系统「开票事由」就是这种）。
                        普通 input 挑不了历史，纯 select 又打不了新词 —— 这一类字段必须两者都要。 -->
-                  <el-autocomplete v-else-if="fd.type==='inputSuggest'" v-model="fd.value" :placeholder="L(fd.ph||'')"
+                  <el-autocomplete v-else-if="fd.type==='inputSuggest'" v-model="fd.value" :placeholder="phOf(fd.ph, fd.label, 0, 0)"
                                    :disabled="fdDisabled(fd)" :fetch-suggestions="(q,cb)=>sugFetch(fd,q,cb)"
                                    :trigger-on-focus="true" style="width:100%" @blur="dvBlur(fd)"></el-autocomplete>
                   <el-input v-else-if="fd.type==='inputSelect'" v-model="fd.value" :disabled="fdDisabled(fd)" @blur="dvBlur(fd)"
@@ -3006,7 +3013,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                   <!-- §5.3o 普通输入：支持【前缀标签】(真系统「交易性质」= [出库]+输入) 与【字数统计】(39/60)
                        写法：{ label:"交易性质", prefix:"出库", max:60 } / { label:"税种名称", max:1000 }
                        §v3.61 fd.suffix：输入框内右侧单位（某跨境电商 ERP「运费 0,00 BRL」） -->
-                  <el-input v-else v-model="fd.value" :placeholder="L(fd.ph||'')" :disabled="fdDisabled(fd)"
+                  <el-input v-else v-model="fd.value" :placeholder="phOf(fd.ph, fd.label, 0, fdDisabled(fd))" :disabled="fdDisabled(fd)"
                             :maxlength="fd.maxSoft?undefined:fd.max" :show-word-limit="!!fd.max && !fd.maxSoft" @blur="dvBlur(fd)" @input="fd.maxSoft && (fd._err || String(fd.value||'').length>fd.max) && dvBlur(fd)"><!-- §v8.30（S）fd.maxSoft:true → 不在输入框里截断（粘贴超长也保留），超过 max 就红字提示 maxMsg（默认「{f}最多 N 个字符」），右侧仍显示 n / max 计数 -->
                     <template v-if="fd.maxSoft && fd.max && !fd.suffix" #suffix><span class="el-input__count" :style="String(fd.value||'').length>fd.max?{color:'#f56c6c'}:null"><span class="el-input__count-inner">{{ String(fd.value||'').length }} / {{ fd.max }}</span></span></template>
                     <template v-if="fd.prefix" #prepend>{{ L(fd.prefix) }}</template>
@@ -3196,7 +3203,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                     <div v-if="o&&typeof o==='object'&&o.sub" class="fd-sub" style="margin-left:24px">{{ L(o.sub) }}</div>
                   </div>
                 </template>
-                <el-select v-else-if="fd.type==='select'" v-model="fd.value" :multiple="!!fd.multiple" :placeholder="L(fd.ph||'')" style="max-width:320px"><el-option v-for="o in (fd.options||[])" :key="K(o)" :label="L(o)" :value="K(o)" :title="L(o)"></el-option></el-select>
+                <el-select v-else-if="fd.type==='select'" v-model="fd.value" :multiple="!!fd.multiple" :placeholder="phOf(fd.ph, fd.label, 1, 0)" style="max-width:320px"><el-option v-for="o in (fd.options||[])" :key="K(o)" :label="L(o)" :value="K(o)" :title="L(o)"></el-option></el-select>
                 <div v-else-if="fd.type==='table'" style="width:100%">
                   <!-- §v8.31（V）表上方筛选 fd.filters:[{col, ph, options|'col'}] + 【查询】【重置】，样式同筛选区（.search-box） -->
                   <div v-if="fd.filters && fd.filters.length" class="search-box pf-tbl-filter">
@@ -3232,7 +3239,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                 <!-- §v4.2 独立按钮行：按钮文字用 btnText（不写就退回 label；不然会出现「密码 [密码]」这种） -->
                 <el-button v-else-if="fd.type==='button'" size="default" :type="fd.btnType||'default'" @click="fireBtn(fd)">{{ L(fd.btnText||fd.label) }}</el-button>
                 <el-link v-else-if="fd.type==='link'" type="primary" :underline="false" @click="fd.dl && (cfg.downloads||{})[fd.dl] ? doDownload(cfg.downloads[fd.dl]) : (fd.opens?(dlgRow=null,dialogName=fd.opens):msg(L(fd.label)))">{{ L(fd.linkText||fd.label) }}</el-link>
-                <el-input v-else v-model="fd.value" :placeholder="L(fd.ph||'')" style="max-width:320px" :maxlength="fd.max" :show-word-limit="!!fd.max"></el-input>
+                <el-input v-else v-model="fd.value" :placeholder="phOf(fd.ph, fd.label, 0, 0)" style="max-width:320px" :maxlength="fd.max" :show-word-limit="!!fd.max"></el-input>
                 <div v-if="fd.badge" class="pf-badge">👍 {{ L(fd.badge) }}</div>
                 <ol v-if="fd.lines" class="pf-lines"><li v-for="(ln,li) in fd.lines" :key="li">{{ L(ln) }}</li></ol>
                 <div v-if="fd.hint" class="fd-sub" :style="fd.hintPre?{whiteSpace:'pre-line'}:null">{{ L(fd.hint) }}</div>
@@ -3885,16 +3892,16 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
             </el-table>
             <el-form v-else label-position="top" class="form-grid pf-grid" :class="'cols-'+(sec.cols||3)">
               <el-form-item v-for="(fd,fi) in (sec.fields||[])" :key="fi" :label="L(fd.label)" :required="!!fd.required" :class="{'span-2':fd.span===2,'span-3':fd.span===3}">
-                <el-select v-if="fd.type==='select'" v-model="fd.value" :disabled="!!fd.disabled" :placeholder="L(fd.ph||'请选择')"><el-option v-for="o in (fd.options||[])" :key="K(o)" :label="L(o)" :value="K(o)" :title="L(o)"></el-option></el-select>
+                <el-select v-if="fd.type==='select'" v-model="fd.value" :disabled="!!fd.disabled" :placeholder="phOf(fd.ph, fd.label, 1)"><el-option v-for="o in (fd.options||[])" :key="K(o)" :label="L(o)" :value="K(o)" :title="L(o)"></el-option></el-select>
                 <el-date-picker v-else-if="fd.type==='date'" v-model="fd.value" :type="fd.range?'daterange':'date'" :placeholder="L(fd.ph||'')"></el-date-picker>
-                <el-input v-else-if="fd.type==='textarea'" v-model="fd.value" type="textarea" :rows="2" :placeholder="L(fd.ph||'请输入')"></el-input>
+                <el-input v-else-if="fd.type==='textarea'" v-model="fd.value" type="textarea" :rows="2" :placeholder="phOf(fd.ph, fd.label)"></el-input>
                 <div v-else-if="fd.type==='imgCard'" style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="width:80px;height:80px;border:1px dashed #dcdfe6;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:26px;color:#8c939d;background:#fff;cursor:pointer" @click="msg('选择图片上传（原型演示）')">＋</div><span v-if="fd.hint" class="pf-hint">{{ L(fd.hint) }}</span></div>
                 <div v-else-if="fd.type==='upload'"><div class="pf-upload"><el-button :type="fd.uploadPrimary?'primary':undefined" @click="msg(L(fd.ph||'点击上传')+'：选择文件（原型演示）')"><span class="btn-ic" v-html="actIcon({icon:fd.uploadPrimary?'cloud':'add'})"></span>{{ L(fd.ph||'点击上传') }}</el-button><span v-if="fd.hint" class="pf-hint">{{ L(fd.hint) }}</span></div><el-table v-if="fd.fileTable" :data="[]" border class="gl-table" style="margin-top:10px"><el-table-column v-for="(col,ci) in (Array.isArray(fd.fileTable)?fd.fileTable:['文件名称','文件大小','上传时间','操作'])" :key="ci" :label="L(colLabel(col))"></el-table-column></el-table></div>
                 <div v-else-if="fd.type==='addbtn'" class="pf-addbtn"><el-button @click="msg(L(fd.ph||'添加')+'：新增一行（原型演示）')"><span class="btn-ic" v-html="actIcon({icon:'add'})"></span>{{ L(fd.ph||'添加') }}</el-button></div>
                 <!-- §查看/详情只读回显(2026-09-17)：type:'readonly' 值#333·空显 --；type:'tag' 浅蓝药丸(如条形码) -->
                 <div v-else-if="fd.type==='readonly'" class="pf-ro" v-html="L(fd.value) ? cell(fd.value) : '--'"></div>
                 <div v-else-if="fd.type==='tag'" class="pf-ro"><span v-if="L(fd.value)" class="pf-tag">{{ L(fd.value) }}</span><span v-else>--</span></div>
-                <el-input v-else v-model="fd.value" :disabled="!!fd.disabled" :placeholder="L(fd.ph||'请输入')"></el-input>
+                <el-input v-else v-model="fd.value" :disabled="!!fd.disabled" :placeholder="phOf(fd.ph, fd.label)"></el-input>
               </el-form-item>
             </el-form>
             </template>
@@ -4026,7 +4033,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
             </div>
             <span class="hw-sp"></span>
             <select v-for="(f,fi) in (curPosHw.filters||[])" :key="fi" class="hw-sel">
-              <option>{{ L(f.ph||'请选择') }}</option>
+              <option>{{ phOf(f.ph, f.label, 1) }}</option>
               <option v-for="(o,oi) in (f.options||[])" :key="oi">{{ L(o) }}</option>
             </select>
             <a class="pos-link" @click="posTip(curPosHw.refreshTip||'未检测到打印助手')">⟳ {{ L(curPosHw.refreshText||'刷新') }}</a>
@@ -4217,7 +4224,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                     <input type="radio" :checked="posPreWay===wi" :disabled="!!w.disabled" @change="posPreWay=wi">{{ L(w.label||w) }}</label></b></div>
                 <div v-for="(f,fi) in (curPos.preFields||[])" :key="fi" class="pos-pre-f">
                   <label :class="{req:f.required}">{{ L(f.label) }}</label>
-                  <input v-if="f.type!=='select'" v-model="posPreForm[fi]" :placeholder="L(f.ph||'请输入')" :disabled="!!f.disabled" :style="posPreForm['e'+fi] ? {borderColor:'#f56c6c'} : null" @blur="f.pattern && posPreChk(fi)" @input="posPreForm['e'+fi] && posPreChk(fi)">
+                  <input v-if="f.type!=='select'" v-model="posPreForm[fi]" :placeholder="phOf(f.ph, f.label)" :disabled="!!f.disabled" :style="posPreForm['e'+fi] ? {borderColor:'#f56c6c'} : null" @blur="f.pattern && posPreChk(fi)" @input="posPreForm['e'+fi] && posPreChk(fi)">
                   <select v-else v-model="posPreForm[fi]" :disabled="!!f.disabled">
                     <option v-for="(o,oi) in (f.options||[])" :key="oi">{{ L(o) }}</option>
                   </select>
@@ -4267,7 +4274,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
             <div class="pos-dlg">
               <div class="pos-dlg-h"><b>{{ L(curPos.noteTitle||'整单备注') }}</b><i @click="posNoteOpen=false">✕</i></div>
               <div class="pos-dlg-b">
-                <textarea v-model="posNote" rows="5" :maxlength="curPos.noteSoft?undefined:200" :placeholder="L(curPos.notePh||'请输入')"></textarea>
+                <textarea v-model="posNote" rows="5" :maxlength="curPos.noteSoft?undefined:200" :placeholder="phOf(curPos.notePh, curPos.noteTitle||'整单备注')"></textarea>
                 <span class="pos-cnt" :style="curPos.noteSoft && (posNote||'').length>200 ? {color:'#f56c6c'} : null">{{ (posNote||'').length }} / 200</span>
                 <!-- §v8.57 curPos.noteSoft:true → 不截断，超过 200 字红字提示并拦住【确定】 -->
                 <div v-if="curPos.noteSoft && (posNote||'').length>200" class="pos-soft-err">{{ String(T('vMax')||'').replace('{f}', L(curPos.noteTitle||'整单备注')).replace('{n}', 200).trim() }}</div>
@@ -4418,7 +4425,8 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                 </template>
               </div>
               <div class="pos-paypanel-f">
-                <button class="pos-cancel2" @click="posPayClose()">{{ L(curPos.cancelPayText||'取消收款') }}</button>
+                <!-- §v8.64（2423）pos.hideCancelOnResult:true → 结果页（联网 / 离线）出现时不显示【取消收款】 -->
+                <button v-if="!(curPos.hideCancelOnResult && posResult)" class="pos-cancel2" @click="posPayClose()">{{ L(curPos.cancelPayText||'取消收款') }}</button>
                 <button v-if="posPmKind==='mark'" class="pos-cancel" @click="posKey('OK')">{{ L(curPos.confirmPayText||'确认收款') }}</button>
               </div>
             </div>
@@ -4594,7 +4602,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
               <template v-if="hvTab===0">
                 <div class="hv-h2">{{ L(curHandover.noteTitle||'交班备注') }}</div>
                 <div class="hv-note-w">
-                  <textarea class="hv-note" v-model="hvNote" :maxlength="curHandover.noteSoft?undefined:200" :placeholder="L(curHandover.notePh||'请输入')" rows="3"></textarea>
+                  <textarea class="hv-note" v-model="hvNote" :maxlength="curHandover.noteSoft?undefined:200" :placeholder="phOf(curHandover.notePh, curHandover.noteTitle||'交班备注')" rows="3"></textarea>
                   <span class="hv-cnt" :style="curHandover.noteSoft && (hvNote||'').length>200 ? {color:'#f56c6c'} : null">{{ (hvNote||'').length }} / 200</span>
                   <!-- §v8.57 curHandover.noteSoft:true → 不截断，超过 200 字红字提示并拦住【交班】 -->
                   <div v-if="curHandover.noteSoft && (hvNote||'').length>200" class="pos-soft-err">{{ String(T('vMax')||'').replace('{f}', L(curHandover.noteTitle||'交班备注')).replace('{n}', 200).trim() }}</div>
@@ -4740,7 +4748,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                     <b><label style="display:inline-flex;align-items:center;gap:6px;font-weight:400"><input type="checkbox" v-model="poRetAtCounter"> {{ L(curPosOrder.exchangeAuto.counterText)||'顾客还在柜台，货没带走' }}</label>
                       <em style="display:block;color:#909399;font-size:12px;font-style:normal;margin-top:4px">{{ L(curPosOrder.exchangeAuto.counterHint) }}</em></b></div>
                   <div class="po-rete-r"><span>{{ L(curPosOrder.retDescText||'退款说明') }}</span>
-                    <b class="po-rete-ta"><textarea v-model="poRetDesc" :maxlength="curPosOrder.retDescSoft?undefined:200" rows="3" :placeholder="L(curPosOrder.retDescPh||'请输入')"></textarea>
+                    <b class="po-rete-ta"><textarea v-model="poRetDesc" :maxlength="curPosOrder.retDescSoft?undefined:200" rows="3" :placeholder="phOf(curPosOrder.retDescPh, curPosOrder.retDescText||'退款说明')"></textarea>
                       <i :style="curPosOrder.retDescSoft && (poRetDesc||'').length>200 ? {color:'#f56c6c'} : null">{{ (poRetDesc||'').length }} / 200</i>
                       <!-- §v8.57 curPosOrder.retDescSoft:true → 不截断，超过 200 字红字提示并拦住【下一步】 -->
                       <em v-if="curPosOrder.retDescSoft && (poRetDesc||'').length>200" class="pos-soft-err">{{ String(T('vMax')||'').replace('{f}', L(curPosOrder.retDescText||'退款说明')).replace('{n}', 200).trim() }}</em></b></div>
@@ -5024,7 +5032,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
             <el-button v-for="(b,bi) in (fd.btns||[])" :key="bi" :type="b.type||undefined"
                        @click="msg(L(b.done)||(L(b.label)+'（原型演示）'))">{{ L(b.label) }}</el-button>
           </div>
-                <el-input v-else v-model="fd.value" :placeholder="L(fd.ph||'')"></el-input>
+                <el-input v-else v-model="fd.value" :placeholder="phOf(fd.ph, fd.label, 0, 0)"></el-input>
               </el-form-item>
             </el-form>
           </div>
@@ -5042,7 +5050,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
             <div v-else-if="fd.type==='readonly'" style="color:#333;padding-top:6px" v-html="cell(fd.fromRow?dlgFieldVal(fd):fd.value)"></div>
           <!-- §富HTML预览（打印发票 DANFE 预览用）：type:'html' → v-html 渲染整段单据，可滚动 -->
           <div v-else-if="fd.type==='html'" v-html="L(fd.value)" :style="fd.card?'':'overflow-x:auto;border:1px solid #e4e7ed;border-radius:4px;background:#fff'"></div>
-            <el-input v-else v-model="fd.value" :placeholder="L(fd.ph||'')"></el-input>
+            <el-input v-else v-model="fd.value" :placeholder="phOf(fd.ph, fd.label, 0, 0)"></el-input>
           </el-form-item>
         </el-form>
       </div>
@@ -5197,14 +5205,14 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
               <el-select v-if="fd.match!==null && fd.match!==false" v-model="dlgFilterModel['cm'+fi]" class="combo-right" :placeholder="L((fd.match&&fd.match[0])||'精确搜索')"><el-option v-for="o in (fd.match||['精确搜索','模糊搜索'])" :key="K(o)" :label="L(o)" :value="K(o)"></el-option></el-select>
             </template>
           </div>
-          <el-select v-else-if="fd.type==='select'" v-model="fd.value" :multiple="!!fd.multiple" :placeholder="L(fd.ph||'')" :disabled="!!fd.disabled"><el-option v-for="o in (fd.options||[])" :key="K(o)" :label="L(o)" :value="K(o)" :title="L(o)" :disabled="!!optDisabledReason(fd,o)"><span>{{ L(o) }}</span><span v-if="optDisabledReason(fd,o)" class="opt-why">{{ optDisabledReason(fd,o) }}</span></el-option></el-select>
+          <el-select v-else-if="fd.type==='select'" v-model="fd.value" :multiple="!!fd.multiple" :placeholder="phOf(fd.ph, fd.label, 1, fd.disabled)" :disabled="!!fd.disabled"><el-option v-for="o in (fd.options||[])" :key="K(o)" :label="L(o)" :value="K(o)" :title="L(o)" :disabled="!!optDisabledReason(fd,o)"><span>{{ L(o) }}</span><span v-if="optDisabledReason(fd,o)" class="opt-why">{{ optDisabledReason(fd,o) }}</span></el-option></el-select>
           <el-date-picker v-else-if="fd.type==='date'" v-model="fd.value" :type="fd.range?'daterange':(fd.month?'month':'date')" :unlink-panels="!!fd.range" :shortcuts="dtShortcuts(fd)" :start-placeholder="T('startTime')" :end-placeholder="T('endTime')"></el-date-picker>
           <el-switch v-else-if="fd.type==='switch'" v-model="fd.value"></el-switch>
           <!-- §v8.64（2423）不分区弹窗的文本域也显示占位文字 fd.ph（原来没传 placeholder） -->
-          <el-input v-else-if="fd.type==='textarea' && !(fd.maxSoft && fd.max)" v-model="fd.value" type="textarea" :rows="2" :placeholder="L(fd.ph||'')" :maxlength="fd.max" :show-word-limit="!!fd.max" @blur="fd.blurCheck && dlgBlur(fd)" @input="fd.blurCheck && fd._err && dlgBlur(fd)"></el-input>
+          <el-input v-else-if="fd.type==='textarea' && !(fd.maxSoft && fd.max)" v-model="fd.value" type="textarea" :rows="2" :placeholder="phOf(fd.ph, fd.label, 0, 0)" :maxlength="fd.max" :show-word-limit="!!fd.max" @blur="fd.blurCheck && dlgBlur(fd)" @input="fd.blurCheck && fd._err && dlgBlur(fd)"></el-input>
           <!-- §v8.57 不分区弹窗的文本域 fd.maxSoft:true → 不截断，超过 max 红字「{f}最多 N 个字符」（离开即校验），右下仍显示 n / max -->
-          <div v-else-if="fd.type==='textarea'" class="soft-ta"><el-input v-model="fd.value" type="textarea" :rows="2" :placeholder="L(fd.ph||'')" @blur="dlgBlur(fd)" @input="(fd._err || String(fd.value||'').length>fd.max) && dlgBlur(fd)"></el-input><span class="soft-cnt" :class="{over:String(fd.value||'').length>fd.max}">{{ String(fd.value||'').length }} / {{ fd.max }}</span></div>
-          <el-input v-else-if="fd.type==='password'" v-model="fd.value" type="password" show-password :placeholder="L(fd.ph||'')"></el-input>
+          <div v-else-if="fd.type==='textarea'" class="soft-ta"><el-input v-model="fd.value" type="textarea" :rows="2" :placeholder="phOf(fd.ph, fd.label, 0, 0)" @blur="dlgBlur(fd)" @input="(fd._err || String(fd.value||'').length>fd.max) && dlgBlur(fd)"></el-input><span class="soft-cnt" :class="{over:String(fd.value||'').length>fd.max}">{{ String(fd.value||'').length }} / {{ fd.max }}</span></div>
+          <el-input v-else-if="fd.type==='password'" v-model="fd.value" type="password" show-password :placeholder="phOf(fd.ph, fd.label, 0, 0)"></el-input>
           <!-- §5.3r 多选网格（真系统「同步采购发票」弹窗：全选 + 两列勾选框·每项=名称+灰色副行(CNPJ)·可滚动）
                数据写 { type:'checkGrid', allLabel:'全部公司', items:[{label:'APAUL COM LTDA', sub:'64.962.869/0001-08'},…] } -->
           <!-- §v3.18 弹窗 radio 与 pageForm 同一套渲染（含 o.inline 行内控件）；
@@ -5257,7 +5265,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                        @click="msg(L(b.done)||(L(b.label)+'（原型演示）'))">{{ L(b.label) }}</el-button>
           </div>
           <!-- §v8.57 不分区弹窗的输入框 fd.maxSoft:true → 不截断，超过 max 红字（离开即校验），右侧仍显示 n / max；fd.blurCheck:true → 离开输入框即按字段规则校验（原来只在点确定时校验） -->
-          <el-input v-else v-model="fd.value" :placeholder="L(fd.ph||'')" :disabled="!!fd.disabled" :maxlength="fd.maxSoft?undefined:fd.max" :show-word-limit="!!fd.max && !fd.maxSoft" @blur="(fd.maxSoft || fd.blurCheck) && dlgBlur(fd)" @input="(fd.maxSoft || fd.blurCheck) && (fd._err || (fd.maxSoft && String(fd.value||'').length>fd.max)) && dlgBlur(fd)">
+          <el-input v-else v-model="fd.value" :placeholder="phOf(fd.ph, fd.label, 0, fd.disabled)" :disabled="!!fd.disabled" :maxlength="fd.maxSoft?undefined:fd.max" :show-word-limit="!!fd.max && !fd.maxSoft" @blur="(fd.maxSoft || fd.blurCheck) && dlgBlur(fd)" @input="(fd.maxSoft || fd.blurCheck) && (fd._err || (fd.maxSoft && String(fd.value||'').length>fd.max)) && dlgBlur(fd)">
             <template v-if="fd.prefix" #prepend>{{ L(fd.prefix) }}</template>
             <template v-if="fd.maxSoft && fd.max" #suffix><span class="el-input__count" :style="String(fd.value||'').length>fd.max?{color:'#f56c6c'}:null"><span class="el-input__count-inner">{{ String(fd.value||'').length }} / {{ fd.max }}</span></span></template>
           </el-input>
@@ -5435,14 +5443,14 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                    （真系统「发送至」那个 0/3 是最多 3 个邮箱；按空格 / 分号 / 逗号 / 换行分条） -->
               <div v-if="fd.type==='textarea' && fd.maxItems" class="ta-items">
                 <!-- §v4.3 fd.sep → 离开输入框时自动把各条用这个分隔符摆整齐（邮箱之间到底用什么符号隔开，一眼看得出来） -->
-                <el-input v-model="fd.value" type="textarea" :rows="fd.rows||3" :placeholder="L(fd.ph||'')"
+                <el-input v-model="fd.value" type="textarea" :rows="fd.rows||3" :placeholder="phOf(fd.ph, fd.label, 0, 0)"
                           @blur="normItems(fd)"></el-input>
                 <span class="ta-count" :class="{over:itemCount(fd)>fd.maxItems}">{{ itemCount(fd) }} / {{ fd.maxItems }}</span>
               </div>
-              <el-input v-else-if="fd.type==='textarea' && !(fd.maxSoft && fd.max)" v-model="fd.value" type="textarea" :rows="fd.rows||3" :placeholder="L(fd.ph||'')"
+              <el-input v-else-if="fd.type==='textarea' && !(fd.maxSoft && fd.max)" v-model="fd.value" type="textarea" :rows="fd.rows||3" :placeholder="phOf(fd.ph, fd.label, 0, 0)"
                         :maxlength="fd.max" :show-word-limit="!!fd.max" @blur="dlgBlur(fd)" @input="fd._err && dlgBlur(fd)"></el-input>
               <!-- §v8.57 弹窗分区文本域 fd.maxSoft:true → 不截断，超过 max 红字「{f}最多 N 个字符」，右下仍显示 n / max -->
-              <div v-else-if="fd.type==='textarea'" class="soft-ta"><el-input v-model="fd.value" type="textarea" :rows="fd.rows||3" :placeholder="L(fd.ph||'')" @blur="dlgBlur(fd)" @input="(fd._err || String(fd.value||'').length>fd.max) && dlgBlur(fd)"></el-input><span class="soft-cnt" :class="{over:String(fd.value||'').length>fd.max}">{{ String(fd.value||'').length }} / {{ fd.max }}</span></div>
+              <div v-else-if="fd.type==='textarea'" class="soft-ta"><el-input v-model="fd.value" type="textarea" :rows="fd.rows||3" :placeholder="phOf(fd.ph, fd.label, 0, 0)" @blur="dlgBlur(fd)" @input="(fd._err || String(fd.value||'').length>fd.max) && dlgBlur(fd)"></el-input><span class="soft-cnt" :class="{over:String(fd.value||'').length>fd.max}">{{ String(fd.value||'').length }} / {{ fd.max }}</span></div>
               <!-- §v6.13 弹窗里的多选勾选组（开 55 发票「交付方式」：打印 A4 DANFE / 发送到邮箱）——原来没有这个分支，显示成空白输入框 -->
               <el-checkbox-group v-else-if="fd.type==='checkboxGroup'" v-model="fd.value" @change="dlgBlur(fd)">
                 <el-checkbox v-for="o in (fd.options||[])" :key="K(o)" :value="K(o)" :label="K(o)">{{ L(o) }}</el-checkbox>
@@ -5461,14 +5469,14 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
               <!-- §v7.9 弹窗分区里的单选按钮（开票弹窗最上面「发票类型 ○NFC-e 65 ○NF-e 55」：两个选项直接摆出来，比下拉框更容易看到可以切换） -->
               <div v-else-if="fd.type==='radio'"><el-radio-group v-model="fd.value" :disabled="!!fd.disabled" @change="v=>dlgRadioChange(fd,v)"><el-radio v-for="o in (fd.options||[])" :key="K(o)" :value="K(o)" :label="K(o)" :disabled="!!dlgRadioOff(fd,o)">{{ L(o) }}</el-radio></el-radio-group>
                 <div v-if="dlgRadioOffMsg(fd)" class="fd-sub" style="color:#e6a23c">{{ dlgRadioOffMsg(fd) }}</div></div>
-              <el-select v-else-if="fd.type==='select'" v-model="fd.value" :placeholder="L(fd.ph||'')" :filterable="!!fd.filterable" @visible-change="o=>{ if(!o) dlgBlur(fd) }" @change="dlgBlur(fd); dlgFieldChange(fd)"><el-option v-for="o in (fd.options||[])" :key="K(o)" :label="L(o)" :value="K(o)" :title="L(o)"></el-option></el-select>
+              <el-select v-else-if="fd.type==='select'" v-model="fd.value" :placeholder="phOf(fd.ph, fd.label, 1, 0)" :filterable="!!fd.filterable" @visible-change="o=>{ if(!o) dlgBlur(fd) }" @change="dlgBlur(fd); dlgFieldChange(fd)"><el-option v-for="o in (fd.options||[])" :key="K(o)" :label="L(o)" :value="K(o)" :title="L(o)"></el-option></el-select>
               <el-switch v-else-if="fd.type==='switch'" v-model="fd.value" @change="dlgBlur(fd)"></el-switch>
               <!-- §v4.3 弹窗里也支持整段富文本（真系统「该发票账号不允许被删除」下面那两条办法就是纯说明文字） -->
               <div v-else-if="fd.type==='html'" v-html="L(fd.value)" @click="onCellAct"></div>
               <!-- §v6.9 inputSuggest 在【弹窗】里原来没有渲染分支（只有详情整页有），
                    配了这个 type 的格子渲染成空白（2026-10-12 调拨开票弹窗「开票事由」空白就是这个）。
                    照详情那条原样补一条。 -->
-              <el-autocomplete v-else-if="fd.type==='inputSuggest'" v-model="fd.value" :placeholder="L(fd.ph||'')"
+              <el-autocomplete v-else-if="fd.type==='inputSuggest'" v-model="fd.value" :placeholder="phOf(fd.ph, fd.label, 0, 0)"
                                :fetch-suggestions="(q,cb)=>sugFetch(fd,q,cb)"
                                :trigger-on-focus="true" style="width:100%"></el-autocomplete>
               <!-- §v6.9 只读值里允许带排版（主值 + 灰字副行），和列表单元格同一套写法。
@@ -5479,11 +5487,11 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
                 <template v-else>{{ dlgFieldVal(fd) }}</template>
                 <span v-if="fd.copy" class="fd-copy" v-html="copyIc(dlgFieldVal(fd))"></span></div>
               <!-- §v3.85 fd.prefix → 输入框前缀（真系统「重开发票金额  R$ [    ]」）；fd.copy → 只读值后跟复制图标 -->
-              <el-input v-else-if="fd.prefix" v-model="fd.value" :placeholder="L(fd.ph||'')" @input="v=>numClean(fd,v)" @blur="dlgBlur(fd)"><template #prepend>{{ L(fd.prefix) }}</template></el-input>
+              <el-input v-else-if="fd.prefix" v-model="fd.value" :placeholder="phOf(fd.ph, fd.label, 0, 0)" @input="v=>numClean(fd,v)" @blur="dlgBlur(fd)"><template #prepend>{{ L(fd.prefix) }}</template></el-input>
               <!-- §v3.89 单行输入也支持 fd.max（右侧 50/60 计数）与 fd.icon:'search'/'edit'（框内右侧图标·真系统「退货 CFOP 🔍」「交易性质 ✏️」） -->
               <!-- §v6.12 弹窗分区里的输入框也支持 fd.suffix（BRL / %）、fd.disabled，以及 fd.ai（框内绿色 AI 标 + 查询图标，真系统「编辑详情 › NCM」） -->
               <!-- §v8.57 fd.maxSoft:true → 不截断（maxlength 不下发），超过 max 输入时即红字，右侧仍显示 n / max -->
-              <el-input v-else v-model="fd.value" :placeholder="L(fd.ph||'')" :maxlength="fd.maxSoft?undefined:fd.max" :show-word-limit="!!fd.max && !fd.maxSoft" :disabled="!!fd.disabled" @input="v=>{ numClean(fd,v); if(fd._err || (fd.maxSoft && String(fd.value||'').length>fd.max)) dlgBlur(fd); }" @blur="dlgBlur(fd); dlgFieldChange(fd)">
+              <el-input v-else v-model="fd.value" :placeholder="phOf(fd.ph, fd.label, 0, fd.disabled)" :maxlength="fd.maxSoft?undefined:fd.max" :show-word-limit="!!fd.max && !fd.maxSoft" :disabled="!!fd.disabled" @input="v=>{ numClean(fd,v); if(fd._err || (fd.maxSoft && String(fd.value||'').length>fd.max)) dlgBlur(fd); }" @blur="dlgBlur(fd); dlgFieldChange(fd)">
                 <template v-if="fd.icon==='search' || fd.ai" #suffix><span v-if="fd.ai" class="ai-badge" style="display:inline-block;padding:0 4px;margin-right:6px;border-radius:3px;background:#E8F7EE;color:#1BA45B;font-size:11px;font-weight:700;line-height:16px">AI</span><span class="fd-ic" :title="L(fd.pickTip||'')" @click="pkOpen(fd)" v-html="SEARCH_SVG"></span></template>
                 <template v-else-if="fd.icon==='edit'" #suffix><span class="fd-ic" v-html="PEN_SVG"></span></template>
                 <template v-else-if="fd.maxSoft && fd.max" #suffix><span class="el-input__count" :style="String(fd.value||'').length>fd.max?{color:'#f56c6c'}:null"><span class="el-input__count-inner">{{ String(fd.value||'').length }} / {{ fd.max }}</span></span></template>
@@ -5661,7 +5669,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
     customCols:   {zh:'自定义列',            en:'Customize columns',     pt:'Personalizar colunas',  spa:'Personalizar columnas'},
     selectAll:    {zh:'全选',                en:'Select all',            pt:'Selecionar tudo',       spa:'Seleccionar todo'},
     pickData:     {zh:'请选择数据',          en:'Please select data',    pt:'Selecione os dados',    spa:'Seleccione los datos'},
-    pickOne:      {zh:'请至少勾选一项',       en:'Please select at least one item', pt:'Selecione ao menos um item', spa:'Seleccione al menos un elemento'},
+    pickOne:      {zh:'请至少勾选一项。',       en:'Please select at least one item.', pt:'Selecione ao menos um item.', spa:'Seleccione al menos un elemento.'},
     noticeTitle:  {zh:'注意事项：',           en:'Notes:',                pt:'Observações:',          spa:'Notas:'},
     saveRules:    {zh:'保存前会校验：',       en:'Checked before saving:', pt:'Validado ao salvar:',  spa:'Se valida al guardar:'},
     /* §v3.94 离开输入框即校验用的三句提示（真系统 某跨境电商 ERP 创建手工发票逐字） */
@@ -6354,7 +6362,8 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         const leaves = [];
         (function walk(gs){ gs.forEach(g=> g.leaf ? leaves.push(g) : walk(g.children||[])); })(colTreeShown.value||[]);
         let rows = byFilter ? (renderRows.value||[]) : (selRows.value && selRows.value.length ? selRows.value : (renderRows.value||[]));
-        if(!byFilter && !(selRows.value||[]).length){ msg(T('pickData')||'请选择数据'); return; }
+        /* §v8.64（2423）没勾选：提示取页面配置 needSelMsg，默认“请至少勾选一项。”（pickOne），黄色提示 */
+        if(!byFilter && !(selRows.value||[]).length){ ElementPlus.ElMessage({message:L(cfg.value.needSelMsg)||T('pickOne'), type:'warning'}); return; }
         /* ⚠️ 单元格的值有好几种形态，都得取到**人看得懂的文字**，不能直接 String()：
              · 状态药丸 {t:'已开票', c:'green'}      → 取 t
              · 可编辑单元格 {ctrl:'input', value:…}  → 取 value
@@ -7427,7 +7436,9 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           all.unshift(_rtOrd);
           ((raOff ? raOff.mirrors : ra.mirrors)||[]).forEach(mc=>{ const pc=PC[mc.page]; let bs=pc&&(mc.status?(pc.byStatus&&pc.byStatus[mc.status]):pc); if(!bs) return;
             const keys=(mc.tabs||[]).concat(mc.tabByType&&mc.tabByType[L(o.type)]?[mc.tabByType[L(o.type)]]:[]);
-            vars.NOW=nowM; const one=fillAutoKey(JSON.parse(_fillC(JSON.stringify(fill(mc.row)),_col))); vars.NOW=now;
+            /* §v8.64（2423）mirrors[i].nowYmd:true → 这一行的 {NOW} 写成 yyyy-mm-dd HH:mm:ss；amtPrefix:'BRL ' → {AMT} 写成“BRL 1.234,50”（前缀 + 千位点 + 小数逗号）。不配 = 原样 */
+            const _amt0=vars.AMT; if(mc.amtPrefix!=null){ const [ip,fp]=posParseMoney(amt).toFixed(2).split('.'); vars.AMT=String(L(mc.amtPrefix))+ip.replace(/\B(?=(\d{3})+(?!\d))/g,'.')+','+fp; }
+            vars.NOW = mc.nowYmd ? relToYmd(nowM) : nowM; const one=fillAutoKey(JSON.parse(_fillC(JSON.stringify(fill(mc.row)),_col))); vars.NOW=now; vars.AMT=_amt0;
             if(!keys.length && Array.isArray(bs.rows)){ bs.rows.unshift(JSON.parse(JSON.stringify(one))); return; }
             (bs.statusTabs||[]).forEach(t=>{ if(keys.indexOf(K(t.key))>=0 && Array.isArray(t.rows)){ t.rows.unshift(JSON.parse(JSON.stringify(one))); if(Array.isArray(t.fails)) t.fails.unshift(null); if(t.count!=null) t.count=t.rows.length; } }); });
           poSel.value=0;
@@ -8308,6 +8319,8 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
          ① 必填/必选没填没选 → 请输入 / 请选择 / 请上传 + 字段名；
          ② ③ 填了不合规（必填、非必填都查）→ 格式不正确 / 应为 N 位数字 / 至少 N 个字符 / 须大于 N / 不能为负数 / 须在 X~Y 之间 / 最多 N 位小数 / 须为整数。
          句子从 I18N 模板按当前语言拼，字段名取当前语言的字段名 → 切语言整句跟着变；数据里写了专门提示（xxxMsg）时以数据为准。 */
+      /* §v8.65 占位默认拼字段名：写了 ph 用 ph；没写时 = “请输入/请选择 + 字段名”（中英葡按 vEnter / vSelect 模板）；连字段名也没有才退回光秃秃的“请输入/请选择” */
+      function phOf(ph, lab, sel, off){ if(ph) return L(ph); if(off) return ''; if(L(lab)) return vMsg(sel ? 'vSelect' : 'vEnter', lab); return off===undefined ? L(sel ? '请选择' : '请输入') : ''; }   /* off：传了第 4 个参数的地方（原来默认空占位），禁用时不显示占位、没有字段名时仍是空 */
       function vMsg(key, lab, n, x, y){ return String(T(key)||'').replace('{f}', L(lab)||'').replace('{n}', n==null?'':n).replace('{x}', x==null?'':x).replace('{y}', y==null?'':y).trim(); }
       function vEmptyMsg(fd, lab){ const t=String((fd&&fd.type)||''); return /^(select|date|datetime|daterange|cascader|radio|radios|checkbox|checkboxGroup|multiSelect|switch)$/.test(t) ? vMsg('vSelect',lab) : (/upload|file/i.test(t) ? vMsg('vUpload',lab) : vMsg('vEnter',lab)); }
       function vNumMsg(fd, lab, v){
@@ -10352,7 +10365,13 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
              原来只认 {filename,...} 对象，写字符串会静默落成 download.txt。 */
           const isStr = (typeof dl==='string');
           /* §v6.11 文件名 / 内容里也认 {r.列下标}、{key.列下标}（与打印预览同一套）：下载的 DANFE 是这一行的票，不是示例票 */
-          const name = isStr ? dl : ((dl&&dl.filename)?fillRow(L(dl.filename), row):'download.txt');
+          let name = isStr ? dl : ((dl&&dl.filename)?fillRow(L(dl.filename), row):'download.txt');
+          /* §v8.64（2423）文件名里 {fv:字段名} = 当前弹窗这个字段的值（月份控件写成 YYYY-MM、日期 YYYY-MM-DD，区间用 ~ 连起来）；不写不生效 */
+          if(String(name).indexOf('{fv:')>-1){ const dg=(cfg.value.dialogs||{})[dialogName.value]; const fs=dg ? [].concat(...(dg.sections||[]).map(s=>(s&&s.fields)||[]), Array.isArray(dg.fields)?dg.fields:[]) : [];
+            const p2=n=>String(n).padStart(2,'0'); const fmt=(v,f)=>{ if(v instanceof Date) return v.getFullYear()+'-'+p2(v.getMonth()+1)+(f&&f.month?'':'-'+p2(v.getDate())); return String(L(v)==null?'':L(v)); };
+            name=String(name).replace(/\{fv:([^}|]+)(\|digits)?\}/g,(m,k,dg0)=>{ const _o=(()=>{ let f=fs.find(x=>x && (lblIs(x.label,k) || x.key===k));
+              if(!f) fs.some(x=>(Array.isArray(x&&x.options)?x.options:[]).some(o=>{ if(o && typeof o==='object' && o.inline && lblIs(o.label,k)){ f=o.inline; return true; } return false; }));   /* {fv:单选项名} = 该选项行内控件的值（如【按月导出】的月份） */
+              if(!f) return ''; const v=f.value; return Array.isArray(v) ? v.map(x=>fmt(x,f)).join('~') : fmt(v,f); })(); return dg0 ? _o.replace(/\D/g,'') : _o; }); }   /* {fv:字段|digits} 只留数字（2026-11 → 202611） */
           const ext = String(name).split('.').pop().toLowerCase();
           const MIME = { xml:'application/xml;charset=utf-8', csv:'text/csv;charset=utf-8',
                          json:'application/json;charset=utf-8', pdf:'application/pdf',
@@ -11331,7 +11350,12 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       watch(dialogName, n=>{ etCancel(); Object.keys(dlgAlertOpen).forEach(k=>delete dlgAlertOpen[k]);
         /* §v3.79 fd.reset:true → 每次打开清空（修正内容这类一次性输入，别把上一张票写的带过来） */
         const dg = n && ((cfg.value.dialogs)||{})[n];
-        if(dg) (dg.sections||[]).forEach(sec=>((sec&&sec.fields)||[]).forEach(fd=>{ if(fd && fd.reset && !(fd.editFrom!=null && dlgRow.value)) fd.value=''; }));   /* §v8.0 有 editFrom 且从某一行打开的字段，值是这一行带出来的，不清 */
+        /* §v8.64（2423）reset 清空后回到 editDefault（有就用它，没有才是空串）；不分区块弹窗（dg.fields）的 reset 字段也一样清 */
+        if(dg) [].concat(...(dg.sections||[]).map(sec=>(sec&&sec.fields)||[]), Array.isArray(dg.fields)?dg.fields:[]).forEach(fd=>{ if(fd && fd.reset && !(fd.editFrom!=null && dlgRow.value)) fd.value = fd.editDefault!=null ? JSON.parse(JSON.stringify(fd.editDefault)) : ''; });   /* §v8.0 有 editFrom 且从某一行打开的字段，值是这一行带出来的，不清 */
+        /* §v8.64（2423）日期 / 月份字段 valueThisMonth:true → 每次打开弹窗把值设成当前“年-月”（YYYY-MM）。不配不生效 */
+        if(dg){ const _ym=(()=>{ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); })();
+          [].concat(...(dg.sections||[]).map(s=>(s&&s.fields)||[]), Array.isArray(dg.fields)?dg.fields:[]).forEach(fd=>{ if(!fd) return; if(fd.valueThisMonth && fd.type==='date') fd.value=_ym;
+            (Array.isArray(fd.options)?fd.options:[]).forEach(o=>{ const ic=o && typeof o==='object' && o.inline; if(ic && ic.valueThisMonth && ic.type==='date') ic.value=_ym; }); }); }   /* 单选项行内的月份控件（o.inline）同样认 */
       });
       /* §v6.13 勾选格变化：没勾的行，其余输入框置灰（不填、不校验）；已超时置灰的保持置灰 */
       /* §v8.60 弹窗区块表格：列显示条件 / 勾上的行 / 合计（售后只退勾上的商品）。不配不生效 */
@@ -11596,7 +11620,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       Vue.watch(()=>[currentPage.value, activePanel.value], ()=>{ Object.keys(filterModel).forEach(k=>delete filterModel[k]); Object.keys(msDraft).forEach(k=>delete msDraft[k]); try{ mfClear(mfSaved); }catch(e){} __filterKw.value=[]; __queryKw.value=[]; qfOn.value=0; });
       Vue.watch(()=>[currentPage.value, activeStatus.value, curQuickFilters.value], ()=>{ const q=curQuickFilters.value;
         if(q && Array.isArray(q.items) && q.items.length){ qfOn.value=0; __filterKw.value = qfKwOf(q.items[0]); } }, {immediate:true});
-      return { cell,colShowRe,isCtrl,actIcon,colLabel,colWidth,navOf,goSys,menuMode,menuRef,activeMenuId,setMenuMode,userName,notifCount,bellCfg,bellOpen,bellItems,bellIsUnread,bellUnread,bellClick,bellReadAll,bellOpenMsg,activePanel,panelOpen,panelQ,panelItems,curPanel,curRows,curTotal,curCardMeta,cardMetaOf,cardSel,aiQuery,aiAnswer,aiShown,askAI,noticeTab,curNotice,unreadOf,L,K,T,lang,locales,localeName,setLang:uiSetLang,epLocale,systems,views:_VW,curView,setView,viewLabel,brandName,brandBadge,brandLogo,tbHide,topbarExtra,viewFooter,userMenu,userIconMode,FLAGS,currentSystem,homePage,currentPage,openTabs,annoOn,pageSize,pageNo,filterModel,curNoSearchBtn,curTabsPos,detailRow,detailFail,fillFailD,fieldErr,errSumItems,gotoField,btnOpensRow,fillFail,dlgFail,btnVisible,fillRow,fillPrint,prtCopies,prtOff,dlgOkBtn,curAlertCollapsible,alertFolded,ltChecks,applyListFilter,detailRadio,detailRadios,radioRowOk,fdShow,fdDisabled,fdRequired,secShow,anchorShow,nav,cfg:ecfg,
+      return { phOf,cell,colShowRe,isCtrl,actIcon,colLabel,colWidth,navOf,goSys,menuMode,menuRef,activeMenuId,setMenuMode,userName,notifCount,bellCfg,bellOpen,bellItems,bellIsUnread,bellUnread,bellClick,bellReadAll,bellOpenMsg,activePanel,panelOpen,panelQ,panelItems,curPanel,curRows,curTotal,curCardMeta,cardMetaOf,cardSel,aiQuery,aiAnswer,aiShown,askAI,noticeTab,curNotice,unreadOf,L,K,T,lang,locales,localeName,setLang:uiSetLang,epLocale,systems,views:_VW,curView,setView,viewLabel,brandName,brandBadge,brandLogo,tbHide,topbarExtra,viewFooter,userMenu,userIconMode,FLAGS,currentSystem,homePage,currentPage,openTabs,annoOn,pageSize,pageNo,filterModel,curNoSearchBtn,curTabsPos,detailRow,detailFail,fillFailD,fieldErr,errSumItems,gotoField,btnOpensRow,fillFail,dlgFail,btnVisible,fillRow,fillPrint,prtCopies,prtOff,dlgOkBtn,curAlertCollapsible,alertFolded,ltChecks,applyListFilter,detailRadio,detailRadios,radioRowOk,fdShow,fdDisabled,fdRequired,secShow,anchorShow,nav,cfg:ecfg,
       curPos,posScanMode,posCart,posSel,posPick,posScan,posCat,posBatch,posHold,posPayOpen,posPm,posGot,posSc,posToast,
       posExch,posExchDiff,posExchText,posExchCancel,posPayStart,posRefund,posPayLabel,
       posMoney,posTotal,posQty,posGoods,posToolList,posToolOff,posBadge,posAdd,posScanAdd,posDel,posStep,posTool,posKeys,posKey,posChange,

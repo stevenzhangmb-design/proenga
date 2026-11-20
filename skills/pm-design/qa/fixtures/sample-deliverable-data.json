@@ -18,7 +18,7 @@
       "filters": [
         { "label": "订单号", "ph": "请输入订单号" },
         { "label": "状态", "type": "select", "options": ["已完成", "待付款"] },
-        { "label": "下单日期", "ph": "请选择" }
+        { "label": "下单日期", "ph": "请选择下单日期" }
       ],
       "toolbar": ["导出"],
       "listTitle": "订单列表",
