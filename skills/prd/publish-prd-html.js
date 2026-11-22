@@ -23,7 +23,8 @@ md = md.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (all, alt, src) => {
   return `![${alt}](${map.get(abs)})`;
 });
 // 正文里的 <序列号> 这类中文占位，pandoc 会当成 HTML 标签吃掉，先转义成文字
-md = md.replace(/<([^\sa-zA-Z\/!<>][^<>\n]{0,30})>/g, '\\<$1\\>');
+// 只转义代码块（```…```，含 mermaid 流程图）以外的正文；代码块里转义会把 <--> 改成 \<--\>，流程图报语法错误（2026-11-22 修）
+md = md.split(/(^```[^\n]*\n[\s\S]*?^```[ \t]*$)/m).map((seg, i) => i % 2 ? seg : seg.replace(/<([^\sa-zA-Z\/!<>][^<>\n]{0,30})>/g, '\\<$1\\>')).join('');
 const keep = new Set();
 for (const [abs, rel] of map) {
   const dst = path.join(outDir, rel); keep.add(path.basename(dst));
