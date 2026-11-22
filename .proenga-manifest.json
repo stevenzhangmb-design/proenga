@@ -1,6 +1,6 @@
 {
  "_说明": "本文件由发布脚本自动生成，不要手工改。update-proenga.ps1 / update-proenga.sh 用它核对新版是否完整、判断哪些旧文件可以删除。",
- "version": "2026.11.22.1",
+ "version": "2026.11.22.2",
  "files": {
   ".agents/skills/dev-codegen/SKILL.md": "4ecaea1fd3899373f76ecd2cf6f84b03b13386ba",
   ".agents/skills/dev-prompts/SKILL.md": "624f7c3c3da8cc69e5a19863bb1d51c66ad93279",
@@ -51,13 +51,13 @@
   ".github/skills/verify-prototype/SKILL.md": "821d9330bb92ae1b9f00a8cef24fc03ed31adc61",
   ".gitignore": "4c79d5bcfe93dbe43aa70c1ed11649d9d713fee9",
   ".mcp.json.example": "166f13e31ffc38be1a73b7ac9cb898f2ec19605d",
-  "AGENTS.md": "180bbe21fcff34aec9f51a0b859553e3addc3ad6",
+  "AGENTS.md": "9c2a615f73563232fcca450d1c05b9fc118b53fb",
   "CHANGELOG.md": "ee0d1b66acb457442bdf500da61873148c25a1fb",
-  "CLAUDE.md": "f447761ec347d30e32508d57ff636866a2231b4b",
+  "CLAUDE.md": "f9c5ecb6a4ca50b4d6b80b5754d52405c4f4e07b",
   "INSTALL.md": "ff7da8ec32ac5e79af4478ba485cd0f0e94f88d4",
   "LICENSE": "af7501a71a5774098519eee4324ab75cc73d9a4a",
   "README.md": "ed02d4286d218b3d03ceddc41e8cb84ffc1efabe",
-  "VERSION": "45965d038fa54eeb6a1f7ce7414697bfeb17b9fb",
+  "VERSION": "97e66e7d4d4173e494c2d3f4c1682cb31b66320a",
   "anno-server/anno-config.example.json": "53f8a23cf9689de61d17667d2dac99bc0cc64b9f",
   "anno-server/assemble-once.js": "9df4eb3cde539a64cdb92deb723283ad82ffa5c4",
   "anno-server/build-shared-generator.js": "14d491f41d75ed20df4f0e88a34eefa83915b639",
@@ -356,6 +356,7 @@
    "9bb9d5d373407dcd60185969f8151ec17e76a499"
   ],
   "AGENTS.md": [
+   "180bbe21fcff34aec9f51a0b859553e3addc3ad6",
    "19bcbcb566f1fd5413424372f5ef031b9d2b8767",
    "5d66ec2eaffa61c7e8561369fdc612eaae7a83fb",
    "65f7d98aa5276ab1f903796ecb931befd6a509a5",
@@ -382,7 +383,8 @@
    "9240e72eb1d663aaa8a174b53c2a9b9d37306587",
    "ad5e8defb33150668118689c14eadef81a48a645",
    "cfd3cc36933b0dd8cfde43267e0fda877f4abed9",
-   "e092a631c68bc170f98d591b5d91a2f4e508a9c6"
+   "e092a631c68bc170f98d591b5d91a2f4e508a9c6",
+   "f447761ec347d30e32508d57ff636866a2231b4b"
   ],
   "INSTALL.md": [
    "0c5a1a3c54c0d5253164cc24bd9ab4391e92355e",

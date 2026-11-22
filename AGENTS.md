@@ -46,10 +46,11 @@
 8. **【铁律】原型必须遵守 PRD 字段规范、用例规则模版**：生成原型和改原型都不能跳过：每个输入项的字段名、控件类型、是否必填（星号）、默认值或占位、校验规则、填错提示，都要和 PRD 字段规范模版、用例规则模版一致，多语言原型中英葡对照。模版原文以 `skills/prd/references/templates/prd-template-clean.md`（字段规范五列、用例规则提示消息三列）和 `skills/prd/references/templates/prompt-template-common.md` 为准，先读再写。
    - 占位：输入框写“请输入 + 字段名”，下拉框写“请选择 + 字段名”，用例子当占位的保留例子（见 `skills/pm-design/system-design-spec.md` §7.6）；字段没写占位时骨架自动拼上字段名，三种语言分别是“请输入{字段名} / Enter {字段名} / Informe {字段名}”“请选择{字段名} / Select {字段名} / Selecione {字段名}”。
    - 必填：PRD 写“是”的字段，原型必须有星号（`required:true`，条件必填用 `requiredWhen`）；PRD 写“否”的字段不许有星号。
+   - 默认值、只读、回显（见 `skills/pm-design/system-design-spec.md` §7.7；选了默认 UI 设计规范的原型都适用）：下拉有业务默认值才预选（写 `value`），没有就写 `optional:true` 显示“请选择 + 字段名”，不许让骨架兜底选第一项；表单下拉里不放“全部××”；弹窗里展示打开它那一行自己的信息时用 `type:'readonly', fromRow:{col}` 带出原值；编辑表单可改字段写 `editFrom: 列下标` 回显原值，单号、编号、状态只读，控件类型和新增表单同名字段一致。
    - 填错提示：用户语言短句，没填写“请输入XX”“请选择XX”“请上传XX”，填错写“格式不正确”“最多 N 个字符”“须大于 N”等，和 PRD 提示消息表一字不差。
    - 正确：原型 `{ "label":"客户名称", "type":"input", "required":true, "ph":"请输入客户名称" }`，PRD 字段规范“客户名称｜文本｜是｜请输入客户名称｜最多 50 个字符”，提示消息“客户名称｜请输入客户名称｜最多 50 个字符”。
    - 错误：原型 `{ "label":"客户名称", "ph":"请输入" }`（占位没带字段名）；PRD 写必填，原型没有星号；PRD 没填提示写“请输入客户名称”，原型 `reqMsg` 写“客户名称不能为空”。
-   - 机器兜底：交付件自检 `skills/pm-design/qa/deliverable-verify-gate.js` 内含两项检查，`rebuild-deliverable.ps1` 全量重建和快速模式的后台报告都会跑：`skills/pm-design/qa/proto-copy-writing-gate.js`（占位只写“请输入”“请选择”=红）、`skills/prd/qa/prd-prototype-field-gate.js`（字段名、必填、占位、没填提示和配对的 PRD 不一致=红）。交付总闸 `deliver-gate.js` 也调用这两项。红了不许说“做完了”，交付件自检全绿（快速模式看报告第一行是 PASS）才能说完成。
+   - 机器兜底：交付件自检 `skills/pm-design/qa/deliverable-verify-gate.js` 内含两项检查，`rebuild-deliverable.ps1` 全量重建和快速模式的后台报告都会跑：`skills/pm-design/qa/proto-copy-writing-gate.js`（占位只写“请输入”“请选择”=红）、`skills/prd/qa/prd-prototype-field-gate.js`（字段名、必填、占位、没填提示和配对的 PRD 不一致=红）；另有 `skills/pm-design/qa/form-field-spec-gate.js`（下拉没默认值却被自动选第一项、表单下拉有“全部”选项、编辑弹窗不回显原值，现阶段只提示不拦）。交付总闸 `deliver-gate.js` 也调用这两项。红了不许说“做完了”，交付件自检全绿（快速模式看报告第一行是 PASS）才能说完成。
    - 配对 PRD：在 project-data 顶层写 `"_prd": "<PRD 的 .md 或 prd-data.json 路径>"`（相对 project-data 所在目录，或绝对路径），检查就按它找；没写时先找原型同目录的 PRD，再按项目名在上级目录的 PRD 文件夹里模糊匹配（取最新的一份）。写了 `_prd` 但文件不存在判红；一份都没找到时明确提示“未检查（不算通过）”。
 
 ---
