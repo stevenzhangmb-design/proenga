@@ -1,6 +1,6 @@
 {
  "_说明": "本文件由发布脚本自动生成，不要手工改。update-proenga.ps1 / update-proenga.sh 用它核对新版是否完整、判断哪些旧文件可以删除。",
- "version": "2026.11.22.5",
+ "version": "2026.11.22.6",
  "files": {
   ".agents/skills/dev-codegen/SKILL.md": "4ecaea1fd3899373f76ecd2cf6f84b03b13386ba",
   ".agents/skills/dev-prompts/SKILL.md": "624f7c3c3da8cc69e5a19863bb1d51c66ad93279",
@@ -52,12 +52,12 @@
   ".gitignore": "4c79d5bcfe93dbe43aa70c1ed11649d9d713fee9",
   ".mcp.json.example": "166f13e31ffc38be1a73b7ac9cb898f2ec19605d",
   "AGENTS.md": "9c2a615f73563232fcca450d1c05b9fc118b53fb",
-  "CHANGELOG.md": "3e69cfac34ab530e61f4e6e551b0b10148968e2e",
+  "CHANGELOG.md": "8a96e55396d4d3ff6d9b30deb70e894908277114",
   "CLAUDE.md": "f9c5ecb6a4ca50b4d6b80b5754d52405c4f4e07b",
   "INSTALL.md": "ff7da8ec32ac5e79af4478ba485cd0f0e94f88d4",
   "LICENSE": "af7501a71a5774098519eee4324ab75cc73d9a4a",
   "README.md": "ed02d4286d218b3d03ceddc41e8cb84ffc1efabe",
-  "VERSION": "09e8db086e2ca466fca03b979b325fc202728e29",
+  "VERSION": "5f4c2d732f173412ff98b2ed827ddfa087866719",
   "anno-server/anno-config.example.json": "53f8a23cf9689de61d17667d2dac99bc0cc64b9f",
   "anno-server/assemble-once.js": "9df4eb3cde539a64cdb92deb723283ad82ffa5c4",
   "anno-server/build-shared-generator.js": "14d491f41d75ed20df4f0e88a34eefa83915b639",
@@ -259,7 +259,7 @@
   "skills/pm-design/vendor/vue.js": "9469d82c60cfbfdf5956a9202f85ff8b6a563eb4",
   "skills/pm-design/vendor/vue.js.url": "fcb48932d3e2970b30928af2371c0e20a08ce5bf",
   "skills/pm-design/工程命名规范.md": "fad4be1fcb9b7e214075e046e47f6376a4531e50",
-  "skills/prd/SKILL.md": "dfba7573e07ab8432f4ba3079bd02af4e9345a7a",
+  "skills/prd/SKILL.md": "aa1867b0345ff78936116149be77a5adb34654e0",
   "skills/prd/_anno-browser.js": "7a2a212dcfa5ffc7705706941dea9a2e0232c4f2",
   "skills/prd/_rules/prd-directory-numbering.mdc": "5ed5c46349e71b0efed3cb7db9295afc38454fdd",
   "skills/prd/_rules/prd-post-generation-deepcheck.mdc": "d8665d3a968ee4d07cead6dd92f780669536381d",
@@ -366,6 +366,7 @@
   "CHANGELOG.md": [
    "06de227e8dcd6a040d114f881b3d9aa998616208",
    "191544ea4c0c21860ddbfc69a7be79e9c401834f",
+   "3e69cfac34ab530e61f4e6e551b0b10148968e2e",
    "4279f4c22cd993629c5ab556f39b58ad5a966707",
    "4458ee53599309ff2b4abc56afcb3e5a8b69a2a0",
    "45641414dc65b2c41799076b5dd0a962ae761682",
@@ -792,6 +793,7 @@
    "c239fea8e477ea3d99bdd55e3de797310ba9bf4f",
    "d996c0109b1ac324b5773bdd8ded6dfcf32f4d08",
    "dd2ce4f686ebcaac1c1d0d8c3837c2be741518f1",
+   "dfba7573e07ab8432f4ba3079bd02af4e9345a7a",
    "fff6c15a8de40e9428efe7df5818b2894c225f7e"
   ],
   "skills/prd/_anno-browser.js": [
