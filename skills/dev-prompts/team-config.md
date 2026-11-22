@@ -204,7 +204,7 @@ com.<company>.<project>
 
 - 权限码格式：<resource:action / module.function.action>
 - 权限码示例：<vip-level:read / vip-level:create / vip-level:update / vip-level:delete>
-- 数据权限：<部门隔离 / 门店隔离 / 自研规则>
+- 数据权限：<部门隔离 / 网点隔离 / 自研规则>
 - 鉴权方式：<注解 @PreAuthorize / AOP 拦截 / 网关层>
 
 ---

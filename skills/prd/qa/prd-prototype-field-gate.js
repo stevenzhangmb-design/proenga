@@ -38,16 +38,23 @@ if (!prdPath || !fs.existsSync(prdPath)) { console.log("✗ 未找到 PRD（prd-
 // §2026-11-20 也能直接读 PRD 的 md：按功能点标题切块，每块里的“字段规范”表和“用例规则 › 提示消息”表照 prd-data 的写法装进 _draft_fieldSpecs / _draft_useCaseRules
 const MD_MODE = /\.md$/i.test(prdPath);
 function prdFromMd(text) {
-  const fps = {}; let cur = null, sub = "";
+  const fps = {}; let cur = null, sub = "", intro = false;
   for (const line of text.split(/\r?\n/)) {
     const h = /^(#{2,6})\s+(.+?)\s*$/.exec(line);
     if (h) {
       const t = h[2].replace(/`/g, "");
+      intro = false;
       if (/字段规范/.test(t)) { sub = "fs"; continue; }
       if (/用例规则/.test(t)) { sub = "uc"; continue; }
       // 功能点下面的其它小节（不是新的功能点）：只结束上一小节，不换功能点
       if (/^[\d.]*\s*(位置|原型|原型图|流程图|关键业务约束|业务场景说明|页面说明|界面说明|功能点详细介绍|说明)$/.test(t)) { sub = ""; continue; }
-      cur = t; sub = ""; fps[cur] = fps[cur] || { _draft_fieldSpecs: "", _draft_useCaseRules: "" }; continue;
+      cur = t; sub = ""; intro = true; fps[cur] = fps[cur] || { _draft_fieldSpecs: "", _draft_useCaseRules: "", _intro: "" }; continue;
+    }
+    // §2026-11-22 功能点标题下、第一个小节之前的开头说明（一般写“适用：……打开【某页面】”），用来认这个功能点对应原型的哪个页面/弹窗
+    //    只取第一段（后面几段常顺带提到别的页面，如“提交失败后可以【重新提交】”，不能拿来认页面）
+    if (cur && intro) {
+      if (/^:::/.test(line)) continue;
+      if (line.trim()) fps[cur]._intro += line + "\n"; else if (fps[cur]._intro) intro = false;
     }
     if (!cur || !sub) continue;
     if (sub === "fs") fps[cur]._draft_fieldSpecs += line + "\n"; else fps[cur]._draft_useCaseRules += line + "\n";
@@ -101,11 +108,26 @@ for (const re of [/:label="[^"]*?'([^']{2,16})'[^"]*?'([^']{2,16})'/g]) while ((
 { const re = /'([一-龥][^']{1,15})'/g; while ((m = re.exec(html))) add(m[1]); }
 // 9) §2026-11-20 装配出来的原型，字段名写在原型数据（SYSTEMS / NAV / PAGECFG 三个 JSON 字面量）里，不在模板标签上；
 //    把里面所有中文文字（三语对象取 zh）都收进词表，否则 PRD 里的字段一个都对不上（曾报 506 个“原型查不到”）
+// §2026-11-22 ① 说明文字、弹窗段落常写成 HTML（<b>小标题：</b>正文、<div>① 小标题</div>），整串太长进不了词表；
+//    按标签切开，每段去掉行首序号、行尾冒号后单独收词（只按标签切，不按标点拆正文，免得正文里的普通词把臆造字段放过去）。
+//    ② 含重音的拉丁字母（ã ç é 等）也算字母（原来只收纯 ASCII，带重音的外文字段名进不了词表）。
+const LATIN_WORD = /^[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ0-9 /().-]{1,23}$/;
+const addText = t => {
+  t = String(t).replace(/&nbsp;/g, " ").replace(/^[\s①-⑳❶-❿·•-]+/, "").replace(/^\d{1,2}[、.．)）]\s*/, "").replace(/[：:]\s*$/, "").trim();
+  if (/[一-龥]/.test(t) || LATIN_WORD.test(t)) add(t);
+};
+const PROTO_DATA = [];
 for (const decl of ["const SYSTEMS=", "const NAV=", "const PAGECFG="]) {
   const raw = grabLiteral(html, decl); if (!raw) continue;
   let data; try { data = JSON.parse(raw); } catch (_) { continue; }
+  PROTO_DATA.push(data);
   const walkV = n => {
-    if (typeof n === "string") { if (/[一-龥]/.test(n) || /^[A-Za-z][A-Za-z0-9 /().-]{1,23}$/.test(n)) add(n.replace(/<[^>]+>/g, "")); return; }
+    if (typeof n === "string") {
+      if (/[一-龥]/.test(n) || LATIN_WORD.test(n)) add(n.replace(/<[^>]+>/g, ""));
+      addText(n.replace(/<[^>]+>/g, ""));
+      if (/<[^>]+>/.test(n)) for (const seg of n.split(/<[^>]+>/)) addText(seg);
+      return;
+    }
     if (!n || typeof n !== "object") return;
     if (Array.isArray(n)) { n.forEach(walkV); return; }
     if (typeof n.zh === "string") { walkV(n.zh); return; }
@@ -120,9 +142,32 @@ const present = new Set();
 { const re = /data-annotation="([^"]+-[^".]+\.[^"]+)"/g; while ((m = re.exec(html))) { const fk = m[1], dot = fk.lastIndexOf("."); present.add(fk.slice(0, dot).replace(/-[^-]+$/, "") + "|" + fk.slice(dot + 1)); } }
 
 // ── 逐功能点：PRD 字段规范字段名 是否在原型词表可查到 ──
+// §2026-11-22 界面元素类别名：PRD 用类别称呼没有文字标签的界面元素（提示条、标题旁的 ? 帮助、组合筛选里的搜索方式下拉），
+//    原型里自然没有同名文字。只有原型里【确实有】这类元素才放行，没有照样报。
+const dataKeys = new Set(); let comboWithMatch = false;
+{
+  const walkK = n => {
+    if (!n || typeof n !== "object") return;
+    if (Array.isArray(n)) { n.forEach(walkK); return; }
+    if (n.type === "combo" && Array.isArray(n.match) && n.match.length) comboWithMatch = true;
+    for (const k of Object.keys(n)) { const v = n[k]; if (v != null && v !== "" && v !== false) dataKeys.add(k); walkK(v); }
+  };
+  PROTO_DATA.forEach(walkK);
+}
+const hasKey = re => [...dataKeys].some(k => re.test(k));
+const ELEMENT_KINDS = [
+  // 提示条：弹窗 / 页面顶部的提示区块
+  { re: /^(提示条|提示框|提示栏|顶部提示条?|警示条)$/, has: () => hasKey(/^(alert|alertTitle|notice|banner)$/) || /<el-alert\b/.test(html) },
+  // 帮助：标题旁的 ? 图标（PRD 写了“标题旁”就只认标题旁的帮助）
+  { re: /^[?？]?(帮助|帮助图标|问号|问号图标)$/, has: raw => /标题/.test(raw) ? hasKey(/^(titleHelp|listHelp)$/) : (hasKey(/^(titleHelp|listHelp|help)$/) || /QuestionFilled|el-icon-question/.test(html)) },
+  // 搜索方式：组合筛选里选“精确 / 模糊”等匹配方式的下拉
+  { re: /^(搜索方式|匹配方式)$/, has: () => comboWithMatch },
+];
+const isElementKind = (raw, n) => ELEMENT_KINDS.some(e => e.re.test(n) && e.has(String(raw)));
 const matched = name => {
   const n = norm(name); if (!n) return true;
   if (vocab.has(n)) return true;                                  // 精确（申请充值金额=th、充值金额=表单 label）
+  if (isElementKind(name, n)) return true;                        // 界面元素类别名，且原型里确有这类元素
   for (const v of vocab) {
     if (v.length >= 2 && v.includes(n)) return true;             // vocab 长串 ⊇ PRD 短字段（PRD 用简名、原型有全名）
     if (v.length >= 2 && n.endsWith(v)) return true;             // PRD 复合名以真实字段词结尾（创建时间⊃时间、审核时间⊃时间）；防"转账凭证⊃转账"前缀误放行
@@ -174,45 +219,92 @@ function grabLiteral(src, decl) {
   }
   return null;
 }
-const protoFields = new Map();   // 归一后的中文字段名 → [{ph, req, cond, msg}]
+const protoFields = new Map();   // 归一后的中文字段名 → [{ph, req, cond, msg, pages}]
+// §2026-11-22 同名字段在不同页面属性可能不同（这个页面可编辑带星号，那个页面只读），比对时按功能点对应的页面取，不跨页面串。
+//    页面/弹窗 = fullPages、dialogs 下的每一项，以及 detailViews 的每一项 / detailView，取它的 title。
+const pageLabels = new Map();   // 归一后的页面标题 → 该页面上出现的字段名（归一后，含只读列和只读项）
+const normTitle = s => String(s).replace(/\s+/g, "");
 {
-  const walk = (node, inFilter) => {   // inFilter：筛选区里的同名字段（查询条件），只在没有别的同名输入项时才拿来比
+  const walk = (node, inFilter, pages, pk) => {   // inFilter：筛选区里的同名字段（查询条件），只在没有别的同名输入项时才拿来比；pk：本节点在父节点里的键
     if (!node || typeof node !== "object") return;
-    if (Array.isArray(node)) { node.forEach(x => walk(x, inFilter)); return; }
+    if (Array.isArray(node)) { node.forEach(x => walk(x, inFilter, pages, pk === "detailViews" ? "detailViews[]" : pk)); return; }
+    if (pk === "page" || pk === "detailViews[]" || pk === "detailView") {
+      const t = normTitle(zhOf(node.title).trim());
+      if (t) { pages = pages.concat(t); if (!pageLabels.has(t)) pageLabels.set(t, new Set()); }
+    }
     const lab = zhOf(node.label).trim();
+    if (lab) for (const p of pages) pageLabels.get(p).add(norm(lab));
     if (lab && ["type", "ph", "required", "requiredWhen", "reqMsg", "requiredMsg"].some(k => node[k] !== undefined)) {
       const t = String(node.type || ""), sel = SEL_TYPE.test(t), up = /upload|file/i.test(t);
       const verb = up ? "请上传" : (sel ? "请选择" : "请输入");
       const ph = node.ph !== undefined && !Array.isArray(node.ph) ? zhOf(node.ph).trim() : null;
-      const ent = { ph, defPh: (sel ? "请选择" : "请输入") + lab, req: !!node.required, cond: !!node.requiredWhen, filter: !!inFilter,
+      const ent = { ph, defPh: (sel ? "请选择" : "请输入") + lab, req: !!node.required, cond: !!node.requiredWhen, filter: !!inFilter, pages,
         msg: zhOf(node.reqMsg || node.requiredMsg).trim() || (verb + lab) };
       const key = norm(lab); if (!protoFields.has(key)) protoFields.set(key, []); protoFields.get(key).push(ent);
     }
-    for (const k of Object.keys(node)) if (node[k] && typeof node[k] === "object") walk(node[k], inFilter || /^(filters|moreFilters|filter)$/i.test(k));
+    // §2026-11-22 骨架内置表单项的必填声明：骨架自带的输入框不写成 {label, required} 字段，而是在所属配置对象上写
+    //    “<前缀>Required: true” 或 “<前缀>Req: true”（同一对象里可选 <前缀>Label / <前缀>Text / <前缀>Name 作字段名、
+    //    <前缀>ReqMsg 作没填提示、<前缀>Ph 作占位）。字段名依次取 Label / Text / Name；都没写时取没填提示去掉“请输入/请选择/请上传”。
+    for (const fk of Object.keys(node)) {
+      const fm = /^([a-z][A-Za-z0-9]*?)(Required|Req)$/.exec(fk); if (!fm || node[fk] !== true) continue;
+      const pre = fm[1], rmsg = zhOf(node[pre + "ReqMsg"] || node[pre + "RequiredMsg"]).trim();
+      const fname = (zhOf(node[pre + "Label"]) || zhOf(node[pre + "Text"]) || zhOf(node[pre + "Name"]) || rmsg.replace(/^请(输入|选择|上传)/, "")).trim();
+      if (!fname) continue;
+      const verb = /^请(选择|上传)/.test(rmsg) ? rmsg.slice(0, 3) : "请输入";
+      const ph = node[pre + "Ph"] !== undefined ? zhOf(node[pre + "Ph"]).trim() : null;
+      const key = norm(fname); if (!protoFields.has(key)) protoFields.set(key, []);
+      protoFields.get(key).push({ ph, defPh: verb + fname, req: true, cond: false, filter: !!inFilter, pages, msg: rmsg || (verb + fname) });
+      for (const p of pages) pageLabels.get(p).add(key);
+    }
+    // fullPages / dialogs 是“名字 → 页面”的表：它下面每一项按页面处理
+    const isPageTable = pk === "fullPages" || pk === "dialogs";
+    for (const k of Object.keys(node)) if (node[k] && typeof node[k] === "object") walk(node[k], inFilter || /^(filters|moreFilters|filter)$/i.test(k), pages, isPageTable ? "page" : k);
   };
-  for (const decl of ["const SYSTEMS=", "const NAV=", "const PAGECFG="]) {
-    const raw = grabLiteral(html, decl); if (!raw) continue;
-    try { walk(JSON.parse(raw), false); } catch (_) { /* 解析失败交给其它闸 */ }
-  }
+  PROTO_DATA.forEach(d => walk(d, false, [], ""));
 }
 const attrFlags = [];
-const pickCand = key => { const all = protoFields.get(key); if (!all || !all.length) return null; const nf = all.filter(x => !x.filter); return nf.length ? nf : all; };
+const pickAll = all => { if (!all || !all.length) return null; const nf = all.filter(x => !x.filter); return nf.length ? nf : all; };
+// 功能点对应的页面：功能点开头说明（第一个小节之前，一般是“适用：点【按钮】打开【某页面】”）里写的【页面/弹窗名】，
+// 原型里有这个标题、且页面上有这个字段的第一个。开头说明里同时写了【提交】和【提交 · 某单据】这类名字时，短的那个是按钮名，去掉。
+// 开头说明里认不出页面（或 PRD 是 prd-data.json，没有开头说明）时，按全原型的同名字段比（原来的做法）。
+const fpPagesOf = txt => {
+  const out = []; const re = /【([^】]{2,40})】/g; let mm;
+  while ((mm = re.exec(txt))) { const t = normTitle(mm[1]); if (pageLabels.has(t) && !out.includes(t)) out.push(t); }
+  return out.filter(t => !out.some(o => o !== t && o.includes(t)));
+};
+// 返回 { page: 功能点对应的页面或 null, onPage: 该页面上的同名输入项, all: 全原型同名输入项（已按筛选区优先规则取舍） }
+const pickCand = (key, fpPages) => {
+  const all = protoFields.get(key) || [];
+  const page = (fpPages || []).find(p => pageLabels.get(p).has(key)) || null;
+  const onPage = page ? all.filter(x => x.pages.includes(page)) : [];
+  return { page, onPage: pickAll(onPage), all: pickAll(all) };
+};
+// 提示语比对：全角 / 半角括号等价，去掉句末句号和空白，括号里的内容保留整句比；
+// PRD 习惯在提示后面用括号补写出现条件（如“请输入编号（只填了名称时）”），整句对不上时再去掉括号及以后的条件部分比一次
+const canonMsg = s => String(s || "").replace(/[。.]\s*$/, "").replace(/（/g, "(").replace(/）/g, ")").replace(/\s+/g, "").trim();
+const msgSame = (proto, prdMsg) => canonMsg(proto) === canonMsg(prdMsg) || canonMsg(proto) === canonMsg(String(prdMsg).replace(/[（(].*$/, ""));
 const cells = l => l.split("|").slice(1, -1).map(s => s.trim().replace(/^`|`$/g, ""));
 const isVerbPh = s => /^(请输入|请选择)/.test(s);
 for (const k of Object.keys(fps)) {
   const dot = k.lastIndexOf("."), fp = k.slice(dot + 1), mod = k.slice(0, dot).replace(/-[^-]+$/, "");
   if (!MD_MODE && present.size && !present.has(mod + "|" + fp)) continue;
   const fsTxt = String(fps[k]._draft_fieldSpecs || "");
+  const fpPages = fpPagesOf(String(fps[k]._intro || ""));
   // 字段规范五列：字段名称 | 类型 | 是否必填/必选 | 默认值 | 约束规则
   for (const l of fsTxt.split("\n")) {
     if (!/^\|/.test(l) || /字段名称|^\|\s*-+/.test(l)) continue;
     const c = cells(l); if (c.length < 4) continue;
     const name = c[0], reqTxt = c[2], defTxt = c[3];
-    const cand = pickCand(norm(name)); if (!cand) continue;
-    if (/^是/.test(reqTxt) && !cand.some(x => x.req || x.cond)) attrFlags.push({ k, name, why: "PRD 写必填，原型这个字段没有星号（没写 required 或 requiredWhen）" });
-    if (/^否/.test(reqTxt) && cand.every(x => x.req)) attrFlags.push({ k, name, why: "PRD 写非必填，原型这个字段标了必填星号" });
+    const pc = pickCand(norm(name), fpPages);
+    // 功能点对应页面上有这个输入项，就只拿这个页面的比；页面上没有这个输入项时，比必填用全原型（原来的做法，不漏报）
+    const cand = pc.onPage || pc.all; if (!cand) continue;
+    const at = pc.onPage ? "（原型【" + pc.page + "】）" : "";
+    if (/^是/.test(reqTxt) && !cand.some(x => x.req || x.cond)) attrFlags.push({ k, name, why: "PRD 写必填，原型这个字段没有星号（没写 required 或 requiredWhen）" + at });
+    // 非必填：功能点对应页面上这个字段只是显示（不是输入项），和 PRD 一致，不拿别的页面的同名输入项来比
+    // “否（为空时必填）”这类写法是有条件必填，原型标星号不算不一致
+    if (/^否/.test(reqTxt) && !/^否.*必填/.test(reqTxt) && !(pc.page && !pc.onPage) && cand.every(x => x.req)) attrFlags.push({ k, name, why: "PRD 写非必填，原型这个字段标了必填星号" + at });
     if (isVerbPh(defTxt) && cand.some(x => x.ph != null) && !cand.some(x => (x.ph != null ? x.ph : x.defPh) === defTxt))
-      attrFlags.push({ k, name, why: "占位文字不一致：PRD 默认值写“" + defTxt + "”，原型写“" + cand.map(x => x.ph != null ? x.ph : x.defPh).join("”或“") + "”" });
+      attrFlags.push({ k, name, why: "占位文字不一致：PRD 默认值写“" + defTxt + "”，原型写“" + [...new Set(cand.map(x => x.ph != null ? x.ph : x.defPh))].join("”或“") + "”" + at });
   }
   // 用例规则 › 提示消息三列：字段名称 | 未填写/未选择提示 | 输入错误提示
   const ucTxt = String(fps[k]._draft_useCaseRules || "");
@@ -221,9 +313,10 @@ for (const k of Object.keys(fps)) {
     const c = cells(l.trim()); if (c.length !== 3) continue;
     const name = c[0], miss = c[1];
     if (!miss || miss === "-" || !/^请(输入|选择|上传)/.test(miss)) continue;
-    const cand = pickCand(norm(name)); if (!cand) continue;
-    if (!cand.some(x => x.msg === miss.replace(/[。.]$/, "").replace(/[（(].*$/, "").trim()))
-      attrFlags.push({ k, name, why: "没填提示不一致：PRD 写“" + miss + "”，原型会提示“" + [...new Set(cand.map(x => x.msg))].join("”或“") + "”" });
+    const pc = pickCand(norm(name), fpPages); const cand = pc.onPage || pc.all; if (!cand) continue;
+    // §2026-11-22 原来只拿“PRD 提示删掉括号及以后部分”去比，原型提示带括号时两边一字不差也报；改用 msgSame
+    if (!cand.some(x => msgSame(x.msg, miss)))
+      attrFlags.push({ k, name, why: "没填提示不一致：PRD 写“" + miss + "”，原型会提示“" + [...new Set(cand.map(x => x.msg))].join("”或“") + "”" + (pc.onPage ? "（原型【" + pc.page + "】）" : "") });
   }
 }
 

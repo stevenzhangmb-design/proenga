@@ -131,7 +131,7 @@ field_specs（PRD/UI层·已有）      data_model（代码生成层·新增）
           { "field":"高",         "col":"height_cm",     "type":"decimal", "precision":10, "scale":2, "nullable":true, "comment":"高(cm)" },
           { "field":"重量",       "col":"weight_g",      "type":"decimal", "precision":10, "scale":2, "nullable":true, "comment":"重量(g)" },
           { "field":"计量单位",   "col":"size_unit",     "type":"tinyint", "enum":"size_unit", "default":1, "nullable":false, "comment":"公制/英制" },
-          { "field":"NCM编码",    "col":"ncm_code",      "type":"varchar", "len":16, "nullable":true, "comment":"巴西 NCM 税则编码" },
+          { "field":"NCM编码",    "col":"ncm_code",      "type":"varchar", "len":16, "nullable":true, "comment":"葡语地区 NCM 税则编码" },
           { "field":"状态",       "col":"status",        "type":"tinyint", "enum":"goods_status", "default":1, "nullable":false, "index":true, "comment":"审核状态" }
         ]
       },
@@ -176,7 +176,7 @@ CREATE TABLE `wms_goods` (
   `height_cm`      DECIMAL(10,2)    NULL COMMENT '高(cm)',
   `weight_g`       DECIMAL(10,2)    NULL COMMENT '重量(g)',
   `size_unit`      TINYINT      NOT NULL DEFAULT 1 COMMENT '公制/英制(1公制2英制)',
-  `ncm_code`       VARCHAR(16)      NULL COMMENT '巴西 NCM 税则编码',
+  `ncm_code`       VARCHAR(16)      NULL COMMENT '葡语地区 NCM 税则编码',
   `status`         TINYINT      NOT NULL DEFAULT 1 COMMENT '审核状态(1待审核2已审核3已驳回9停用)',
   `create_time`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time`    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',

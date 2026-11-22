@@ -217,7 +217,7 @@ const currentSystem = ref('OMS');
 
 // 各系统的"流转到对方"提示文字（由 prd-data.json 的跨系统标注驱动）
 const flowTips = {
-  OMS: '调拨单提交后 → 流转至 WMS 待审核',
+  OMS: '转移单提交后 → 流转至 WMS 待审核',
   WMS: '审核通过后 → 通知 OMS 库存调整',
 };
 const currentFlowTip = computed(() => flowTips[currentSystem.value] || '');
@@ -255,9 +255,9 @@ const switchSystem = (sysKey) => {
 
 | 业务场景 | 系统 A | 系统 B |
 |---|---|---|
-| 调拨管理 | OMS 创建调拨单 / 提交 | WMS 审核 / 出库 |
+| 转移管理 | OMS 创建转移单 / 提交 | WMS 审核 / 出库 |
 | 采购协同 | 采购系统 发起采购 | WMS 收货 / 入库 |
-| 退货处理 | OMS 客户发起退货 | WMS 验货 / 退库 |
+| 退回处理 | OMS 客户发起退回 | WMS 验货 / 退库 |
 | 配送调度 | OMS 订单派单 | TMS 路线规划 / 派送 |
 
 ### 14.6 页签联动（page-tabs 显示当前打开页面 / v1.0 强制）
@@ -525,7 +525,7 @@ const fmtNum    = (n) => Number(n).toLocaleString('zh-CN',{minimumFractionDigits
 ```js
 // 筛选控件范式（要点 10）：选项字典 + 多选默认全选 + 单号聚合
 const flowTypeOpts = ['业务费用','费用补收','费用回退','充值','账单扣费'];
-const bizTypeOpts  = ['一件代发入库','一件代发出库','B2B入库','B2B出库','一件代发退货入库','工单','仓租账单'];
+const bizTypeOpts  = ['一件代发入库','一件代发出库','B2B入库','B2B出库','一件代发退回入库','工单','仓租账单'];
 const noFieldOpts  = ['费用单号','业务单号','账单号'];
 const noFieldKey   = { '费用单号':'feeNo','业务单号':'bizNo','账单号':'billNo' };
 const fFeeType  = ref('');                  // 单选，默认请选择
@@ -1188,7 +1188,7 @@ ElMessage.info('Carregando dados...');
 
 ---
 
-## 8. 巴西本地化工具函数
+## 8. 葡语地区本地化工具函数
 
 ```javascript
 // 日期格式化：YYYY-MM-DD HH:mm:ss → DD/MM/YYYY HH:mm:ss
