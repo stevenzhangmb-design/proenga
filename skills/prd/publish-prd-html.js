@@ -5,6 +5,9 @@ const fs = require('fs'), path = require('path'), { execFileSync } = require('ch
 const [, , mdPath, outDir, titleArg] = process.argv;
 if (!mdPath || !outDir) { console.error('用法：node publish-prd-html.js <prd.md> <outDir> [标题]'); process.exit(1); }
 const mdDir = path.dirname(path.resolve(mdPath));
+/* 2026-11-22 铁律：发布前 PRD 写法检查必须跑完并通过，没通过不许生成在线网页 */
+{ const r = require('child_process').spawnSync(process.execPath, [path.join(__dirname, 'qa', 'prd-structure-lint.js'), mdPath, '--writing-only'], { encoding: 'utf8' });
+  if (r.status !== 0) { console.error('✗ 不能发布：PRD 写法检查没通过，先改好再发布。\n' + (r.stdout || '').split('\n').filter(l => /❌|-\s/.test(l)).slice(0, 8).join('\n')); process.exit(5); } }
 let md = fs.readFileSync(mdPath, 'utf8');
 const title = titleArg || (md.match(/^#\s+(.+)$/m) || [, path.basename(mdPath, '.md')])[1].trim();
 
