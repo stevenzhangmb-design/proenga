@@ -1,6 +1,6 @@
 {
  "_说明": "本文件由发布脚本自动生成，不要手工改。update-proenga.ps1 / update-proenga.sh 用它核对新版是否完整、判断哪些旧文件可以删除。",
- "version": "2026.11.22.11",
+ "version": "2026.11.22.12",
  "files": {
   ".agents/skills/dev-codegen/SKILL.md": "4ecaea1fd3899373f76ecd2cf6f84b03b13386ba",
   ".agents/skills/dev-prompts/SKILL.md": "624f7c3c3da8cc69e5a19863bb1d51c66ad93279",
@@ -57,7 +57,7 @@
   "INSTALL.md": "ff7da8ec32ac5e79af4478ba485cd0f0e94f88d4",
   "LICENSE": "af7501a71a5774098519eee4324ab75cc73d9a4a",
   "README.md": "ed02d4286d218b3d03ceddc41e8cb84ffc1efabe",
-  "VERSION": "85c3c5cb30c3be6913d5dbedc062e0828f0052fa",
+  "VERSION": "9b246bb4aaaa69a043f49fb3e1782f72dba7f5f5",
   "anno-server/anno-config.example.json": "53f8a23cf9689de61d17667d2dac99bc0cc64b9f",
   "anno-server/assemble-once.js": "9df4eb3cde539a64cdb92deb723283ad82ffa5c4",
   "anno-server/build-shared-generator.js": "14d491f41d75ed20df4f0e88a34eefa83915b639",
@@ -117,7 +117,7 @@
   "skills/dev-prompts/SKILL.md": "cb15dc45f877284387674468f3d437f29fa247b2",
   "skills/dev-prompts/team-config.md": "c0c09cfb43935bfb271b8633f8d8291b1a87a965",
   "skills/dev-prompts/template.md": "e52d9447aee658dee14570d3b1534a3bbac3e4c6",
-  "skills/pm-design/SKILL.md": "e60e0de168ece31bc28ff0f03493fad236265052",
+  "skills/pm-design/SKILL.md": "7bc473c4bcfc3051b1e054593d40aa9311e896a2",
   "skills/pm-design/annotation-templates.md": "1a7fc43b391305eee862fef78f82139d851cf0d0",
   "skills/pm-design/business-analysis-template.md": "1ac3e47fb84cfb7afaaac55ddeaa9f6e52dea287",
   "skills/pm-design/check-annotation-coverage.ps1": "106e061c86945652d089c4224fab33734d8e8d02",
@@ -502,7 +502,8 @@
    "a187e684b7d5ab5d40f5e717e58ed4edd3182223",
    "c20164a250989b2a865e83a41ab04ec77caee830",
    "c6e25102998dc1ba097e3ae67df6be433cc834d5",
-   "c87e01684756912d6f85746b183b103ece9b3bb1"
+   "c87e01684756912d6f85746b183b103ece9b3bb1",
+   "e60e0de168ece31bc28ff0f03493fad236265052"
   ],
   "skills/pm-design/annotation-templates.md": [
    "673cc7ba8251823989e46d17350fcb93255465f7",
