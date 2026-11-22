@@ -1,6 +1,6 @@
 {
  "_说明": "本文件由发布脚本自动生成，不要手工改。update-proenga.ps1 / update-proenga.sh 用它核对新版是否完整、判断哪些旧文件可以删除。",
- "version": "2026.11.22.4",
+ "version": "2026.11.22.5",
  "files": {
   ".agents/skills/dev-codegen/SKILL.md": "4ecaea1fd3899373f76ecd2cf6f84b03b13386ba",
   ".agents/skills/dev-prompts/SKILL.md": "624f7c3c3da8cc69e5a19863bb1d51c66ad93279",
@@ -52,12 +52,12 @@
   ".gitignore": "4c79d5bcfe93dbe43aa70c1ed11649d9d713fee9",
   ".mcp.json.example": "166f13e31ffc38be1a73b7ac9cb898f2ec19605d",
   "AGENTS.md": "9c2a615f73563232fcca450d1c05b9fc118b53fb",
-  "CHANGELOG.md": "f9fa7f7285ed88e8c2b3c8d7af302abf966a14cf",
+  "CHANGELOG.md": "3e69cfac34ab530e61f4e6e551b0b10148968e2e",
   "CLAUDE.md": "f9c5ecb6a4ca50b4d6b80b5754d52405c4f4e07b",
   "INSTALL.md": "ff7da8ec32ac5e79af4478ba485cd0f0e94f88d4",
   "LICENSE": "af7501a71a5774098519eee4324ab75cc73d9a4a",
   "README.md": "ed02d4286d218b3d03ceddc41e8cb84ffc1efabe",
-  "VERSION": "6cc7b554e4f47fa90d04d377b9e112abb78d0797",
+  "VERSION": "09e8db086e2ca466fca03b979b325fc202728e29",
   "anno-server/anno-config.example.json": "53f8a23cf9689de61d17667d2dac99bc0cc64b9f",
   "anno-server/assemble-once.js": "9df4eb3cde539a64cdb92deb723283ad82ffa5c4",
   "anno-server/build-shared-generator.js": "14d491f41d75ed20df4f0e88a34eefa83915b639",
@@ -259,7 +259,7 @@
   "skills/pm-design/vendor/vue.js": "9469d82c60cfbfdf5956a9202f85ff8b6a563eb4",
   "skills/pm-design/vendor/vue.js.url": "fcb48932d3e2970b30928af2371c0e20a08ce5bf",
   "skills/pm-design/工程命名规范.md": "fad4be1fcb9b7e214075e046e47f6376a4531e50",
-  "skills/prd/SKILL.md": "3215db3b02f48d51a18b6866ce6804c2d9aa774e",
+  "skills/prd/SKILL.md": "dfba7573e07ab8432f4ba3079bd02af4e9345a7a",
   "skills/prd/_anno-browser.js": "7a2a212dcfa5ffc7705706941dea9a2e0232c4f2",
   "skills/prd/_rules/prd-directory-numbering.mdc": "5ed5c46349e71b0efed3cb7db9295afc38454fdd",
   "skills/prd/_rules/prd-post-generation-deepcheck.mdc": "d8665d3a968ee4d07cead6dd92f780669536381d",
@@ -377,7 +377,8 @@
    "b82b3d3a7439d85f84976e97a0ed88413c3425d7",
    "ca4ad7a3cb3d14a2892867d8c24fd740d45218a0",
    "cdec6641d11c60aaba0447126f1fbd0205d076ff",
-   "ee0d1b66acb457442bdf500da61873148c25a1fb"
+   "ee0d1b66acb457442bdf500da61873148c25a1fb",
+   "f9fa7f7285ed88e8c2b3c8d7af302abf966a14cf"
   ],
   "CLAUDE.md": [
    "10466d3cbfe58013e75e31eb29270a0a79cc1809",
@@ -781,6 +782,7 @@
   ],
   "skills/prd/SKILL.md": [
    "0efb50fd5c2b3f6b5cd45641ce408ee9dc366d70",
+   "3215db3b02f48d51a18b6866ce6804c2d9aa774e",
    "37160ade40c6f0759e7356efeb5b3a21b59416e1",
    "3dcb81c8a900a37f53087c2f88b12dd53d5805be",
    "5146a7432ec4b9adfb0270a31100d7c5ec9903da",
