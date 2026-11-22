@@ -8,8 +8,10 @@
    这正是 prd-content-lint / prd-structure-lint 判不了的一层（它们不知道原型真实有哪些字段）。
    —— 专治"凭记忆/截图臆造字段"（如给充值表单臆造「币种」「审核结果」「已到账金额」）。
    定位：随包发；画新原型 / 别人装包跑 deliver-gate 都自动受保护，不再靠 AI 老不老实。
-   用法：node prd-prototype-field-gate.js [原型.html] [prd-data.json]（不给则按 system_name 自动配对 archive）
-   退出码：0=全部字段在原型可查到 1=有疑似臆造字段。
+   用法：node prd-prototype-field-gate.js [原型.html] [PRD.md 或 prd-data.json] [--project-data <project-data.json>]
+        不给 PRD 时自动配对（见 _find-paired-prd.js：project-data 的 _prd → 同目录 → 按项目名在上级目录模糊匹配）；
+        什么都不给则按 system_name 配对 archive（交付总闸用）。
+   退出码：0=一致 1=有不一致 3=没找到配对的 PRD，未检查（不算通过）。
    ════════════════════════════════════════════════════════════════════════ */
 const fs = require("fs"), path = require("path");
 
@@ -20,24 +22,16 @@ function findArchive() {
   return null;
 }
 const arch = findArchive();
-let protoPath = process.argv[2], prdPath = process.argv[3];
+const ARGS = process.argv.slice(2);
+const pdI = ARGS.indexOf("--project-data"); const projectData = pdI >= 0 ? ARGS.splice(pdI, 2)[1] : null;
+let protoPath = ARGS[0], prdPath = ARGS[1];
 const protoSys = f => { try { const m = fs.readFileSync(f, "utf8").match(/"system_name"\s*:\s*"((?:[^"\\]|\\.)*)"/); return m ? m[1] : ""; } catch (_) { return ""; } };
-// §2026-11-20 给了原型、没给 PRD：只在原型同目录找配对的 PRD，不再拿 archive 里别的系统的 prd-data 来比
-//   配对顺序：同目录 prd-data.json 且 system_name 相同 → 同目录 PRD-*.md 文件名含 system_name → 同目录只有一份 PRD-*.md
-//   找不到就明确说“未检查”，不算通过（退出码 3）。
-function findPairedPrd(proto) {
-  const dir = path.dirname(proto), sys = protoSys(proto);
-  const pj = path.join(dir, "prd-data.json");
-  if (fs.existsSync(pj)) { try { const p = JSON.parse(fs.readFileSync(pj, "utf8").replace(/^﻿/, "")); if (!sys || p.system_name === sys) return pj; } catch (_) {} }
-  let mds = []; try { mds = fs.readdirSync(dir).filter(f => /^PRD.*\.md$/i.test(f) && !/^~\$/.test(f)); } catch (_) {}
-  const byName = sys ? mds.filter(f => f.includes(sys)) : [];
-  if (byName.length) return path.join(dir, byName.sort().pop());
-  if (mds.length === 1) return path.join(dir, mds[0]);
-  return null;
-}
+// §2026-11-20 给了原型、没给 PRD：按 _find-paired-prd.js 的顺序找配对的 PRD，不再拿 archive 里别的系统的 prd-data 来比；找不到明确说“未检查”（退出码 3）
 if (protoPath && !prdPath) {
-  prdPath = findPairedPrd(protoPath);
-  if (!prdPath) { console.log("⚠ 未检查（不算通过）：原型 " + path.basename(protoPath) + " 同目录没找到配对的 PRD（prd-data.json 的 system_name 要和原型一致，或 PRD-<系统名>.md）。写好 PRD 后再跑，或在第二个参数直接给 PRD 的 .md / prd-data.json。"); process.exit(3); }
+  const r = require("./_find-paired-prd").findPairedPrd({ proto: protoPath, projectData });
+  if (r && r.error) { console.log("✗ " + r.error); process.exit(1); }
+  if (!r || !r.file) { console.log("⚠ 未检查（不算通过）：没找到原型 " + path.basename(protoPath) + " 配对的 PRD。可以在 project-data 顶层写 \"_prd\": \"<PRD 的 .md 路径，相对 project-data 所在目录或绝对路径>\"；或把 PRD 放在原型同目录、上级目录的 PRD 文件夹里，文件名带项目名。"); process.exit(3); }
+  prdPath = r.file; console.log("配对的 PRD：" + prdPath + "（" + r.how + "）");
 }
 if (!prdPath) { if (arch && fs.existsSync(path.join(arch, "prd-data.json"))) prdPath = path.join(arch, "prd-data.json"); }
 if (!prdPath || !fs.existsSync(prdPath)) { console.log("✗ 未找到 PRD（prd-data.json 或 PRD 的 .md）"); process.exit(1); }
@@ -51,7 +45,8 @@ function prdFromMd(text) {
       const t = h[2].replace(/`/g, "");
       if (/字段规范/.test(t)) { sub = "fs"; continue; }
       if (/用例规则/.test(t)) { sub = "uc"; continue; }
-      if (/^[\d.]+\s*(位置|原型图)$/.test(t) || /^(位置|原型图)$/.test(t)) { sub = ""; continue; }
+      // 功能点下面的其它小节（不是新的功能点）：只结束上一小节，不换功能点
+      if (/^[\d.]*\s*(位置|原型|原型图|流程图|关键业务约束|业务场景说明|页面说明|界面说明|功能点详细介绍|说明)$/.test(t)) { sub = ""; continue; }
       cur = t; sub = ""; fps[cur] = fps[cur] || { _draft_fieldSpecs: "", _draft_useCaseRules: "" }; continue;
     }
     if (!cur || !sub) continue;
@@ -81,7 +76,7 @@ if (!protoPath || !fs.existsSync(protoPath)) { console.log(`（无与「${sysNam
 const html = fs.readFileSync(protoPath, "utf8");
 
 // ── 提取原型"字段真值词表" ──
-const norm = s => String(s).trim()
+const norm = s => String(s).replace(/\*\*/g, "").split("›").pop().trim()   // §2026-11-20 去粗体；“退货人信息 › CEP”取最后一段
   .replace(/[（(][^）)]*[）)]\s*$/g, "")   // 去尾部括注：账户余额 (CNY) → 账户余额
   .replace(/^\*\s*/, "").replace(/\s+/g, "").trim();
 const vocab = new Set();
@@ -110,7 +105,7 @@ for (const decl of ["const SYSTEMS=", "const NAV=", "const PAGECFG="]) {
   const raw = grabLiteral(html, decl); if (!raw) continue;
   let data; try { data = JSON.parse(raw); } catch (_) { continue; }
   const walkV = n => {
-    if (typeof n === "string") { if (/[一-龥]/.test(n)) add(n.replace(/<[^>]+>/g, "")); return; }
+    if (typeof n === "string") { if (/[一-龥]/.test(n) || /^[A-Za-z][A-Za-z0-9 /().-]{1,23}$/.test(n)) add(n.replace(/<[^>]+>/g, "")); return; }
     if (!n || typeof n !== "object") return;
     if (Array.isArray(n)) { n.forEach(walkV); return; }
     if (typeof n.zh === "string") { walkV(n.zh); return; }
@@ -227,7 +222,7 @@ for (const k of Object.keys(fps)) {
     const name = c[0], miss = c[1];
     if (!miss || miss === "-" || !/^请(输入|选择|上传)/.test(miss)) continue;
     const cand = pickCand(norm(name)); if (!cand) continue;
-    if (!cand.some(x => x.msg === miss.replace(/[。.]$/, "")))
+    if (!cand.some(x => x.msg === miss.replace(/[。.]$/, "").replace(/[（(].*$/, "").trim()))
       attrFlags.push({ k, name, why: "没填提示不一致：PRD 写“" + miss + "”，原型会提示“" + [...new Set(cand.map(x => x.msg))].join("”或“") + "”" });
   }
 }

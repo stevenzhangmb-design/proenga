@@ -15,7 +15,7 @@
 | **② 改原型** | `node skills/pm-design/p.js <源> find/show/get/tree` | 定点查（这句话在哪 / 这页有什么），**不整份读大 HTML** | 0.16s |
 | | `node skills/pm-design/p.js <源> set "<路径>=<值>" --check <页>` | 改一处 + 重装 + **文字确认**（列/行/字段/报错/溢出·省截图 token） | set 0.5s + check ~1.5s |
 | | `node skills/pm-design/p.js <源> shot <页> [--click …]` | 只在核对视觉保真/逐像素时才截图 | ~7s |
-| | `node skills/pm-design/mockgen.js <源> <页> [N] --apply` | 按列名自动生成模拟数据（金额/CNPJ/日期/状态…） | <0.1s |
+| | `node skills/pm-design/mockgen.js <源> <页> [N] --apply` | 按列名自动生成模拟数据（金额/企业编号/日期/状态…） | <0.1s |
 | | 多语标签写紧凑串 `"\|中文\|English\|Português"`（`i18n-compact.js` 装配时自动展开） | | |
 | **③ 生成 PRD** | `node skills/prd/prd-draft.js <类型> [--fields "售价*,库存"] [--notif] [--name 商品]` | 吐 7 节 use_cases 骨架·固定件（操作日志/查询句/提示消息/通知表头）逐字填好·AI 只填 `<…>` 业务槽位 → `/anno-inject` | 瞬时·每 fp 省~20-30% |
 | **④ 改 PRD** | `node skills/prd/pd.js <prd-data> list/show/get/find` | 定点看某功能点现有字段规范 + 7 节用例规则，**不整份读几 MB prd-data** | 瞬时·只读 |

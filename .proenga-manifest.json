@@ -1,11 +1,11 @@
 {
  "_说明": "本文件由发布脚本自动生成，不要手工改。update-proenga.ps1 / update-proenga.sh 用它核对新版是否完整、判断哪些旧文件可以删除。",
- "version": "2026.11.20.3",
+ "version": "2026.11.22.1",
  "files": {
   ".agents/skills/dev-codegen/SKILL.md": "4ecaea1fd3899373f76ecd2cf6f84b03b13386ba",
   ".agents/skills/dev-prompts/SKILL.md": "624f7c3c3da8cc69e5a19863bb1d51c66ad93279",
   ".agents/skills/pm-design/SKILL.md": "c8f1c42ba218fff9bcf12510f15cfb7b7af143a9",
-  ".agents/skills/prd/SKILL.md": "3441eff9766b5b73143ccb070e488322a0b23edf",
+  ".agents/skills/prd/SKILL.md": "0f18d235dd89bb17fc9047e2a3c862ef35c8dcdf",
   ".agents/skills/product-pitch/SKILL.md": "8e1ec4f836824b4a4b54a775e16e1bf2bfdb397f",
   ".agents/skills/proenga-update/SKILL.md": "a520f22078265a6928b3bcd744cfd3150f4eb6b9",
   ".agents/skills/rpa/SKILL.md": "40ba50538197245fdeb5d8cc979037aa2636faed",
@@ -18,7 +18,7 @@
   ".claude/skills/dev-codegen/SKILL.md": "4ecaea1fd3899373f76ecd2cf6f84b03b13386ba",
   ".claude/skills/dev-prompts/SKILL.md": "624f7c3c3da8cc69e5a19863bb1d51c66ad93279",
   ".claude/skills/pm-design/SKILL.md": "c8f1c42ba218fff9bcf12510f15cfb7b7af143a9",
-  ".claude/skills/prd/SKILL.md": "3441eff9766b5b73143ccb070e488322a0b23edf",
+  ".claude/skills/prd/SKILL.md": "0f18d235dd89bb17fc9047e2a3c862ef35c8dcdf",
   ".claude/skills/product-pitch/SKILL.md": "8e1ec4f836824b4a4b54a775e16e1bf2bfdb397f",
   ".claude/skills/proenga-update/SKILL.md": "a520f22078265a6928b3bcd744cfd3150f4eb6b9",
   ".claude/skills/rpa/SKILL.md": "40ba50538197245fdeb5d8cc979037aa2636faed",
@@ -29,7 +29,7 @@
   ".codebuddy/skills/dev-codegen/SKILL.md": "4ecaea1fd3899373f76ecd2cf6f84b03b13386ba",
   ".codebuddy/skills/dev-prompts/SKILL.md": "624f7c3c3da8cc69e5a19863bb1d51c66ad93279",
   ".codebuddy/skills/pm-design/SKILL.md": "c8f1c42ba218fff9bcf12510f15cfb7b7af143a9",
-  ".codebuddy/skills/prd/SKILL.md": "3441eff9766b5b73143ccb070e488322a0b23edf",
+  ".codebuddy/skills/prd/SKILL.md": "0f18d235dd89bb17fc9047e2a3c862ef35c8dcdf",
   ".codebuddy/skills/product-pitch/SKILL.md": "8e1ec4f836824b4a4b54a775e16e1bf2bfdb397f",
   ".codebuddy/skills/proenga-update/SKILL.md": "a520f22078265a6928b3bcd744cfd3150f4eb6b9",
   ".codebuddy/skills/rpa/SKILL.md": "40ba50538197245fdeb5d8cc979037aa2636faed",
@@ -41,7 +41,7 @@
   ".github/skills/dev-codegen/SKILL.md": "4ecaea1fd3899373f76ecd2cf6f84b03b13386ba",
   ".github/skills/dev-prompts/SKILL.md": "624f7c3c3da8cc69e5a19863bb1d51c66ad93279",
   ".github/skills/pm-design/SKILL.md": "c8f1c42ba218fff9bcf12510f15cfb7b7af143a9",
-  ".github/skills/prd/SKILL.md": "3441eff9766b5b73143ccb070e488322a0b23edf",
+  ".github/skills/prd/SKILL.md": "0f18d235dd89bb17fc9047e2a3c862ef35c8dcdf",
   ".github/skills/product-pitch/SKILL.md": "8e1ec4f836824b4a4b54a775e16e1bf2bfdb397f",
   ".github/skills/proenga-update/SKILL.md": "a520f22078265a6928b3bcd744cfd3150f4eb6b9",
   ".github/skills/rpa/SKILL.md": "40ba50538197245fdeb5d8cc979037aa2636faed",
@@ -51,13 +51,13 @@
   ".github/skills/verify-prototype/SKILL.md": "821d9330bb92ae1b9f00a8cef24fc03ed31adc61",
   ".gitignore": "4c79d5bcfe93dbe43aa70c1ed11649d9d713fee9",
   ".mcp.json.example": "166f13e31ffc38be1a73b7ac9cb898f2ec19605d",
-  "AGENTS.md": "65f7d98aa5276ab1f903796ecb931befd6a509a5",
-  "CHANGELOG.md": "06de227e8dcd6a040d114f881b3d9aa998616208",
-  "CLAUDE.md": "e092a631c68bc170f98d591b5d91a2f4e508a9c6",
+  "AGENTS.md": "180bbe21fcff34aec9f51a0b859553e3addc3ad6",
+  "CHANGELOG.md": "ee0d1b66acb457442bdf500da61873148c25a1fb",
+  "CLAUDE.md": "f447761ec347d30e32508d57ff636866a2231b4b",
   "INSTALL.md": "ff7da8ec32ac5e79af4478ba485cd0f0e94f88d4",
   "LICENSE": "af7501a71a5774098519eee4324ab75cc73d9a4a",
   "README.md": "ed02d4286d218b3d03ceddc41e8cb84ffc1efabe",
-  "VERSION": "6d9b3d0e915e619d2637fbacb342b12ec7b3059f",
+  "VERSION": "45965d038fa54eeb6a1f7ce7414697bfeb17b9fb",
   "anno-server/anno-config.example.json": "53f8a23cf9689de61d17667d2dac99bc0cc64b9f",
   "anno-server/assemble-once.js": "9df4eb3cde539a64cdb92deb723283ad82ffa5c4",
   "anno-server/build-shared-generator.js": "14d491f41d75ed20df4f0e88a34eefa83915b639",
@@ -74,8 +74,8 @@
   "skills/_shared/acceptance-checklist.md": "faed872d101cb82cc22a245549544212f1d13435",
   "skills/_shared/dev-stack-spec.md": "d3c3c8d7568472ead3de5fda5dd1809c7ca792a4",
   "skills/_shared/downstream-skill-conventions.md": "e07a98e41f05749905254b11ae7e4eb9014bde5b",
-  "skills/_shared/efficiency-cheatsheet.md": "52ac3cd090d705fc1fc87bdabf89c2d008bd43e6",
-  "skills/_shared/fix-and-upstream-protocol.md": "912c5cf382993c26188a67b9db46d1e40cc420f6",
+  "skills/_shared/efficiency-cheatsheet.md": "419ef2c13016f19756be0df45eed69c2fdd8aaf2",
+  "skills/_shared/fix-and-upstream-protocol.md": "0a07a4533421c970761a7f39859cab425bfdc4b5",
   "skills/_shared/qa/_no-throwaway-script-hook.js": "1c47a3ab40b998c6cf79e699bb7a947fe7ca540a",
   "skills/_shared/qa/_stop-ledger-check.js": "3b6862899850c7b5e74afd52f379799c5c6f9c00",
   "skills/_shared/qa/_stop-speed-budget.js": "69977aedd79d2bec4a96d917edfd7e966c652f4b",
@@ -85,7 +85,7 @@
   "skills/_shared/qa/cdp-run.js": "9ded70e122de5528164878c6f0704c6900fc3f67",
   "skills/_shared/qa/verify-pages-sync.js": "1d6be8bab51ad88244951e506de75f8584be67a3",
   "skills/_shared/qa/verify-render-sync.js": "7911baa64a332ff465b7fa70316961b6a7dc5821",
-  "skills/_shared/requirement-ledger.md": "991c756d7135acfbf2a86b5231705ef39a2e81bb",
+  "skills/_shared/requirement-ledger.md": "e4af598af49322608bd123d9c1092353f9dc476c",
   "skills/_shared/research-before-advice.md": "8fac9398a7047437bfd2f6f0c7243abee13936d5",
   "skills/_shared/speed-protocol.md": "3588e8e367bb26c8c91ca71e91d39a32cac78331",
   "skills/_shared/templates/原型改动清单.md": "3599c109ee79a9bcb91553cb9a3c5f336e562075",
@@ -117,14 +117,14 @@
   "skills/dev-prompts/SKILL.md": "cb15dc45f877284387674468f3d437f29fa247b2",
   "skills/dev-prompts/team-config.md": "b0533be34edb4c935882d5f5764fde3391057618",
   "skills/dev-prompts/template.md": "873b758cd925a74d3e7ab1eb6952153e5f3aec4b",
-  "skills/pm-design/SKILL.md": "3cd7d1ff1b14e849ec6be0a18a741af666c2dea2",
+  "skills/pm-design/SKILL.md": "a187e684b7d5ab5d40f5e717e58ed4edd3182223",
   "skills/pm-design/annotation-templates.md": "673cc7ba8251823989e46d17350fcb93255465f7",
   "skills/pm-design/business-analysis-template.md": "1ac3e47fb84cfb7afaaac55ddeaa9f6e52dea287",
   "skills/pm-design/check-annotation-coverage.ps1": "106e061c86945652d089c4224fab33734d8e8d02",
   "skills/pm-design/components/annotation-layer.html": "2b18a48c3f26c20f2bf39730731d9b5387d55351",
   "skills/pm-design/components/host-shell.html": "acd5ff6f9442c671ac28300abacfb1d2da1f6f18",
   "skills/pm-design/components/page-renderer.html": "26f6b8ecde893828746e3aa4580eb4d8e5705329",
-  "skills/pm-design/components/prototype-skeleton.html": "5b3af973786d7c57622ddc9f065b7e9f79bc8a37",
+  "skills/pm-design/components/prototype-skeleton.html": "88239951df7bed3ceef9f1dd2accf1f1cdecfde5",
   "skills/pm-design/examples/capture-mode-retail-product-management.md": "54d107f8b5c178ca9a85992749a37903157fe447",
   "skills/pm-design/examples/project-data.sample.json": "f4e74b564b66664abb132f0cce30f4c748dbd434",
   "skills/pm-design/i18n-compact.js": "7c19f2194a4253fabae88cd25751493fcedf0ca2",
@@ -177,7 +177,7 @@
   "skills/pm-design/qa/contract-anno-prototype-test.js": "a35dfed5c1b8dcbfe9aebf6ad8a27862310c4bf8",
   "skills/pm-design/qa/delete-sync-isolated-gate.js": "ebe62d4baa302ac07a2b7bf824d37843592c084c",
   "skills/pm-design/qa/deliver-gate.js": "b39eb0fb99f08fbb17f1985bd62cc880c03f191a",
-  "skills/pm-design/qa/deliverable-verify-gate.js": "2a13f1a3c79bfe93011161d6faad780df9aa2cbc",
+  "skills/pm-design/qa/deliverable-verify-gate.js": "018cbc491e5e8eeee39a7dc7de8a1c9f37d76670",
   "skills/pm-design/qa/design-baseline.json": "35056b8f6cab55666e7ab674a9136fb277e25e37",
   "skills/pm-design/qa/design-token-gate.js": "f8c30871774aa38033a221aa0cbd137618500740",
   "skills/pm-design/qa/dialog-eyeball-gate.js": "506bb9b5469f81d5458213036daf12244e6e2ab9",
@@ -191,6 +191,7 @@
   "skills/pm-design/qa/fixtures/sample-deliverable-data.json": "5c6710dbb1f5df216115196ea0d8fec2ce277ae8",
   "skills/pm-design/qa/fixtures/vt/br-trilingual.json": "eecfce2cb5394f2e2344baccd77752b26d81eaaa",
   "skills/pm-design/qa/fixtures/vt/cn-b-admin.json": "79f69ba8ef5b336f9b5f558f60392a8406ff104b",
+  "skills/pm-design/qa/form-field-spec-gate.js": "01b35a0841c79809f0523d81c1a1f15e19a56959",
   "skills/pm-design/qa/fresh-install-smoke.js": "b188b883db074840e5494b70a9a155cd0a9369fc",
   "skills/pm-design/qa/full-interaction-regression-gate.js": "4a02abd5a2690cfdd2c9337b7188e1f34b645204",
   "skills/pm-design/qa/full-pipeline-audit.js": "506ec53bfd93ac0a50ffd0ae0f0d260b7399fe1c",
@@ -240,10 +241,10 @@
   "skills/pm-design/regression-check.ps1": "c2ac48d2418fe4ba76f5126de79fe2e6608107ab",
   "skills/pm-design/regression-test-cases.md": "4736804d310711b88fb9ef8c28aef11b2673c5c3",
   "skills/pm-design/render-mermaid.js": "beb88139c83f6142aa6663443049694d8a955db5",
-  "skills/pm-design/scaffold.js": "3cacd4c130a5383ce120d44f17c54626021cda96",
+  "skills/pm-design/scaffold.js": "41162963bf4bc33e0960f64259a83f75bb706924",
   "skills/pm-design/shot.ps1": "93089d8d2a455ead8401fd2b7e7b2ba04d52d140",
   "skills/pm-design/system-design-spec-mobile.md": "9a7ab4607ef0accb3b45c110d3a4fc4323bec887",
-  "skills/pm-design/system-design-spec.md": "80eccf2d942ef99e537519c2a4457bf6ae6519da",
+  "skills/pm-design/system-design-spec.md": "4fffd3aff9750fc78378203e884c4979ccb6f7a6",
   "skills/pm-design/v1-master-spec.md": "0de3067797a5d2b613e53fa17fe69fa98b343f28",
   "skills/pm-design/vendor/ep.css": "1bdde2347dce9014e96b83fcb055d9a8991a8986",
   "skills/pm-design/vendor/ep.css.url": "42733d8865f42f5c148f85c26d547e100a5ece18",
@@ -258,7 +259,7 @@
   "skills/pm-design/vendor/vue.js": "9469d82c60cfbfdf5956a9202f85ff8b6a563eb4",
   "skills/pm-design/vendor/vue.js.url": "fcb48932d3e2970b30928af2371c0e20a08ce5bf",
   "skills/pm-design/工程命名规范.md": "d773b45a67738b5122a07309f9d3779ade1f2f5c",
-  "skills/prd/SKILL.md": "0efb50fd5c2b3f6b5cd45641ce408ee9dc366d70",
+  "skills/prd/SKILL.md": "3dcb81c8a900a37f53087c2f88b12dd53d5805be",
   "skills/prd/_anno-browser.js": "7a2a212dcfa5ffc7705706941dea9a2e0232c4f2",
   "skills/prd/_rules/prd-directory-numbering.mdc": "af929b1495d4f581ca8287199e56ea8111054692",
   "skills/prd/_rules/prd-post-generation-deepcheck.mdc": "d8665d3a968ee4d07cead6dd92f780669536381d",
@@ -271,6 +272,7 @@
   "skills/prd/prd-reference.docx": "81b7c8167e9804599426d8c6345e7617271dea36",
   "skills/prd/prd-to-annotations.js": "c5e53771827bc5d43293c2b15d304c87bfe58ef8",
   "skills/prd/publish-prd-html.js": "024abc502125a5a62a3e856eeb154723d0ee9cec",
+  "skills/prd/qa/_find-paired-prd.js": "fd110cd49bb5e80a69f0dc91ee1ce163ad6a12f2",
   "skills/prd/qa/_stop-hook-check.js": "dd0bf8e8e6beb6f5bb165a1efc27e788eaaa2ff8",
   "skills/prd/qa/archive-multiproject-gate.js": "12706c91e612b65bdc915d1924cda3c1983f3548",
   "skills/prd/qa/docx-autoretry-test.js": "5a1e3480586052fbd97a166a669db0354bfcabe5",
@@ -280,7 +282,7 @@
   "skills/prd/qa/prd-content-lint.js": "cd93cdc90e85d1742cdf485c02e2be2be6a390e3",
   "skills/prd/qa/prd-draft-sync-gate.js": "64990887cb171cb2b2b5d7a15a7c4157498953b9",
   "skills/prd/qa/prd-name-fidelity-gate.js": "b873b20953132c590020d72ae8694fb889ab8e6d",
-  "skills/prd/qa/prd-prototype-field-gate.js": "cf52899454d4e37564269e8a45b14f2e205b699e",
+  "skills/prd/qa/prd-prototype-field-gate.js": "f460fe87c4bca4a2471045b4e6020117539df287",
   "skills/prd/qa/prd-structure-lint.js": "d59e8dcb0dc633f11a1d937f022c3d7193b99060",
   "skills/prd/qa/prd-system-attribution-gate.js": "43886c655860ba7f9a4e0cc7a0dd7f1c9da6bc5b",
   "skills/prd/references/quality-checklist.md": "d9ee88d1a05e5451f9f44b1bf674519769a74d8d",
@@ -289,7 +291,7 @@
   "skills/prd/references/templates/prd-template-clean.md": "dbc63e79061d5ae494c2f0e44405d369d5f018fc",
   "skills/prd/references/templates/prompt-template-common.md": "dc1738a17d5e1aec5122a0910cf180157a979b8e",
   "skills/prd/verify-anno-anchors.js": "0fe2fb87a8a50253926dc885c420d217031a88c7",
-  "skills/product-pitch/SKILL.md": "a3a8e621872babebc776bd0fafd43e0edbcb85d0",
+  "skills/product-pitch/SKILL.md": "40abf9dfaf337aa2976182167b7c4404d2856b50",
   "skills/product-pitch/template.md": "73140ff8e39505f3cd38123ce5ff5f70cd99074a",
   "skills/proenga-update/SKILL.md": "3dc1b0f1cc583182a9a608d7fd2c3fc7b4da1a22",
   "skills/rpa/SKILL.md": "eb13167b32ddb39d0372004da35a789c8056401c",
@@ -335,6 +337,18 @@
   "使用指南.md": "f11361b6a41c4b039810de6a28fb225061a97391"
  },
  "history": {
+  ".agents/skills/prd/SKILL.md": [
+   "3441eff9766b5b73143ccb070e488322a0b23edf"
+  ],
+  ".claude/skills/prd/SKILL.md": [
+   "3441eff9766b5b73143ccb070e488322a0b23edf"
+  ],
+  ".codebuddy/skills/prd/SKILL.md": [
+   "3441eff9766b5b73143ccb070e488322a0b23edf"
+  ],
+  ".github/skills/prd/SKILL.md": [
+   "3441eff9766b5b73143ccb070e488322a0b23edf"
+  ],
   ".gitignore": [
    "09c40926e5e45ccb640069910d7639ef2d52e13c",
    "102470b890a04a839ec9cd37dc2e36c325c69349",
@@ -344,10 +358,12 @@
   "AGENTS.md": [
    "19bcbcb566f1fd5413424372f5ef031b9d2b8767",
    "5d66ec2eaffa61c7e8561369fdc612eaae7a83fb",
+   "65f7d98aa5276ab1f903796ecb931befd6a509a5",
    "9ab556757024dcb78a70ad4c303cfc87b003a33d",
    "9d395e5ab96889047f23db851a5ed7d474652f24"
   ],
   "CHANGELOG.md": [
+   "06de227e8dcd6a040d114f881b3d9aa998616208",
    "191544ea4c0c21860ddbfc69a7be79e9c401834f",
    "4279f4c22cd993629c5ab556f39b58ad5a966707",
    "4458ee53599309ff2b4abc56afcb3e5a8b69a2a0",
@@ -365,7 +381,8 @@
    "89ca99f3db286bf14b58b7cf1568a5900737d007",
    "9240e72eb1d663aaa8a174b53c2a9b9d37306587",
    "ad5e8defb33150668118689c14eadef81a48a645",
-   "cfd3cc36933b0dd8cfde43267e0fda877f4abed9"
+   "cfd3cc36933b0dd8cfde43267e0fda877f4abed9",
+   "e092a631c68bc170f98d591b5d91a2f4e508a9c6"
   ],
   "INSTALL.md": [
    "0c5a1a3c54c0d5253164cc24bd9ab4391e92355e",
@@ -416,13 +433,20 @@
   "skills/_shared/downstream-skill-conventions.md": [
    "7aff6ee868544f95fff8592255860015b1aa4234"
   ],
+  "skills/_shared/efficiency-cheatsheet.md": [
+   "52ac3cd090d705fc1fc87bdabf89c2d008bd43e6"
+  ],
   "skills/_shared/fix-and-upstream-protocol.md": [
+   "912c5cf382993c26188a67b9db46d1e40cc420f6",
    "de344159bbbcfbc88fa3df999f9ad59cce260af9",
    "e5302b8e7526f260017841fafe1d6f01e0a3dafd",
    "f6ff6ea04e7e87b075900df1e94a67b109efe479"
   ],
   "skills/_shared/qa/verify-render-sync.js": [
    "0ce492c834f2e7a266b75a1c4bdbdae03d1f868b"
+  ],
+  "skills/_shared/requirement-ledger.md": [
+   "991c756d7135acfbf2a86b5231705ef39a2e81bb"
   ],
   "skills/dev-codegen/SKILL.md": [
    "4e40dc31b0e987fa580ce79cdbcf74ea9338d752",
@@ -452,6 +476,7 @@
   "skills/pm-design/SKILL.md": [
    "20400d18e2fd7888c9ddb22900078831b7a83901",
    "2af538ac3097eb9d5234c6c1f54fb68356c5a408",
+   "3cd7d1ff1b14e849ec6be0a18a741af666c2dea2",
    "536eb13b693c02d46cf7d46aafeaec4cbebf7564",
    "71025176afe3ca9fe5b7162d7a410465d999275c",
    "78f96d2f7cc635b4d474bef08699652665b67869",
@@ -481,6 +506,7 @@
    "28456c3a3556c959ccdd9409c36fe5651b5c2e4f",
    "40878edda7530a89b0c8fc01c7b1833190ed2298",
    "47e0bd974770b00f7c11b7809fb910fb192ac234",
+   "5b3af973786d7c57622ddc9f065b7e9f79bc8a37",
    "60645b42fb06cb9a1416337ec8d13d412a46b019",
    "6b3e7051dda2e071a9a5482d7cef8c6034b1ced5",
    "6b65fd997c6e8bd41d7dbd7354c6d18b9d661cab",
@@ -572,6 +598,7 @@
   ],
   "skills/pm-design/qa/deliverable-verify-gate.js": [
    "1a69596f12a9247ecfe5ccbe09f307942de18838",
+   "2a13f1a3c79bfe93011161d6faad780df9aa2cbc",
    "a2abf651e32f6678ebf119298b4d4d2c6e223437"
   ],
   "skills/pm-design/qa/design-token-gate.js": [
@@ -689,10 +716,14 @@
   "skills/pm-design/qa/three-principles-conformance.js": [
    "859fc3cd15f5d69abdaf57c9748546005f91f443"
   ],
+  "skills/pm-design/scaffold.js": [
+   "3cacd4c130a5383ce120d44f17c54626021cda96"
+  ],
   "skills/pm-design/system-design-spec.md": [
    "3d506f3f926e06229eb77fa0d987027c99fb0b8c",
    "53bf1a9077f1db37e6770321b6ab0a380c1ae7ec",
    "7b47c828633b746b1673e39123b352264b890e1e",
+   "80eccf2d942ef99e537519c2a4457bf6ae6519da",
    "9b45a3985ff03e48d4c7d261fe92ba11f6afa137",
    "b1695708100b4e1f7a209988ad609e32e7094df1",
    "cd5c4b848656c6e15b3c57f422fea9b9907e0422",
@@ -702,6 +733,7 @@
    "eb7e7960747fb91fb7269071dcb2b4986f147a77"
   ],
   "skills/prd/SKILL.md": [
+   "0efb50fd5c2b3f6b5cd45641ce408ee9dc366d70",
    "37160ade40c6f0759e7356efeb5b3a21b59416e1",
    "5146a7432ec4b9adfb0270a31100d7c5ec9903da",
    "5562524b751a530aec27217907a597ae93e767f4",
@@ -736,7 +768,8 @@
    "74185642f1a492fb9cb2190700c6e316c68ce5ee"
   ],
   "skills/prd/qa/prd-prototype-field-gate.js": [
-   "119033e47f7444c62cf24bb459b61c1299d653ae"
+   "119033e47f7444c62cf24bb459b61c1299d653ae",
+   "cf52899454d4e37564269e8a45b14f2e205b699e"
   ],
   "skills/prd/qa/prd-structure-lint.js": [
    "8491fb1f3501609b211f0187b90ae49d170830be",
@@ -751,6 +784,7 @@
   "skills/product-pitch/SKILL.md": [
    "82d1337b2265cc8157ccbdbb5253350a692e8a51",
    "8db8a9b6050fd12b22f41a60f9ef827cf145aeb1",
+   "a3a8e621872babebc776bd0fafd43e0edbcb85d0",
    "dc5c3b656e30a2503093e20051e5cd9ecac5540e"
   ],
   "skills/proenga-update/SKILL.md": [

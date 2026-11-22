@@ -67,7 +67,7 @@
    - **删**：`*-project-data*.bak-*.json`、`*-project-data.json.before*`、`_bld*.html` 预览件、`*-offline.bak*.html`、PRD 的 `*.bak-*.md`、生成 Word 留下的 `_docxsrc_*.md`、清单的 `*.bak-before-*`、临时区（scratchpad / 临时根）里的中间文件和流程图旧图备份。
    - **不删**：当前的 project-data、交付件、`原型改动清单.md`、PRD 的 md 和 docx、检查要用的 `*.audit-base.json`；用户自己放的文件（zip、别的版本文档、旧交付件、截图目录）不碰，有疑问列给用户。
    - **顺序**：先核对通过，再删；删之前列出要删的清单（数量 + 大小），删完复核正式文件都还在。改坏了没核对通过的，备份留着，不删。
-   - **事故**：巴西发票原型目录攒了 345 个 project-data 备份约 5.7GB，加临时区 0.9GB，用户要求「更新完历史数据删掉，保留最新」。
+   - **事故**：某单据项目原型目录攒了 345 个 project-data 备份约 5.7GB，加临时区 0.9GB，用户要求「更新完历史数据删掉，保留最新」。
 
 ---
 

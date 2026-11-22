@@ -176,21 +176,21 @@ const showRed = out => out.split(/\r?\n/).filter(l => /❌|⚠|FAIL|- /.test(l))
   else { red++; console.log('    ✗ 文案或占位不合规（proto-copy-writing-gate.js）：'); showRed(r.out); }
 }
 {
-  let sys = ''; try { const m = fs.readFileSync(DELIV, 'utf8').match(/"system_name"\s*:\s*"((?:[^"\\]|\\.)*)"/); sys = m ? m[1] : ''; } catch (_) {}
-  const dirs = [...new Set([path.dirname(DELIV), PDATA ? path.dirname(PDATA) : null].filter(Boolean))];
-  let prdFile = null;
-  for (const d of dirs) {          // 先找 system_name 一致的 prd-data.json，再找 PRD 的 .md（文件名含系统名，或目录里只有一份）
-    const f = path.join(d, 'prd-data.json');
-    if (fs.existsSync(f)) { try { const p = JSON.parse(fs.readFileSync(f, 'utf8').replace(/^﻿/, '')); if (!sys || p.system_name === sys) { prdFile = f; break; } } catch (_) {} }
-    let mds = []; try { mds = fs.readdirSync(d).filter(x => /^PRD.*\.md$/i.test(x) && !/^~\$/.test(x)); } catch (_) {}
-    const byName = sys ? mds.filter(x => x.includes(sys)) : [];
-    if (byName.length) { prdFile = path.join(d, byName.sort().pop()); break; }
-    if (mds.length === 1) { prdFile = path.join(d, mds[0]); break; }
-  }
-  if (!prdFile) console.log('    ⚠ PRD 字段一致性未检查（不算通过）：交付件或 project-data 同目录没找到配对的 PRD（system_name 一致的 prd-data.json，或 PRD-<系统名>.md）。还没写 PRD 可以先交付原型；写好 PRD 后重跑自检。');
+  /* §2026-11-22 表单字段规范（form-field-spec-gate.js）：表单下拉没默认值却被自动选第一项、表单下拉里有“全部”选项、编辑弹窗不回显原值。
+     现阶段只提示不拦（--warn）：存量原型修干净后再改成硬拦，改之前要先通知还在维护存量原型的人。 */
+  const r = runGate(path.join(__dirname, 'form-field-spec-gate.js'), [DELIV, '--warn']);
+  if (!/⚠/.test(r.out)) console.log('    ✓ 表单下拉默认值、选项、编辑回显合规');
+  else { console.log('    ⚠ 表单字段规范有待改项（现阶段只提示，不算红；form-field-spec-gate.js）：'); showRed(r.out); }
+}
+{
+  // 配对 PRD：project-data 的 _prd → 同目录 → 按项目名在上级目录模糊匹配（skills/prd/qa/_find-paired-prd.js）
+  const fp = require(path.join(__dirname, '..', '..', 'prd', 'qa', '_find-paired-prd.js')).findPairedPrd({ proto: DELIV, projectData: PDATA });
+  const prdFile = fp && fp.file;
+  if (fp && fp.error) { red++; console.log('    ✗ ' + fp.error); }
+  else if (!prdFile) console.log('    ⚠ PRD 字段一致性未检查（不算通过）：没找到配对的 PRD。可以在 project-data 顶层写 _prd（PRD 的 .md 路径，相对 project-data 所在目录或绝对路径）；或把 PRD 放在原型同目录、上级目录的 PRD 文件夹里，文件名带项目名。还没写 PRD 可以先交付原型，写好后重跑自检。');
   else {
     const r = runGate(path.join(__dirname, '..', '..', 'prd', 'qa', 'prd-prototype-field-gate.js'), [DELIV, prdFile]);
-    if (r.c === 0) console.log('    ✓ 原型字段和 PRD 字段规范、用例规则一致（' + path.basename(prdFile) + '）');
+    if (r.c === 0) console.log('    ✓ 原型字段和 PRD 字段规范、用例规则一致（' + path.basename(prdFile) + '·' + fp.how + '）');
     else { red++; console.log('    ✗ 原型和 PRD 字段规范、用例规则不一致（prd-prototype-field-gate.js）：'); showRed(r.out); }
   }
 }

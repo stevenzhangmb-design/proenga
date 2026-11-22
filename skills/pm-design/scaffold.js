@@ -54,7 +54,8 @@
      add-form <页id>  --title "新增商品" --nav "新增商品" [--system][--group]
                 --fields "商品名称*,价格@money*,分类@select:A|B,备注@textarea,上架@switch"
                    字段：尾 * = 必填；@type = select|date|datetime|textarea|switch|radio|number|readonly（默认文本）
-                   @select:/@radio: 后用 | 列选项
+                   @select:/@radio: 后用 | 列选项；有业务默认值写在末尾 =默认项（@select:BRL|USD|CNY=BRL），
+                   没写默认值的下拉不预选，显示“请选择 + 字段名”（字段规范 §7.7）
                 [--cols 2]  每行列数(默认 2·真系统整页表单常 2~3 列)
                 [--hidden]  不挂导航（仅作列表页「新增」跳转目标）
 
@@ -87,10 +88,18 @@ function parseFields(specStr) {
     if (/\*$/.test(s)) { required = true; s = s.replace(/\*$/, '').trim(); }
     const { label, type } = splitType(s);
     const f = { label }; if (required) f.required = true;
-    let t = type, options = null;
+    let t = type, options = null, dflt = null;
     const m = t.match(/^(select|radio):(.*)$/);
-    if (m) { t = m[1]; options = m[2].split('|').map(x => x.trim()); }
-    if (t === 'select') { f.type = 'select'; if (options) f.options = options; }
+    if (m) {
+      t = m[1];
+      /* 默认值写在选项末尾：@select:BRL|USD|CNY=BRL → 预选 BRL */
+      let body = m[2]; const eq = body.lastIndexOf('=');
+      if (eq > 0) { dflt = body.slice(eq + 1).trim(); body = body.slice(0, eq); }
+      options = body.split('|').map(x => x.trim());
+    }
+    /* 字段规范（默认设计规范 §7.7）：下拉有业务默认值才预选；没写默认值就不预选，显示“请选择 + 字段名”。
+       骨架对没写值的下拉会兜底选第一项，所以这里显式写 optional:true。 */
+    if (t === 'select') { f.type = 'select'; if (options) f.options = options; if (dflt) f.value = dflt; else f.optional = true; }
     else if (t === 'radio') { f.type = 'radio'; if (options) f.options = options; }
     else if (t === 'textarea') f.type = 'textarea';
     else if (t === 'switch') f.type = 'switch';

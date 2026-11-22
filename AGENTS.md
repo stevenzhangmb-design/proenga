@@ -50,6 +50,7 @@
    - 正确：原型 `{ "label":"客户名称", "type":"input", "required":true, "ph":"请输入客户名称" }`，PRD 字段规范“客户名称｜文本｜是｜请输入客户名称｜最多 50 个字符”，提示消息“客户名称｜请输入客户名称｜最多 50 个字符”。
    - 错误：原型 `{ "label":"客户名称", "ph":"请输入" }`（占位没带字段名）；PRD 写必填，原型没有星号；PRD 没填提示写“请输入客户名称”，原型 `reqMsg` 写“客户名称不能为空”。
    - 机器兜底：交付件自检 `skills/pm-design/qa/deliverable-verify-gate.js` 内含两项检查，`rebuild-deliverable.ps1` 全量重建和快速模式的后台报告都会跑：`skills/pm-design/qa/proto-copy-writing-gate.js`（占位只写“请输入”“请选择”=红）、`skills/prd/qa/prd-prototype-field-gate.js`（字段名、必填、占位、没填提示和配对的 PRD 不一致=红）。交付总闸 `deliver-gate.js` 也调用这两项。红了不许说“做完了”，交付件自检全绿（快速模式看报告第一行是 PASS）才能说完成。
+   - 配对 PRD：在 project-data 顶层写 `"_prd": "<PRD 的 .md 或 prd-data.json 路径>"`（相对 project-data 所在目录，或绝对路径），检查就按它找；没写时先找原型同目录的 PRD，再按项目名在上级目录的 PRD 文件夹里模糊匹配（取最新的一份）。写了 `_prd` 但文件不存在判红；一份都没找到时明确提示“未检查（不算通过）”。
 
 ---
 
