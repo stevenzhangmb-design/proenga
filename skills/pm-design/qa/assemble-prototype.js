@@ -118,6 +118,8 @@ const projectDataJs = [
   // 是【整套收银台共用】的一份配置，不属于任何单页，所以走全局常量而不是 pagecfg.<页>。
   // data.posNav={title,contact,items:[{page,label,icon,tip}],backTo,backText,logoutText}
   'const POSNAV=' + JSON.stringify(data.posNav || {}) + ';',
+  // §v8.67 项目统一日期格式（整套原型共用）：data.dateFmt='DD/MM/YYYY HH:mm:ss' 或 'YYYY-MM-DD HH:mm:ss'；不写 = 骨架各处原来的格式
+  'const DATE_FMT=' + JSON.stringify(data.dateFmt || '') + ';',
   'const PAGECFG=' + JSON.stringify(data.pagecfg || {}) + ';'
 ].join('\n  ');
 

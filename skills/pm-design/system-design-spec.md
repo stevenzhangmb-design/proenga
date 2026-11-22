@@ -2118,6 +2118,8 @@ ElMessage.error({ message: '操作失败', showClose: true, duration: 0 })
 | 数据存储 / API | ISO `YYYY-MM-DD HH:mm:ss` |
 | 操作日志（审计）| ISO `YYYY-MM-DD HH:mm:ss`（国际标准） |
 
+项目可以声明统一日期格式（如 `DD/MM/YYYY HH:mm:ss`，在项目数据顶层写 `dateFmt`）。声明后，原型运行时生成的时间和操作日志都按这个格式写，不再用上表的 ISO 格式。不声明时按上表。
+
 ### 9.2 币种
 
 - 默认 **BRL**（雷亚尔），符号 R$

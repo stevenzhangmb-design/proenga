@@ -180,6 +180,9 @@ BANS.forEach(([w]) => { if (md.includes(w)) E("BAN", `全文出现禁用措辞�
     if (/^原型/.test(h.name) && !/!\[/.test(b) && !/^无[。.]?$/.test(b) && !/IMG-/.test(b)) bad.push(`「${h.text}」没有原型截图`);
   }
   if (bad.length) E("STD", `有 ${bad.length} 处【流程图/原型/字段规范/用例规则】不符合标准模板（个性化结构的 PRD 也必须一样）：${bad.slice(0, 5).join("；")}${bad.length > 5 ? " 等" : ""}`);
+  /* 2026-11-22 铁律：PRD 截图一律用中文界面；图片说明写着其他语言界面的，判红（用户明确要求放外语截图时，在图片说明里写“用户要求”可放行） */
+  const langImg = []; lines.forEach((l, i) => { const m = l.match(/!\[([^\]]*)\]/); if (m && /(英文|英语|葡文|葡语|葡萄牙语|西班牙语|西文|外语|多语言)(版)?界面|English UI|Portuguese UI/i.test(m[1]) && !/用户要求/.test(m[1])) langImg.push(`第 ${i + 1} 行「${m[1].slice(0, 30)}」`); });
+  if (langImg.length) E("STD", `有 ${langImg.length} 张截图不是中文界面（PRD 截图一律用中文界面）：${langImg.slice(0, 5).join("；")}${langImg.length > 5 ? " 等" : ""}`);
 }
 /* --writing-only：不按标准模板写的 PRD、用户在对话框里要求增加的文字，同样要守写法规则（2026-11-06 用户明令：不管是否按标准模板，统一遵守）。
    只查上面的写法类（「」、口语、句末标点等），不查模板结构。make-doc.ps1 对非模板文档自动用这个模式。 */

@@ -1,5 +1,9 @@
 <!-- ╔══════════════════════════════════════════════════════════════════════╗
      原型骨架（装配器结构唯一源）· prototype-skeleton · v8.11 （2026-11-10）
+     v8.67（2026-11-22）：项目统一日期格式——project-data 顶层写 dateFmt:'DD/MM/YYYY HH:mm:ss'（或 'YYYY-MM-DD HH:mm:ss'），装配器注入 DATE_FMT；
+            声明后骨架运行时生成的时间一律按它写：efxNow / posNow 的 {now}{due}{NOW}{DUE}、超时提示 {auth}（含秒）、relToYmd（relAbs / voidDlg.authYmd / mirrors.nowYmd）、
+            {{±N}} 占位（含 |ymd）、下载文件名 {fv:日期字段}（文件名里的 / 换成 -，|digits 不变）、整页 nowDefault 没写 format 时；此时 posOrder.nowYmd 不再起作用。
+            不写 dateFmt = 原行为不变。另修 {DUE}：{NOW} 是 dd/mm/yyyy 时原来认不出、原样等于 {NOW}，现在也按 +dueHours 算。新增 dateFmt() / fmtDT(日期, 格式) / dateOf(时间文字)。
      v8.66（2026-11-22）：组合筛选框（列表筛选区、弹窗里的组合框）没写 ph 时，默认占位按当前语言显示：批量搜索用逗号,隔开 / Separate multiple values with commas / Separe vários valores com vírgula（词典 batchPh）；写了 ph 仍用写的。
      v8.65（2026-11-20）：占位默认拼字段名——字段没写 ph 时，原来默认“请输入”“请选择”的地方（分区表单的下拉/文本域/输入框、工具条下拉、预订单字段、备注类文本域）
             改成“请输入/请选择 + 字段名”，中英葡按 vEnter / vSelect 模板（请输入{f} / Enter {f} / Informe {f}；请选择{f} / Select {f} / Selecione {f}）；写了 ph 仍用 ph；
@@ -5815,26 +5819,36 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
   /* §v3.71 相对时间占位符：数据里写 {{-3h}} / {{-2d}} / {{-45m}}（也支持 +），渲染成「相对现在」的
      dd/mm/yyyy HH:MM:SS。模拟数据的时间写死日期，过几天再打开就全过期了（取消发票的「距超时」会变成全部已超时）；
      写成相对的，演示时永远有「还剩 / 即将超时 / 已超时」的对比。 */
-  /* §v8.64（2423）占位符末尾加 |ymd（如 {{-3h|ymd}}）→ 写成 yyyy-mm-dd HH:mm:ss；不加仍是 dd/mm/yyyy */
+  /* §v8.67 项目统一日期格式：project-data 顶层写 dateFmt:'DD/MM/YYYY HH:mm:ss'（或 'YYYY-MM-DD HH:mm:ss'），装配器注入常量 DATE_FMT。
+     声明后，骨架运行时生成的时间一律按它写：{now}/{due}/{NOW}/{DUE}、超时提示 {auth}、相对时间换算（relAbs / authYmd / mirrors.nowYmd）、
+     {{-3h}} 占位（含 |ymd）、下载文件名 {fv:日期字段}（文件名里的 / 换成 -）、整页字段 nowDefault 的默认格式；posOrder.nowYmd 等各处的 ymd 开关不再起作用。
+     不写 = 各处原来的格式（老项目不变）。dateOf 认 yyyy-mm-dd、dd/mm/yyyy 两种写法，所以只支持这两种日期顺序。 */
+  function dateFmt(){ try{ return (typeof DATE_FMT!=='undefined' && DATE_FMT) ? String(DATE_FMT) : ''; }catch(_){ return ''; } }
+  function fmtDT(d, fm){ const p=x=>String(x).padStart(2,'0');
+    return String(fm).replace('YYYY',d.getFullYear()).replace('MM',p(d.getMonth()+1)).replace('DD',p(d.getDate())).replace('HH',p(d.getHours())).replace('mm',p(d.getMinutes())).replace('ss',p(d.getSeconds())); }
+  /* §v8.64（2423）占位符末尾加 |ymd（如 {{-3h|ymd}}）→ 写成 yyyy-mm-dd HH:mm:ss；不加仍是 dd/mm/yyyy；§v8.67 声明了 dateFmt 两种都按 dateFmt */
   function fillRelTime(s){
     if(s.indexOf('{{') < 0) return s;
     return s.replace(/\{\{([+-])(\d+)([dhm])(\|ymd)?\}\}/g, (_, sg, n, u, ymd)=>{
       const ms = ({ d:864e5, h:36e5, m:6e4 }[u] || 0) * (+n) * (sg === '-' ? -1 : 1);
       const t = new Date(Date.now() + ms), p = x => String(x).padStart(2, '0');
+      if(dateFmt()) return fmtDT(t, dateFmt());
       const hms = p(t.getHours()) + ':' + p(t.getMinutes()) + ':' + p(t.getSeconds());
       return ymd ? t.getFullYear() + '-' + p(t.getMonth()+1) + '-' + p(t.getDate()) + ' ' + hms
                  : p(t.getDate()) + '/' + p(t.getMonth()+1) + '/' + t.getFullYear() + ' ' + hms;
     });
   }
-  /* §v8.64（2423）时间文字 → yyyy-mm-dd HH:mm:ss：认 yyyy-mm-dd HH:mm[:ss]、dd/mm/yyyy HH:mm[:ss]、“N 分钟前”“N 小时前”“刚刚”（含“刚刚（N 分钟前）”）；认不出原样返回 */
-  function relToYmd(s){ const at=String(s==null?'':s); let m, t=null; const now=Date.now();
+  /* §v8.64（2423）时间文字 → yyyy-mm-dd HH:mm:ss：认 yyyy-mm-dd HH:mm[:ss]、dd/mm/yyyy HH:mm[:ss]、“N 分钟前”“N 小时前”“刚刚”（含“刚刚（N 分钟前）”）；认不出原样返回
+     §v8.67 拆成 dateOf（认时间 → 毫秒，认不出 null）+ 输出；声明了 dateFmt 就按 dateFmt 输出 */
+  function relToYmd(s){ const at=String(s==null?'':s); const t=dateOf(at);
+    return t==null ? at : fmtDT(new Date(t), dateFmt() || 'YYYY-MM-DD HH:mm:ss'); }
+  function dateOf(s){ const at=String(s==null?'':s); let m, t=null; const now=Date.now();
     if((m=at.match(/(\d{4})-(\d{2})-(\d{2})[\sT]+(\d{2}):(\d{2})(?::(\d{2}))?/))) t=new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +(m[6]||0)).getTime();
     else if((m=at.match(/(\d{2})\/(\d{2})\/(\d{4})[\s ]+(\d{2}):(\d{2})(?::(\d{2}))?/))) t=new Date(+m[3], +m[2]-1, +m[1], +m[4], +m[5], +(m[6]||0)).getTime();
     else if((m=at.match(/(\d+)\s*分钟前/))) t=now-(+m[1])*6e4;
     else if((m=at.match(/(\d+)\s*小时前/))) t=now-(+m[1])*36e5;
     else if(/刚刚/.test(at)) t=now;
-    if(t==null) return at; const d=new Date(t), p=x=>String(x).padStart(2,'0');
-    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
+    return t; }
   /* 数据里只写空壳 <i class="copy-ic" data-copy="X"></i>，渲染时补上图形 —— 免得每格都塞一份 SVG */
   function fillCopyIcons(s){
     return s.indexOf('copy-ic') < 0 ? s
@@ -6504,7 +6518,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           let s=0,w=2; for(let i=k43.length-1;i>=0;i--){ s+=(+k43[i])*w; w=w===9?2:w+1; } return k43+((s%11<2)?0:11-s%11); };
         const pm=((curPos.value&&curPos.value.payMethods)||[])[posPm.value];
         const vars={ RNO:rNo, XNO:xNo, ORIG:o.no, TYPE:L(o.type), STORE:L(o.store), RGOODS:x.names, XGOODS:ex.map(r=>L(r.name)).join('、')||'—',
-          RAMT:L(posMoney(x.amt)), XAMT:L(posMoney(xamtN)), DIFF:L(posMoney(Math.abs(xamtN-x.amt))), RQTY:x.qty, XQTY:xqty, NOW:now, DUE:(()=>{ /* §2375 {DUE} = {NOW} + vp.dueHours（默认 24）小时，格式同 {NOW} */ const m=String(now).match(/(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d):(\d\d)/); if(!m) return now; const d=new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+m[6]); d.setTime(d.getTime()+(+(vp.dueHours||24))*3600000); const z=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes())+':'+z(d.getSeconds()); })(),
+          RAMT:L(posMoney(x.amt)), XAMT:L(posMoney(xamtN)), DIFF:L(posMoney(Math.abs(xamtN-x.amt))), RQTY:x.qty, XQTY:xqty, NOW:now, DUE:(()=>{ /* §2375 {DUE} = {NOW} + vp.dueHours（默认 24）小时，格式同 {NOW}；§v8.67 {NOW} 是 dd/mm/yyyy 也认（原来认不出就原样等于 {NOW}），声明了 dateFmt 按 dateFmt */ const t=dateOf(now); if(t==null) return now; const d=new Date(t+(+(vp.dueHours||24))*3600000); return fmtDT(d, dateFmt() || (/^\d{4}-/.test(String(now)) ? 'YYYY-MM-DD HH:mm:ss' : 'DD/MM/YYYY HH:mm:ss')); })(),
           RNF:rNf, SNF:sNf, RKEY:_same ? res.ret.chave : mk('55',rNf), SKEY:((off||_same) && res.chave) ? res.chave : mk('65',sNf), ORIGNF:(o.nf&&o.nf.no)||'—',
           USER:L(curPos.value&&curPos.value.user)||'--', PAY:L(pm&&pm.label)||'--', GOT:L(posMoney(Math.max(0,+posGot.value||0))), CHG:L(posMoney(Math.max(0,Math.max(0,+posGot.value||0)-posTotal.value))) };
         const fill=t=>JSON.parse(JSON.stringify(t==null?'':t).replace(/\{(RNO|XNO|ORIG|TYPE|STORE|RGOODS|XGOODS|RAMT|XAMT|DIFF|RQTY|XQTY|NOW|DUE|RNF|SNF|RKEY|SKEY|ORIGNF|USER|PAY|GOT|CHG|XST|RST)\}/g,(m,k)=>String(vars[k]==null?'':vars[k]).replace(/["\\]/g,'\\$&')));
@@ -7286,7 +7300,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           const lim = r.hrs<1 ? Math.round(r.hrs*60)+(zh?' 分钟':' min') : r.hrs+(zh?' 小时':' h');
           const ms=r.overMs||0, d=Math.floor(ms/864e5), h=Math.floor(ms%864e5/36e5), mi=Math.floor(ms%36e5/6e4);
           const over = zh ? ((d? d+' 天 ':'') + h + ' 小时 ' + mi + ' 分') : ((d? d+'d ':'') + h + 'h ' + mi + 'm');
-          s=s.replace(/\{auth\}/g, dt.getFullYear()+'-'+p(dt.getMonth()+1)+'-'+p(dt.getDate())+' '+p(dt.getHours())+':'+p(dt.getMinutes())).replace(/\{limit\}/g, lim).replace(/\{over\}/g, over); }
+          s=s.replace(/\{auth\}/g, dateFmt() ? fmtDT(dt, dateFmt()) : dt.getFullYear()+'-'+p(dt.getMonth()+1)+'-'+p(dt.getDate())+' '+p(dt.getHours())+':'+p(dt.getMinutes()))   /* §v8.67 声明了 dateFmt 按它写（含秒）；不写仍是 yyyy-mm-dd HH:mm */.replace(/\{limit\}/g, lim).replace(/\{over\}/g, over); }
         return s; }
       /* ════ §v6.2 订单管理的筛选 / 打印下拉 / 退换货三步（2026-10-11 真系统实测）════ */
       const poFilterOpen = ref(false);
@@ -9566,8 +9580,8 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       /* §v8.23（J）整页字段 nowDefault:true → 整页打开时填成当前时间（按 fd.format，默认 DD/MM/YYYY HH:mm:ss）；只填一次，用户可再改。不配不生效。 */
       Vue.watch(()=>detailData.value, d=>{ if(!d) return; const p=n=>String(n).padStart(2,'0');
         (d.sections||[]).forEach(s=> dvSecPanes(s).forEach(pn=>(pn.fields||[]).forEach(f=>{ if(!f || !f.nowDefault || f._nowSet) return;
-          const t=new Date(); const fm=f.format||'DD/MM/YYYY HH:mm:ss';
-          f.value=fm.replace('YYYY',t.getFullYear()).replace('MM',p(t.getMonth()+1)).replace('DD',p(t.getDate())).replace('HH',p(t.getHours())).replace('mm',p(t.getMinutes())).replace('ss',p(t.getSeconds()));
+          const t=new Date(); const fm=f.format||dateFmt()||'DD/MM/YYYY HH:mm:ss';   /* §v8.67 没写 fd.format 时按项目 dateFmt */
+          f.value=fmtDT(t, fm);
           f._nowSet=true; }))); });
       function dlgRunChecks(d){ if(!d || !Array.isArray(d.checks)) return; const fv=dvFieldVals(), dd=detailData.value, cols={}; let nRows=0;
         ((dd&&dd.sections)||[]).forEach(sec=>{ if(!secShow(sec)) return; dvSecPanes(sec).forEach(pn=>{ const tb=pn.table; if(!tb) return; nRows=Math.max(nRows,(tb.rows||[]).length);
@@ -10409,10 +10423,13 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
           let name = isStr ? dl : ((dl&&dl.filename)?fillRow(L(dl.filename), row):'download.txt');
           /* §v8.64（2423）文件名里 {fv:字段名} = 当前弹窗这个字段的值（月份控件写成 YYYY-MM、日期 YYYY-MM-DD，区间用 ~ 连起来）；不写不生效 */
           if(String(name).indexOf('{fv:')>-1){ const dg=(cfg.value.dialogs||{})[dialogName.value]; const fs=dg ? [].concat(...(dg.sections||[]).map(s=>(s&&s.fields)||[]), Array.isArray(dg.fields)?dg.fields:[]) : [];
-            const p2=n=>String(n).padStart(2,'0'); const fmt=(v,f)=>{ if(v instanceof Date) return v.getFullYear()+'-'+p2(v.getMonth()+1)+(f&&f.month?'':'-'+p2(v.getDate())); return String(L(v)==null?'':L(v)); };
+            const p2=n=>String(n).padStart(2,'0'); const fmt0=(v,f)=>{ if(v instanceof Date) return v.getFullYear()+'-'+p2(v.getMonth()+1)+(f&&f.month?'':'-'+p2(v.getDate())); return String(L(v)==null?'':L(v)); };
+            /* §v8.67 声明了 dateFmt：日期写成 dateFmt 的日期部分（DD/MM/YYYY → 22-11-2026，文件名里 / 换成 -），月份去掉日（11-2026）；{fv:字段|digits} 仍按原来的 年月日 顺序取数字 */
+            const fmt=(v,f,raw)=>{ const s0=fmt0(v,f), _df=dateFmt(); const mm=!raw && _df && String(s0).match(/^(\d{4})-(\d{2})(?:-(\d{2}))?$/); if(!mm) return s0;
+              let dp=_df.split(' ')[0]; if(!mm[3]) dp=dp.replace(/[^A-Za-z]DD$|^DD[^A-Za-z]|DD/,''); return fmtDT(new Date(+mm[1], +mm[2]-1, +(mm[3]||1)), dp).replace(/[\\/:*?"<>|]/g,'-'); };
             name=String(name).replace(/\{fv:([^}|]+)(\|digits)?\}/g,(m,k,dg0)=>{ const _o=(()=>{ let f=fs.find(x=>x && (lblIs(x.label,k) || x.key===k));
               if(!f) fs.some(x=>(Array.isArray(x&&x.options)?x.options:[]).some(o=>{ if(o && typeof o==='object' && o.inline && lblIs(o.label,k)){ f=o.inline; return true; } return false; }));   /* {fv:单选项名} = 该选项行内控件的值（如【按月导出】的月份） */
-              if(!f) return ''; const v=f.value; return Array.isArray(v) ? v.map(x=>fmt(x,f)).join('~') : fmt(v,f); })(); return dg0 ? _o.replace(/\D/g,'') : _o; }); }   /* {fv:字段|digits} 只留数字（2026-11 → 202611） */
+              if(!f) return ''; const v=f.value; return Array.isArray(v) ? v.map(x=>fmt(x,f,dg0)).join('~') : fmt(v,f,dg0); })(); return dg0 ? _o.replace(/\D/g,'') : _o; }); }   /* {fv:字段|digits} 只留数字（2026-11 → 202611） */
           const ext = String(name).split('.').pop().toLowerCase();
           const MIME = { xml:'application/xml;charset=utf-8', csv:'text/csv;charset=utf-8',
                          json:'application/json;charset=utf-8', pdf:'application/pdf',
@@ -10897,7 +10914,7 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
         let s=String(L(hit ? hit.tip : k.tip) || '');
         if(r){ const dt=new Date(r.start), p=n=>String(n).padStart(2,'0'); const zh=/^zh/.test(document.documentElement.lang||'zh');
           const lim = r.hrs<1 ? Math.round(r.hrs*60)+(zh?' 分钟':' min') : r.hrs+(zh?' 小时':' h');
-          s=s.replace(/\{auth\}/g, dt.getFullYear()+'-'+p(dt.getMonth()+1)+'-'+p(dt.getDate())+' '+p(dt.getHours())+':'+p(dt.getMinutes())).replace(/\{limit\}/g, lim).replace(/\{over\}/g, r.overText||''); }
+          s=s.replace(/\{auth\}/g, dateFmt() ? fmtDT(dt, dateFmt()) : dt.getFullYear()+'-'+p(dt.getMonth()+1)+'-'+p(dt.getDate())+' '+p(dt.getHours())+':'+p(dt.getMinutes()))   /* §v8.67 声明了 dateFmt 按它写（含秒）；不写仍是 yyyy-mm-dd HH:mm */.replace(/\{limit\}/g, lim).replace(/\{over\}/g, r.overText||''); }
         return s; }
       /* §v3.69 {deadline:{col,line,hours}} —— 按该行的时间 + N 小时算还剩多久（取消发票有 12~24 小时时限，
          每张票剩余时间都不一样，必须逐行显示）。过期显示红色「已超时」，并记到 tb.__over 供 {x} 统计。 */
@@ -11020,10 +11037,11 @@ v1.2：Route B 两按钮——头部加【📦 导出对接料·喂AI】(annoDev
       const EFX = reactive({ hist:{} });
       function efxKey(r, eff){ return cellLines(r[(eff&&eff.keyCol!=null)?eff.keyCol:1]).join(''); }
       function efxZh(){ return /^zh/.test(document.documentElement.lang||'zh'); }
-      function efxNow(){ const d=new Date(), p=n=>String(n).padStart(2,'0');
+      function efxNow(){ const d=new Date(), p=n=>String(n).padStart(2,'0'); if(dateFmt()) return fmtDT(d, dateFmt());   /* §v8.67 声明了 dateFmt 按它写 */
         return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); }
       /* §v8.36（AE）收银台运行时时间：posOrder.nowYmd:true → yyyy-mm-dd HH:mm:ss；不配 = efxNow() 原样 */
-      function posNow(){ const s=efxNow(); const po=PC['pos-order'] && PC['pos-order'].posOrder; return (po && po.nowYmd) ? s.replace(/^(\d{2})\/(\d{2})\/(\d{4})/,'$3-$2-$1') : s; }
+      /* §v8.67 声明了 dateFmt → 直接用 efxNow()（已按 dateFmt），nowYmd 不再起作用 */
+      function posNow(){ const s=efxNow(); if(dateFmt()) return s; const po=PC['pos-order'] && PC['pos-order'].posOrder; return (po && po.nowYmd) ?s.replace(/^(\d{2})\/(\d{2})\/(\d{4})/,'$3-$2-$1') : s; }
       /* 当前页 byStatus 下的所有行数组（状态级 rows + 各页签 rows），带上所在状态/页签，方便同步与插入 */
       function efxBuckets(){ const out=[]; const bs=cfg.value.byStatus||{};
         Object.keys(bs).forEach(st=>{ const s=bs[st]; if(!s) return;
