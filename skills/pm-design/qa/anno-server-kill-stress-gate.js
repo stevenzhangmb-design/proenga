@@ -16,7 +16,12 @@ const { execSync, spawn } = require('child_process');
 const fs = require('fs'), path = require('path');
 const PORT = 3799, ROUNDS = 5, HEAL_TIMEOUT_MS = 45000, SLOW_MS = 10000;
 const PRD = process.env.ANNO_PRD || path.join(require('./_archive-dir').existingArchiveDir(), 'prd-data.json');
-const ANNO_DIR = process.env.ANNO_DIR || require('path').resolve(__dirname, '../../../anno-server');
+/* anno-server 位置：先按相对位置找（ai-rules 同级 / 公开包里的子目录），都没有才用历史默认路径——换电脑、换盘符都能用 */
+const ANNO_DIR = process.env.ANNO_DIR || [
+  path.join(__dirname, '..', '..', '..', '..', 'anno-server'),
+  path.join(__dirname, '..', '..', '..', 'anno-server'),
+  require('path').resolve(__dirname, '../../../anno-server'),
+].find(p => { try { return fs.existsSync(path.join(p, 'server.js')); } catch (_) { return false; } }) || require('path').resolve(__dirname, '../../../anno-server');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const now = () => Date.now();
 

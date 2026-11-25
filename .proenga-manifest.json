@@ -1,6 +1,6 @@
 {
  "_说明": "本文件由发布脚本自动生成，不要手工改。update-proenga.ps1 / update-proenga.sh 用它核对新版是否完整、判断哪些旧文件可以删除。",
- "version": "2026.11.22.12",
+ "version": "2026.11.25.1",
  "files": {
   ".agents/skills/dev-codegen/SKILL.md": "4ecaea1fd3899373f76ecd2cf6f84b03b13386ba",
   ".agents/skills/dev-prompts/SKILL.md": "624f7c3c3da8cc69e5a19863bb1d51c66ad93279",
@@ -52,12 +52,12 @@
   ".gitignore": "4c79d5bcfe93dbe43aa70c1ed11649d9d713fee9",
   ".mcp.json.example": "166f13e31ffc38be1a73b7ac9cb898f2ec19605d",
   "AGENTS.md": "9c2a615f73563232fcca450d1c05b9fc118b53fb",
-  "CHANGELOG.md": "f9c6e23181fa4fe3faf383d0c8a9723a97fff2c3",
+  "CHANGELOG.md": "2660f6a1d85c1c9a2874a9a303f35902c484d5b9",
   "CLAUDE.md": "f9c5ecb6a4ca50b4d6b80b5754d52405c4f4e07b",
   "INSTALL.md": "ff7da8ec32ac5e79af4478ba485cd0f0e94f88d4",
   "LICENSE": "af7501a71a5774098519eee4324ab75cc73d9a4a",
   "README.md": "ed02d4286d218b3d03ceddc41e8cb84ffc1efabe",
-  "VERSION": "9b246bb4aaaa69a043f49fb3e1782f72dba7f5f5",
+  "VERSION": "79cadc4e21531e21c3d1421378de9a0d25b19e11",
   "anno-server/anno-config.example.json": "53f8a23cf9689de61d17667d2dac99bc0cc64b9f",
   "anno-server/assemble-once.js": "9df4eb3cde539a64cdb92deb723283ad82ffa5c4",
   "anno-server/build-shared-generator.js": "14d491f41d75ed20df4f0e88a34eefa83915b639",
@@ -167,7 +167,7 @@
   "skills/pm-design/qa/anno-placement-gate.js": "4ce140a14c023413fa216df6d2fc4f7b284e60ce",
   "skills/pm-design/qa/anno-portability-gate.js": "08f0be443b70767da365ffed35d070f195f1319f",
   "skills/pm-design/qa/anno-server-crash-isolation-gate.js": "7f32c1f1cbb2de5976e9a01b2a59be0df7cf1f36",
-  "skills/pm-design/qa/anno-server-kill-stress-gate.js": "9a196bed7426fa7aaed4d73b829db2629cb16177",
+  "skills/pm-design/qa/anno-server-kill-stress-gate.js": "aa90094f0eba9580ffb1246574a6855cf5bfef27",
   "skills/pm-design/qa/annotation-runtime.spec.js": "534095fd3842fce0f58cb814a197654ad5c132a9",
   "skills/pm-design/qa/assemble-prototype.js": "8ddab1c47eb3886115cd8c94df1aa81800e4487a",
   "skills/pm-design/qa/auto-screenshot.js": "04d4dfb2a654c5301d8df743675e144bc8df261a",
@@ -384,6 +384,7 @@
    "ca4ad7a3cb3d14a2892867d8c24fd740d45218a0",
    "cdec6641d11c60aaba0447126f1fbd0205d076ff",
    "ee0d1b66acb457442bdf500da61873148c25a1fb",
+   "f9c6e23181fa4fe3faf383d0c8a9723a97fff2c3",
    "f9fa7f7285ed88e8c2b3c8d7af302abf966a14cf"
   ],
   "CLAUDE.md": [
@@ -618,7 +619,8 @@
    "7bbaa93f643c7389473a470967d224ab5a636b90"
   ],
   "skills/pm-design/qa/anno-server-kill-stress-gate.js": [
-   "262cc50785750446a93f313f18e2f2f61cb139b3"
+   "262cc50785750446a93f313f18e2f2f61cb139b3",
+   "9a196bed7426fa7aaed4d73b829db2629cb16177"
   ],
   "skills/pm-design/qa/assemble-prototype.js": [
    "a3e13175c01a638cebb46f9f82a8d7741dc2aadb",
