@@ -10,7 +10,7 @@
    ════════════════════════════════════════════════════════════════════════ */
 const path=require("path"),fs=require("fs"),http=require("http"),os=require("os"),{spawn}=require("child_process");
 const { findChrome }=require("./_gate-env");
-const ANNO=process.env.ANNO_SERVER || path.join(__dirname,"../../../../anno-server");
+const ANNO=process.env.ANNO_SERVER || ([path.join(__dirname,"../../../anno-server"), path.join(__dirname,"../../../../anno-server")].find(p => require("fs").existsSync(require("path").join(p, "server.js"))) || path.join(__dirname,"../../../anno-server"));
 const SERVER=path.join(ANNO,"server.js"), GEN=path.join(ANNO,"prd-generator.js");
 const CHROME=process.env.CHROME_PATH || findChrome();
 const PORT=8932, DPORT=9472;

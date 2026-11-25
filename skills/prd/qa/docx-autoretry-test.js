@@ -14,7 +14,7 @@ const fs = require("fs"), path = require("path"), os = require("os");
 require("../../_shared/qa/_tmp-sandbox"); // 临时文件进沙盒·退出自动删（铁律·见 _tmp-sandbox.js）
 const { execFileSync } = require("child_process");
 
-const SERVER = process.env.ANNO_SERVER || path.join(__dirname, "..", "..", "..", "..", "anno-server", "server.js");
+const SERVER = process.env.ANNO_SERVER || ([path.join(__dirname, "..", "..", "..", "anno-server", "server.js"), path.join(__dirname, "..", "..", "..", "..", "anno-server", "server.js")].find(p => require("fs").existsSync(p)) || path.join(__dirname, "..", "..", "..", "anno-server", "server.js"));
 if (!fs.existsSync(SERVER)) { console.log("（未找到 anno-server/server.js，跳过 docx 自动重试闸）"); process.exit(0); }
 let srv; try { srv = require(SERVER); } catch (e) { console.log("✗ 无法加载 server.js：" + e.message); process.exit(1); }
 if (typeof srv.scheduleDocxOverwrite !== "function") { console.log("✗ server.js 未导出 scheduleDocxOverwrite（自动重试功能缺失/被改坏）"); process.exit(1); }

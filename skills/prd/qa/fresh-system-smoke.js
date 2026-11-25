@@ -14,7 +14,7 @@
 const { execFileSync } = require("child_process");
 const fs = require("fs"), path = require("path"), os = require("os");
 require("../../_shared/qa/_tmp-sandbox"); // 临时文件进沙盒·退出自动删（铁律·见 _tmp-sandbox.js）
-const SERVER = process.env.ANNO_SERVER || path.join(__dirname, "..", "..", "..", "..", "anno-server", "server.js");
+const SERVER = process.env.ANNO_SERVER || ([path.join(__dirname, "..", "..", "..", "anno-server", "server.js"), path.join(__dirname, "..", "..", "..", "..", "anno-server", "server.js")].find(p => require("fs").existsSync(p)) || path.join(__dirname, "..", "..", "..", "anno-server", "server.js"));
 if (!fs.existsSync(SERVER)) { console.log("（未找到 anno-server/server.js，跳过全新系统 smoke）"); process.exit(0); }
 
 const H5 = `| 字段名称 | 类型 | 是否必填/必选 | 默认值 | 约束规则 |\n|---|---|---|---|---|\n`;

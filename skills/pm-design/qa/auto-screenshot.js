@@ -31,7 +31,7 @@ function arg(name, def) { const i = process.argv.indexOf(name); return i > 0 && 
 const HTML = arg("-Html");
 const STATES = arg("-States");
 const PRDDATA = arg("-PrdData", HTML ? path.join(path.dirname(HTML), "prd-data.json") : "");
-const SERVER = arg("-Server", path.join(__dirname, "..", "..", "..", "..", "anno-server", "server.js"));
+const SERVER = arg("-Server", ([path.join(__dirname, "..", "..", "..", "anno-server", "server.js"), path.join(__dirname, "..", "..", "..", "..", "anno-server", "server.js")].find(p => require("fs").existsSync(p)) || path.join(__dirname, "..", "..", "..", "anno-server", "server.js")));
 if (!HTML || !fs.existsSync(HTML)) { console.log("✗ -Html 原型文件不存在"); process.exit(1); }
 
 const CHROME = ["C:/Program Files/Google/Chrome/Application/chrome.exe", "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",

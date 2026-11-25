@@ -666,7 +666,9 @@ function archiveDirsToWatch() {
   const dirs = new Set();
   try { require("./_archive-dir").protoScanDirs().forEach(d => dirs.add(path.resolve(d))); } catch (_) {}
   try {
-    const sd = path.resolve(QA, "..", "..", "..", "..", "anno-server");
+    /* 同步服务目录：工具包里的（ai-rules\anno-server 或公开包 proenga\anno-server）优先，其次是 ai-rules 同级的老布局 */
+    const sd = [path.resolve(QA, "..", "..", "..", "anno-server"), path.resolve(QA, "..", "..", "..", "..", "anno-server")]
+      .find(d => fs.existsSync(path.join(d, "anno-config.json"))) || path.resolve(QA, "..", "..", "..", "anno-server");
     const cfg = JSON.parse(fs.readFileSync(path.join(sd, "anno-config.json"), "utf8").replace(/^﻿/, ""));
     [cfg.archiveDir, ...(cfg.archiveDirs || [])].filter(Boolean).forEach(d => dirs.add(path.resolve(sd, d)));
   } catch (_) {}
