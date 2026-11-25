@@ -10,7 +10,7 @@
    ════════════════════════════════════════════════════════════════════════ */
 const path = require('path'), fs = require('fs');
 const { findPrototypes, ANNOTATION_LAYER } = require('./_gate-env');
-const ANNO = process.env.ANNO_SERVER || path.join(__dirname, '../../../../anno-server');
+const ANNO = process.env.ANNO_SERVER || ([path.join(__dirname, '../../../anno-server'), path.join(__dirname, '../../../../anno-server')].find(p => require('fs').existsSync(require('path').join(p, 'server.js'))) || path.join(__dirname, '../../../anno-server'));
 const srv = require(path.join(ANNO, 'server.js'));
 
 // 单一契约：字段规范 / 用例规则 内容落在这两个键上

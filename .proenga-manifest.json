@@ -1,6 +1,6 @@
 {
  "_说明": "本文件由发布脚本自动生成，不要手工改。update-proenga.ps1 / update-proenga.sh 用它核对新版是否完整、判断哪些旧文件可以删除。",
- "version": "2026.11.25.2",
+ "version": "2026.11.25.3",
  "files": {
   ".agents/skills/dev-codegen/SKILL.md": "4ecaea1fd3899373f76ecd2cf6f84b03b13386ba",
   ".agents/skills/dev-prompts/SKILL.md": "624f7c3c3da8cc69e5a19863bb1d51c66ad93279",
@@ -52,12 +52,12 @@
   ".gitignore": "4c79d5bcfe93dbe43aa70c1ed11649d9d713fee9",
   ".mcp.json.example": "166f13e31ffc38be1a73b7ac9cb898f2ec19605d",
   "AGENTS.md": "9c2a615f73563232fcca450d1c05b9fc118b53fb",
-  "CHANGELOG.md": "e82abf435f1d82e5e7a14711fa67a155f61202cb",
+  "CHANGELOG.md": "71dd1a0f12175be5f0721a7efff24b992d4bd1c9",
   "CLAUDE.md": "f9c5ecb6a4ca50b4d6b80b5754d52405c4f4e07b",
   "INSTALL.md": "ff7da8ec32ac5e79af4478ba485cd0f0e94f88d4",
   "LICENSE": "af7501a71a5774098519eee4324ab75cc73d9a4a",
   "README.md": "ed02d4286d218b3d03ceddc41e8cb84ffc1efabe",
-  "VERSION": "6c52f5ac839291f26fa352bd5510d0d892d73159",
+  "VERSION": "4c056daa338220bb4784b6c396938b2c52927329",
   "anno-server/anno-config.example.json": "53f8a23cf9689de61d17667d2dac99bc0cc64b9f",
   "anno-server/assemble-once.js": "9df4eb3cde539a64cdb92deb723283ad82ffa5c4",
   "anno-server/build-shared-generator.js": "14d491f41d75ed20df4f0e88a34eefa83915b639",
@@ -174,7 +174,7 @@
   "skills/pm-design/qa/choice-conformance-gate.js": "012f6b2e087884f751cd1c81cc50cbf61d13cad4",
   "skills/pm-design/qa/computed-style-gate.js": "1a134a2d2583d8ee2380f55cd7dd7c2cd43ed293",
   "skills/pm-design/qa/content-scan.js": "72f9f76bc1c58c8f0b6960811bce2616b7329225",
-  "skills/pm-design/qa/contract-anno-prototype-test.js": "a35dfed5c1b8dcbfe9aebf6ad8a27862310c4bf8",
+  "skills/pm-design/qa/contract-anno-prototype-test.js": "b2dd45d569fecd0e1b06edf0d460ac73e036c1b6",
   "skills/pm-design/qa/delete-sync-isolated-gate.js": "ebe62d4baa302ac07a2b7bf824d37843592c084c",
   "skills/pm-design/qa/deliver-gate.js": "fa7578eed67d21daba29cc830cb15f3605e9fe66",
   "skills/pm-design/qa/deliverable-verify-gate.js": "018cbc491e5e8eeee39a7dc7de8a1c9f37d76670",
@@ -212,7 +212,7 @@
   "skills/pm-design/qa/pd-top-field.js": "078d7e11b120e0f233973dc9ab83b55314c8526d",
   "skills/pm-design/qa/pin-edit-delete-sync-gate.js": "190bfc5b2228763c8ddf50a05d86a11ca6c5247e",
   "skills/pm-design/qa/playwright.config.js": "d47f61085762485e68d8fb191c214b9322620a91",
-  "skills/pm-design/qa/prd-generator-test.js": "08a513f525f33d91fbc15098875c31aff70b1f2a",
+  "skills/pm-design/qa/prd-generator-test.js": "663de8fd54173279cd742f0284137cfc5d61692b",
   "skills/pm-design/qa/product-filter-gate.js": "2e649bcc320bde4f127bcc709c85da29140da78a",
   "skills/pm-design/qa/proto-copy-writing-gate.js": "3a2fc844866d2a1ab860dc26e117ab73034da10f",
   "skills/pm-design/qa/prototype-pmdesign-gate.js": "52cbf078b71d69dbe8c1c5b13c2e74ae3a10dd6d",
@@ -384,6 +384,7 @@
    "c66449849bd955d35fcb2d50c340fa053593309e",
    "ca4ad7a3cb3d14a2892867d8c24fd740d45218a0",
    "cdec6641d11c60aaba0447126f1fbd0205d076ff",
+   "e82abf435f1d82e5e7a14711fa67a155f61202cb",
    "ee0d1b66acb457442bdf500da61873148c25a1fb",
    "f9c6e23181fa4fe3faf383d0c8a9723a97fff2c3",
    "f9fa7f7285ed88e8c2b3c8d7af302abf966a14cf"
@@ -636,6 +637,9 @@
   "skills/pm-design/qa/computed-style-gate.js": [
    "48fc637ef3c6e68b1e57272ee82f661754558883"
   ],
+  "skills/pm-design/qa/contract-anno-prototype-test.js": [
+   "a35dfed5c1b8dcbfe9aebf6ad8a27862310c4bf8"
+  ],
   "skills/pm-design/qa/delete-sync-isolated-gate.js": [
    "ae68d74e4c4b666e6ac6bc4fd71e87925b57655e"
   ],
@@ -715,6 +719,7 @@
    "b634a0691666c073f9c67536220f79cad4c0e199"
   ],
   "skills/pm-design/qa/prd-generator-test.js": [
+   "08a513f525f33d91fbc15098875c31aff70b1f2a",
    "ecdb248628821cafcc60d7a704b0e70d0da8d4f6"
   ],
   "skills/pm-design/qa/proto-copy-writing-gate.js": [

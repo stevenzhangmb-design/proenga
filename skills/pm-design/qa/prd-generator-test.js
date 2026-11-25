@@ -9,7 +9,7 @@
    运行：  node prd-generator-test.js     退出码 0=全绿 1=有失败。
    ════════════════════════════════════════════════════════════════════════ */
 const path = require("path"), fs = require("fs");
-const SERVER = process.env.ANNO_SERVER || path.join(__dirname, "../../../../anno-server/server.js");
+const SERVER = process.env.ANNO_SERVER || ([path.join(__dirname, "../../../anno-server/server.js"), path.join(__dirname, "../../../../anno-server/server.js")].find(p => require("fs").existsSync(p)) || path.join(__dirname, "../../../anno-server/server.js"));
 if (!fs.existsSync(SERVER)) { console.log("✗ 找不到 anno-server:", SERVER, "（用 ANNO_SERVER 环境变量指定）"); process.exit(1); }
 const { generatePrdMd, mergePinIntoPrd } = require(SERVER);
 
