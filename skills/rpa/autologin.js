@@ -19,6 +19,9 @@
    用法：
      node autologin.js <port> probe                    探一遍：有没有验证码/滑块，存验证码图
      node autologin.js <port> go [--code 1234]         执行登录（有验证码就带 --code）
+     node autologin.js <port> go --await-code [--shot 图.png]
+                                                       ★有图形验证码时用这个：同一进程里 存图→等 AI 把码写进 <图>.code→当场真实键盘填+回读校验→点登录；
+                                                         没进去自动换新图重来（最多 4 轮）。每个输入框填完都回读值，没写进去就换 insertText / 原生赋值。
    账号密码走环境变量，绝不落文件：
      $env:RPA_USER='x'; $env:RPA_PASS='y'; node autologin.js 9612 go --code 7148
 
@@ -84,6 +87,30 @@ async function realType(c, text) {
     await sleep(rnd(40, 100));
   }
 }
+/* §2026-11-26 根治「验证码填了、页面却说不能为空」：
+   有的站（实测一个 Vue 登录页）对 keyDown 里带的 text 不认，框里其实没进字，以前从不回读就去点登录。
+   现在每填一个框都【回读当前焦点框的值】，对不上就依次换：Input.insertText → 原生 setter + input/change 事件，
+   三招都不行才报错。返回最终值，调用方据此判断。 */
+async function typeVerified(c, pos, text, isPassword) {
+  const readVal = async () => await c.evalv(`(function(){var e=document.activeElement;return e&&'value' in e?String(e.value):''})()`);
+  await realClick(c, pos); await sleep(rnd(60, 120));
+  await clearField(c); await realType(c, text); await sleep(120);
+  let v = await readVal();
+  if (v !== String(text)) {
+    await clearField(c);
+    try { await c.send('Input.insertText', { text: String(text) }); } catch (_) {}
+    await sleep(120); v = await readVal();
+  }
+  if (v !== String(text)) {
+    v = await c.evalv(`(function(t){var e=document.activeElement;if(!e||!('value' in e))return '';
+      var p=Object.getPrototypeOf(e);var d=Object.getOwnPropertyDescriptor(p,'value');
+      if(d&&d.set){d.set.call(e,t)}else{e.value=t}
+      e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));
+      return String(e.value);})(${JSON.stringify(String(text))})`);
+  }
+  if (v !== String(text)) console.log('  ⚠ 输入框没写进去' + (isPassword ? '（密码框）' : '：期望 ' + text + ' 实际 ' + v));
+  return v === String(text);
+}
 async function clearField(c) {
   await c.send('Input.dispatchKeyEvent', { type: 'keyDown', modifiers: 2, key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65 });
   await c.send('Input.dispatchKeyEvent', { type: 'keyUp', modifiers: 2, key: 'a', code: 'KeyA', windowsVirtualKeyCode: 65 });
@@ -128,22 +155,54 @@ async function clearField(c) {
     if (cmd === 'go') {
       const user = process.env.RPA_USER, pass = process.env.RPA_PASS;
       if (!f.btn) { console.error('✗ 没找到登录按钮，当前可能不在登录页'); process.exit(1); }
-      if (f.hasCode && !code) { console.error('✗ 这个站要验证码：先跑 probe 取图，读出来再 go --code <码>'); process.exit(2); }
+      const awaitCode = a.includes('--await-code');
+      if (f.hasCode && !code && !awaitCode) { console.error('✗ 这个站要验证码：用 go --await-code（推荐：存图→等 AI 写码→当场填），或 probe 取图后 go --code <码>'); process.exit(2); }
 
-      if (user && f.acct && !f.acctVal) { await realClick(c, f.acct); await clearField(c); await realType(c, user); }
-      if (pass && f.pass && !f.passLen) { await realClick(c, f.pass); await clearField(c); await realType(c, pass); }
+      if (user && f.acct && !f.acctVal) await typeVerified(c, f.acct, user);
+      if (pass && f.pass && !f.passLen) await typeVerified(c, f.pass, pass, true);
       if (f.hasCb && !f.cbChecked) {
         await c.evalv(`(function(){var cb=document.querySelector('input[type=checkbox]');
           var l=cb&&(cb.closest('label')||cb.closest('.el-checkbox'));if(l){l.click()}else if(cb){cb.click()}return 1})()`);
         await sleep(300);
       }
-      if (f.code && code) { await realClick(c, f.code); await clearField(c); await realType(c, code); }
-      await sleep(rnd(200, 400));
 
-      /* 点之前重新量一次按钮位置：填完字后布局可能变（错误提示会把按钮顶下去） */
-      const f2 = JSON.parse(await c.evalv(FORM) || '{}');
-      await realClick(c, f2.btn || f.btn);
-      await sleep(3000);
+      /* §2026-11-26 --await-code：读图和填码放进【同一个进程】，中间不刷新页面、不重连。
+         以前 probe 和 go 是两条命令，中间验证码可能已经换了，填的是旧码。
+         流程：存验证码图 → 打印「等码」→ 轮询 <图>.code 文件（AI 读图后写进去）→ 立刻真实键盘填+回读校验 → 点登录。
+         没进去且还在登录页 → 页面多半换了新图 → 存新图再等，最多 4 轮。 */
+      const codeFile = shotPath + '.code';
+      const maxRound = awaitCode ? 4 : 1;
+      for (let round = 1; round <= maxRound; round++) {
+        let theCode = code;
+        if (f.hasCode && awaitCode) {
+          const fr = JSON.parse(await c.evalv(FORM) || '{}');
+          if (!fr.capImg) { console.error('✗ 找不到验证码图（不是 data:URI 的话改用 captcha.js 抽图）'); process.exit(3); }
+          try { fs.unlinkSync(codeFile); } catch (_) {}
+          fs.writeFileSync(shotPath, Buffer.from(fr.capImg.split(',')[1], 'base64'));
+          console.log('【第 ' + round + ' 轮】验证码图 → ' + shotPath);
+          console.log('  等码：读图后把识别结果写进 ' + codeFile + '（最多等 180 秒）');
+          theCode = '';
+          for (let w = 0; w < 360 && !theCode; w++) {
+            await sleep(500);
+            try { theCode = fs.readFileSync(codeFile, 'utf8').trim(); } catch (_) {}
+          }
+          try { fs.unlinkSync(codeFile); } catch (_) {}
+          if (!theCode) { console.error('✗ 180 秒内没收到验证码'); process.exit(4); }
+        }
+        const fc = JSON.parse(await c.evalv(FORM) || '{}');
+        if (fc.code && theCode) await typeVerified(c, fc.code, theCode);
+        await sleep(rnd(200, 400));
+        /* 点之前重新量一次按钮位置：填完字后布局可能变（错误提示会把按钮顶下去） */
+        const f2 = JSON.parse(await c.evalv(FORM) || '{}');
+        await realClick(c, f2.btn || f.btn);
+        await sleep(3000);
+        if (!awaitCode || !f.hasCode) break;
+        const still = await c.evalv("!!document.querySelector('input[type=password]')") && /login/i.test(await c.evalv('location.pathname') || '');
+        if (!still || await c.evalv(SLIDER) === 'yes') break;
+        const tipR = await c.evalv(`(function(){return [].slice.call(document.querySelectorAll('.el-message__content,.el-message,.el-form-item__error,[class*=error]'))
+          .map(function(e){return (e.textContent||'').trim()}).filter(Boolean).slice(0,2).join(' / ');})()`);
+        console.log('  第 ' + round + ' 轮没进去' + (tipR ? '（提示：' + tipR + '）' : '') + (round < maxRound ? '，换图重来' : ''));
+      }
 
       /* 滑块：交给 slider.js，它用模板匹配算缺口 + 人手轨迹拖 */
       if (await c.evalv(SLIDER) === 'yes') {
