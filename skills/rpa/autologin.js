@@ -42,7 +42,7 @@ const FORM = `(function(){
   var code=by(/验证码|verifica|captcha|c.digo/i,'text');
   var cb=ins.filter(function(e){return e.type==='checkbox';})[0];
   var btn=[].slice.call(document.querySelectorAll('button,.el-button')).filter(function(e){
-    return vis(e)&&/登录|登陆|login|entrar|sign ?in|fazer login/i.test((e.textContent||'').trim());})[0];
+    return vis(e)&&/登录|登陆|login|entrar|sign ?in|fazer ?login/i.test((e.textContent||'').replace(/\\s+/g,''));})[0];
   var mid=function(e){if(!e)return null;var r=e.getBoundingClientRect();return [Math.round(r.left+r.width/2),Math.round(r.top+r.height/2)];};
   /* 验证码图：内嵌小图，且靠近验证码输入框（光按尺寸挑会挑到页面 LOGO —— 踩过） */
   var capImg=null;
