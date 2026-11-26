@@ -21,6 +21,9 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+/* 2026-11-26：_cdp 每次连上都会重设视口（1600×900）→ 触发 resize → 腾讯验证框异步重新居中，
+   probe 量到的位置和 click 时的位置不一样，点全落空。验证码工具一律不动视口。 */
+if (process.env.RPA_VIEWPORT === undefined) process.env.RPA_VIEWPORT = '0';
 function tmpBase() { try { return require('../_shared/qa/_tmp-root').tmpRoot(); } catch (_) { return os.tmpdir(); } }
 const { connect } = require('./_cdp');
 const sleep = ms => new Promise(z => setTimeout(z, ms));
@@ -53,6 +56,41 @@ const PROBE = `(function(){
   return JSON.stringify({ok:true,question:q?(q.innerText||'').replace(/\\s+/g,' ').trim():'',
     pic:{x:r.left,y:r.top,w:r.width,h:r.height},qbox:qbox});
 })()`;
+
+/* 跨域 iframe 里的验证（腾讯 turing.captcha / 极验 / hCaptcha / reCAPTCHA 图片框 / 网易易盾 / 阿里）：
+   顶层 DOM 读不到里面，所以整块 iframe 截图（题目、图、确定按钮都在里面），
+   AI 照刻度量出要点的位置——【确定】也一起量进去，按顺序给。
+   鼠标事件从顶层按 CSS 坐标发，Chrome 会自动路由进 iframe。
+   2026-11-26 修：领星 MFA 的腾讯点选框，旧逻辑只找顶层，抓到左边 banner 图，点击全落在遮罩上。 */
+const IFRAME = `(function(){
+  var vis=function(e){var r=e.getBoundingClientRect();var s=getComputedStyle(e);return r.width>=120&&r.height>=120&&s.visibility!=='hidden'&&s.display!=='none'&&+s.opacity>0.05;};
+  var K=/captcha|turing|geetest|hcaptcha|recaptcha|dun\\.163|necaptcha|nocaptcha|aliyuncs.*captcha|verify|challenge/i;
+  var fs=[].slice.call(document.querySelectorAll('iframe')).filter(vis);
+  /* 过了以后腾讯框不删 iframe，只把外层藏起来 → 用"框中心点真能点到它"判断还在不在 */
+  var top=function(f){var r=f.getBoundingClientRect();return document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)===f;};
+  var hit=fs.filter(function(f){return (K.test(f.src||'')||K.test(f.id||'')||K.test(f.className||'')||K.test(f.title||''))&&(!f.checkVisibility||f.checkVisibility({opacityProperty:true,visibilityProperty:true}))&&top(f);});
+  if(!hit.length)return null;
+  hit.sort(function(a,b){var ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();return rb.width*rb.height-ra.width*ra.height;});
+  var r=hit[0].getBoundingClientRect();
+  return JSON.stringify({ok:true,iframe:true,src:(hit[0].src||'').slice(0,120),question:'',pic:{x:r.left,y:r.top,w:r.width,h:r.height}});
+})()`;
+async function locate1(c) {
+  const f = await c.evalv(IFRAME);
+  if (f) return JSON.parse(f);
+  return JSON.parse(await c.evalv(PROBE) || '{}');
+}
+/* 等验证框停稳（连续 3 次位置一致）再量，防止动画/重新居中途中截图 */
+async function locate(c) {
+  let prev = null;
+  for (let i = 0, same = 0; i < 20; i++) {
+    const cur = await locate1(c);
+    if (!cur.ok) return cur;
+    if (prev && prev.ok && Math.abs(prev.pic.x - cur.pic.x) < 1 && Math.abs(prev.pic.y - cur.pic.y) < 1) { if (++same >= 2) return cur; }
+    else same = 0;
+    prev = cur; await sleep(300);
+  }
+  return prev;
+}
 
 /* 给截图画刻度：每 20px 一条细线、每 50px 标数字，AI 量坐标不用心算 */
 const GRID = (uri, w, h) => `new Promise(function(done){var w=${w},h=${h};var im=new Image();im.onerror=function(){done('ERR:载入失败');};im.onload=function(){try{
@@ -97,7 +135,7 @@ const CONFIRM = (pic) => `(function(){var p=${JSON.stringify(pic)};
   try { await c.send('Page.bringToFront'); } catch (_) {}
   try {
     if (process.env.RPA_DEBUG) console.log('· 定位验证框');
-    const info = JSON.parse(await c.evalv(PROBE) || '{}');
+    const info = await locate(c);
     if (process.env.RPA_DEBUG) console.log('· 定位完成', JSON.stringify(info));
     if (!info.ok) { console.error('✗ ' + info.why); process.exit(1); }
     if (mode === 'probe') {
@@ -109,6 +147,12 @@ const CONFIRM = (pic) => `(function(){var p=${JSON.stringify(pic)};
       fs.writeFileSync(out, Buffer.from(g.split(',')[1], 'base64'));
       let qout = '';
       if (info.qbox) { qout = out.replace(/\.png$/i, '-题目.png'); fs.writeFileSync(qout, Buffer.from((await shot(c, info.qbox)).split(',')[1], 'base64')); }
+      if (info.iframe) {
+        console.log('验证框在跨域 iframe 里（' + info.src + '）：整框已截，题目/图/【确定】都在图上');
+        console.log('验证图：' + out + '（红色刻度 = 相对验证框左上角的 CSS 像素）');
+        console.log('下一步：node clickcaptcha.js ' + port + ' click "x1,y1;x2,y2;...;确定x,确定y"  —— iframe 里读不到按钮，【确定】坐标要一起给在最后');
+        return;
+      }
       console.log('题目：' + (info.question || '（没读到文字题目，看题目截图）'));
       console.log('验证图：' + out + '（红色刻度 = 相对验证图左上角的坐标，单位 CSS 像素）');
       if (qout) console.log('题目截图：' + qout + '（题目是小图标时对照它找）');
@@ -121,11 +165,11 @@ const CONFIRM = (pic) => `(function(){var p=${JSON.stringify(pic)};
       for (const [x, y] of pts) { await tap(c, info.pic.x + x, info.pic.y + y); await sleep(rnd(350, 700)); }
       console.log('已按顺序点 ' + pts.length + ' 处');
       await sleep(600);
-      const b = await c.evalv(CONFIRM(info.pic));
+      const b = info.iframe ? null : await c.evalv(CONFIRM(info.pic));
       if (b) { const bb = JSON.parse(b); await tap(c, bb.x, bb.y); console.log('点【' + bb.text + '】'); }
-      await sleep(2000);
-      const after = JSON.parse(await c.evalv(PROBE) || '{}');
-      const gone = !after.ok || Math.abs(after.pic.x - info.pic.x) > 3 || Math.abs(after.pic.y - info.pic.y) > 3 || after.question !== info.question;
+      await sleep(2500);
+      const after = await locate(c);
+      const gone = !after.ok || !!after.iframe !== !!info.iframe || Math.abs(after.pic.x - info.pic.x) > 3 || Math.abs(after.pic.y - info.pic.y) > 3 || after.question !== info.question;
       const body = await c.evalv("(document.body.innerText||'').replace(/\\s+/g,' ').slice(0,4000)");
       const failMsg = /验证失败|请重试|再试一次|failed|try again/i.test(body);
       if (gone && !failMsg) console.log('✅ 验证框已消失 · 当前 ' + await c.evalv('location.href'));
