@@ -30,7 +30,10 @@ const { connect } = require('./_cdp');
 const sleep = ms => new Promise(z => setTimeout(z, ms));
 
 /* 会改真数据的按钮——默认一律不点 */
-const DANGER = /^(提交|保存|确定|确认|删除|移除|发货|强制发货|取消订单|作废|审核|通过|驳回|出库|入库|确认收货|结算|支付|submit|save|confirm|delete)$/i;
+/* 2026-11-26 补：先勾首行再点的工具栏按钮里，有一类是"一点就生效、不弹确认框"的状态开关
+   （领星：加急 / 启用 / 停用 / 关闭门户 / 重置门户权限 / 移除订单 / 自动同步 / 同步可选支付方式 …）。
+   真系统只读，这类一律不点；名字以这些动词开头的也算。 */
+const DANGER = /^(提交|保存|确定|确认|删除|移除.*|发货|强制发货|取消订单|作废|审核|通过|驳回|出库|入库|确认收货|结算|支付|加急|取消加急|启用|停用|关闭.*|重置.*|同步.*|自动同步|撤销.*|标记.*|调整.*状态|恢复|归档|锁定|解锁|submit|save|confirm|delete)$/i;
 /* 纯噪音，点了没意义 */
 const NOISE = /^(查询|重置|搜索|刷新|立即刷新|上一页|下一页|首页|末页|\d+|«|»|<|>)$/;
 
@@ -433,9 +436,44 @@ const TOKENS = `(function(){
           }
         } catch (_) {}
       }
+      /* ⚠️ 2026-11-26 领星事故：鼠标经过左侧导航，弹出的菜单浮层盖住了工具栏，
+         按坐标点下去落在浮层的【收藏星标】上 —— 报告写着「导入供应商 → 已取消【委外订单】收藏」，
+         一轮抓下来用户的菜单收藏被改了 5 次。
+         所以点之前先看坐标处真正是谁：落在导航菜单/浮层里、或是收藏星标，就把鼠标挪到中性位置等浮层收起再看；
+         还不对就跳过。点完若页面提示"收藏"，原地再点一次撤销。 */
+      const HIT = `(function(){var e=document.elementFromPoint(${rx},${ry});if(!e)return '{"bad":"空"}';
+        var cls=function(x){var c=x&&x.className;return String(c&&c.baseVal!==undefined?c.baseVal:(c||''));};
+        var star=/star|collect|favou?r|shoucang/i.test(cls(e)+' '+cls(e.parentElement));
+        var menu=!!e.closest('.el-menu--popup,.el-menu,[class*=sidebar],[class*=side-menu],[class*=menu-pop],[class*=submenu],[class*=flyout],[class*=nav-menu]');
+        return JSON.stringify({bad:star?'收藏星标':(menu?'导航菜单浮层':'')});})()`;
+      let hit = JSON.parse(await c.evalv(HIT) || '{}');
+      if (hit.bad) {
+        const vw = JSON.parse(await c.evalv('JSON.stringify([innerWidth,innerHeight])'));
+        await c.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: vw[0] - 40, y: vw[1] - 40 });
+        await sleep(900);
+        hit = JSON.parse(await c.evalv(HIT) || '{}');
+      }
+      if (hit.bad) {
+        report.push({ text: e.text, kind: e.kind, result: '跳过（坐标处是' + hit.bad + '，不是这个入口）' });
+        console.log('  [' + (i + 1) + '] ' + e.text + ' → 跳过（坐标处是' + hit.bad + '）');
+        continue;
+      }
+      const MSG = "[].slice.call(document.querySelectorAll('.el-message,.ant-message-notice')).length+'|'+[].slice.call(document.querySelectorAll('.el-message,.ant-message-notice')).map(function(x){return x.innerText||''}).join(' ')";
+      const msgBefore = await c.evalv(MSG);
       await c.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: rx, y: ry });
       await c.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: rx, y: ry, button: 'left', clickCount: 1 });
       await c.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: rx, y: ry, button: 'left', clickCount: 1 });
+      await sleep(500);
+      const favMsg = await c.evalv(MSG);
+      /* 只认这次点击新冒出来的提示（上一条的提示可能还没消失，误判会把收藏又切回去） */
+      if (favMsg !== msgBefore && /已收藏|取消.{0,12}收藏/.test(String(favMsg).replace(String(msgBefore).split('|').slice(1).join('|'), ''))) {
+        await c.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: rx, y: ry, button: 'left', clickCount: 1 });
+        await c.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: rx, y: ry, button: 'left', clickCount: 1 });
+        report.push({ text: e.text, kind: e.kind, result: '误触收藏星标，已原地撤销（' + favMsg.replace(/\s+/g, ' ').slice(0, 40) + '）' });
+        console.log('  [' + (i + 1) + '] ' + e.text + ' → 误触收藏，已撤销');
+        await c.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 5, y: 5 });
+        continue;
+      }
       /* ⚠️ 下拉菜单很"娇气"：等太久、或中间做了别的鼠标动作，它自己就收了。
          所以先快读一次状态（抓下拉），再等长一点读第二次（抓弹窗/跳转），两次取其一。 */
       await sleep(700);

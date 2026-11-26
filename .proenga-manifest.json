@@ -1,6 +1,6 @@
 {
  "_说明": "本文件由发布脚本自动生成，不要手工改。update-proenga.ps1 / update-proenga.sh 用它核对新版是否完整、判断哪些旧文件可以删除。",
- "version": "2026.11.26.6",
+ "version": "2026.11.26.7",
  "files": {
   ".agents/skills/dev-codegen/SKILL.md": "4ecaea1fd3899373f76ecd2cf6f84b03b13386ba",
   ".agents/skills/dev-prompts/SKILL.md": "624f7c3c3da8cc69e5a19863bb1d51c66ad93279",
@@ -57,7 +57,7 @@
   "INSTALL.md": "ff7da8ec32ac5e79af4478ba485cd0f0e94f88d4",
   "LICENSE": "af7501a71a5774098519eee4324ab75cc73d9a4a",
   "README.md": "5fc7459c6610326fc246b380599ecfcf24109e93",
-  "VERSION": "d01bbd54d17858b874d2181af85170f5eccaa674",
+  "VERSION": "9e76b3f135f104a774f478bcc723d738841b85d2",
   "anno-server/anno-config.example.json": "53f8a23cf9689de61d17667d2dac99bc0cc64b9f",
   "anno-server/assemble-once.js": "9df4eb3cde539a64cdb92deb723283ad82ffa5c4",
   "anno-server/build-shared-generator.js": "14d491f41d75ed20df4f0e88a34eefa83915b639",
@@ -68,7 +68,7 @@
   "anno-server/start-anno-server.js": "3252685fb09c45537d36e9cb973ea2c04f13bf79",
   "anno-server/start-anno-server.vbs": "081165ba54e49cc6be41b22debec6338c707425f",
   "anno-server/start.ps1": "f769ece32fd13910832cd871151e655620c22d30",
-  "anno-server/vendor/mermaid.min.js": "9bca46f9cb56848a59aaf5dff2eec26350b06cf0",
+  "anno-server/vendor/mermaid.min.js": "5ce24cfcfd2cd9785ee5db89cd03f720dd989cf1",
   "package.json": "46a10a62723d636b36ecf0c41c8dcfbf64ceb4f4",
   "setup-mcp-playwright.ps1": "4b2eff5292246c0f9454ebe9e202c00235569610",
   "skills/_shared/acceptance-checklist.md": "faed872d101cb82cc22a245549544212f1d13435",
@@ -303,7 +303,7 @@
   "skills/rpa/captcha.js": "6ed68b4ddce40819039feecab3299bf5a31a1be7",
   "skills/rpa/clickcaptcha.js": "373cc15b614a4cdff072c0bd6b3ddab626eb7f32",
   "skills/rpa/coverage.js": "02f4e3e717c31487fe761142f70c427167c2b175",
-  "skills/rpa/deepcrawl.js": "6d81eda4e91b7e9cc3ee087c3a51f85ae5e2d393",
+  "skills/rpa/deepcrawl.js": "b191774f157ad739d68299f7360f11536e278410",
   "skills/rpa/derive-config.js": "cd9c32100d1eee917a63c552e6d65c801c360bc1",
   "skills/rpa/distill.js": "849da828849bb2a34f85d889b1f93cc0f7b75865",
   "skills/rpa/emit-css.js": "9afce70aa9cab471a119012a5551568553df57f1",
@@ -441,6 +441,9 @@
   ],
   "anno-server/start-anno-server.vbs": [
    "723b92a264163a9c145876b354e4097905f999c6"
+  ],
+  "anno-server/vendor/mermaid.min.js": [
+   "9bca46f9cb56848a59aaf5dff2eec26350b06cf0"
   ],
   "setup-mcp-playwright.ps1": [
    "960a7701ae80ee38fb593501334ab0c793cec57b"
@@ -911,6 +914,9 @@
   "skills/rpa/clickcaptcha.js": [
    "4d83d84c51c0ff3eb8a3b5605dc3ae7437059b8f",
    "f30b9cb7904daa4d96d36757cfc533ba2deab9be"
+  ],
+  "skills/rpa/deepcrawl.js": [
+   "6d81eda4e91b7e9cc3ee087c3a51f85ae5e2d393"
   ],
   "skills/rpa/slider.js": [
    "915a03c269ef23a37c0421c3b0896ce24c264dc9"
