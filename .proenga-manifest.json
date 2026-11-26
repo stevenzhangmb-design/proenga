@@ -1,6 +1,6 @@
 {
  "_说明": "本文件由发布脚本自动生成，不要手工改。update-proenga.ps1 / update-proenga.sh 用它核对新版是否完整、判断哪些旧文件可以删除。",
- "version": "2026.11.25.3",
+ "version": "2026.11.26.1",
  "files": {
   ".agents/skills/dev-codegen/SKILL.md": "4ecaea1fd3899373f76ecd2cf6f84b03b13386ba",
   ".agents/skills/dev-prompts/SKILL.md": "624f7c3c3da8cc69e5a19863bb1d51c66ad93279",
@@ -37,7 +37,7 @@
   ".codebuddy/skills/test-case/SKILL.md": "3137ba879638f330fda5aad84edff3853920b269",
   ".codebuddy/skills/user-manual/SKILL.md": "1fbb16d7fd08d8866b2228aa4143cc5d906d3b77",
   ".codebuddy/skills/verify-prototype/SKILL.md": "821d9330bb92ae1b9f00a8cef24fc03ed31adc61",
-  ".gitattributes": "060e5785814a3f9db15ee587533142f8902da1c8",
+  ".gitattributes": "8f1c9947248cbae48958a9fc6a8a55bd1e023faf",
   ".github/skills/dev-codegen/SKILL.md": "4ecaea1fd3899373f76ecd2cf6f84b03b13386ba",
   ".github/skills/dev-prompts/SKILL.md": "624f7c3c3da8cc69e5a19863bb1d51c66ad93279",
   ".github/skills/pm-design/SKILL.md": "c8f1c42ba218fff9bcf12510f15cfb7b7af143a9",
@@ -52,12 +52,12 @@
   ".gitignore": "4c79d5bcfe93dbe43aa70c1ed11649d9d713fee9",
   ".mcp.json.example": "166f13e31ffc38be1a73b7ac9cb898f2ec19605d",
   "AGENTS.md": "9c2a615f73563232fcca450d1c05b9fc118b53fb",
-  "CHANGELOG.md": "71dd1a0f12175be5f0721a7efff24b992d4bd1c9",
+  "CHANGELOG.md": "bd0406cb02434404ecc832c629fc44ea1b3e0323",
   "CLAUDE.md": "f9c5ecb6a4ca50b4d6b80b5754d52405c4f4e07b",
   "INSTALL.md": "ff7da8ec32ac5e79af4478ba485cd0f0e94f88d4",
   "LICENSE": "af7501a71a5774098519eee4324ab75cc73d9a4a",
   "README.md": "ed02d4286d218b3d03ceddc41e8cb84ffc1efabe",
-  "VERSION": "4c056daa338220bb4784b6c396938b2c52927329",
+  "VERSION": "716b0a7d09c1f1f3a5a2bf2942f50aedc8ec14a6",
   "anno-server/anno-config.example.json": "53f8a23cf9689de61d17667d2dac99bc0cc64b9f",
   "anno-server/assemble-once.js": "9df4eb3cde539a64cdb92deb723283ad82ffa5c4",
   "anno-server/build-shared-generator.js": "14d491f41d75ed20df4f0e88a34eefa83915b639",
@@ -346,6 +346,9 @@
   ".codebuddy/skills/prd/SKILL.md": [
    "3441eff9766b5b73143ccb070e488322a0b23edf"
   ],
+  ".gitattributes": [
+   "060e5785814a3f9db15ee587533142f8902da1c8"
+  ],
   ".github/skills/prd/SKILL.md": [
    "3441eff9766b5b73143ccb070e488322a0b23edf"
   ],
@@ -373,6 +376,7 @@
    "4458ee53599309ff2b4abc56afcb3e5a8b69a2a0",
    "45641414dc65b2c41799076b5dd0a962ae761682",
    "5196a7bb04650d3cef9b589f6be47f5cdf48add4",
+   "71dd1a0f12175be5f0721a7efff24b992d4bd1c9",
    "7b7d85d1f706cd1b7ae1549946ae55e9c703ce4a",
    "8a96e55396d4d3ff6d9b30deb70e894908277114",
    "936b531ffb879f15a62483556adcccbc878e7815",
