@@ -1,6 +1,6 @@
 {
  "_说明": "本文件由发布脚本自动生成，不要手工改。update-proenga.ps1 / update-proenga.sh 用它核对新版是否完整、判断哪些旧文件可以删除。",
- "version": "2026.11.26.5",
+ "version": "2026.11.26.6",
  "files": {
   ".agents/skills/dev-codegen/SKILL.md": "4ecaea1fd3899373f76ecd2cf6f84b03b13386ba",
   ".agents/skills/dev-prompts/SKILL.md": "624f7c3c3da8cc69e5a19863bb1d51c66ad93279",
@@ -56,8 +56,8 @@
   "CLAUDE.md": "f9c5ecb6a4ca50b4d6b80b5754d52405c4f4e07b",
   "INSTALL.md": "ff7da8ec32ac5e79af4478ba485cd0f0e94f88d4",
   "LICENSE": "af7501a71a5774098519eee4324ab75cc73d9a4a",
-  "README.md": "ed02d4286d218b3d03ceddc41e8cb84ffc1efabe",
-  "VERSION": "197dbb1af44d410664b5c9fa03141d23aad98757",
+  "README.md": "5fc7459c6610326fc246b380599ecfcf24109e93",
+  "VERSION": "d01bbd54d17858b874d2181af85170f5eccaa674",
   "anno-server/anno-config.example.json": "53f8a23cf9689de61d17667d2dac99bc0cc64b9f",
   "anno-server/assemble-once.js": "9df4eb3cde539a64cdb92deb723283ad82ffa5c4",
   "anno-server/build-shared-generator.js": "14d491f41d75ed20df4f0e88a34eefa83915b639",
@@ -68,7 +68,7 @@
   "anno-server/start-anno-server.js": "3252685fb09c45537d36e9cb973ea2c04f13bf79",
   "anno-server/start-anno-server.vbs": "081165ba54e49cc6be41b22debec6338c707425f",
   "anno-server/start.ps1": "f769ece32fd13910832cd871151e655620c22d30",
-  "anno-server/vendor/mermaid.min.js": "5ce24cfcfd2cd9785ee5db89cd03f720dd989cf1",
+  "anno-server/vendor/mermaid.min.js": "9bca46f9cb56848a59aaf5dff2eec26350b06cf0",
   "package.json": "46a10a62723d636b36ecf0c41c8dcfbf64ceb4f4",
   "setup-mcp-playwright.ps1": "4b2eff5292246c0f9454ebe9e202c00235569610",
   "skills/_shared/acceptance-checklist.md": "faed872d101cb82cc22a245549544212f1d13435",
@@ -418,12 +418,12 @@
    "0ae3141aee3ba4f1dc38efae8eb0df75aeab72bf",
    "14ca16869ad1b4741024ebc9ca731364daa605f6",
    "39d39257ea851510ec561095cba5f9c43f076e85",
-   "5fc7459c6610326fc246b380599ecfcf24109e93",
    "685fc0100cb127096350926a49a1d2aaf8f5bc25",
    "6a3cf7438ed0926ae82828650ee446c29a175957",
    "8271b75dac4dca62355530003747dbb6d08c0f12",
    "8d0d84506b5111d77f36437458e4d96996d6eb2a",
    "bb27933d35017f9477aadd963fd0318d60c19ae7",
+   "ed02d4286d218b3d03ceddc41e8cb84ffc1efabe",
    "f67cca0e89a30e90fd63c0a200d25e1be8fe3b77",
    "fef990514900c9362ca56df53b0f49d3ddb28195"
   ],
@@ -441,9 +441,6 @@
   ],
   "anno-server/start-anno-server.vbs": [
    "723b92a264163a9c145876b354e4097905f999c6"
-  ],
-  "anno-server/vendor/mermaid.min.js": [
-   "9bca46f9cb56848a59aaf5dff2eec26350b06cf0"
   ],
   "setup-mcp-playwright.ps1": [
    "960a7701ae80ee38fb593501334ab0c793cec57b"
